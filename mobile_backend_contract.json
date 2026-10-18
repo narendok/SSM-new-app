@@ -1,0 +1,91 @@
+{
+  "target_backend_url": "https://yyrvduosyyaluifqvwkr.supabase.co",
+  "target_project_id": "yyrvduosyyaluifqvwkr",
+  "verification_status": "UNVERIFIED_PENDING_LIVE_SCHEMA",
+  "auth_configuration": {
+    "provider": "google_workspace",
+    "flow": "pkce_s256",
+    "redirect_uri": "com.example.myapplication://auth-callback",
+    "client_secrets_embedded": false,
+    "keystore_only_storage": true
+  },
+  "safe_views": [
+    {
+      "name": "operational_receiving_purchase_orders",
+      "status": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "operational_receiving_purchase_order_items",
+      "status": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "operational_purchase_requests",
+      "status": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "operational_purchase_request_items",
+      "status": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "operational_rfqs",
+      "status": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "operational_rfq_vendors",
+      "status": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "operational_po_shipments",
+      "status": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "operational_vendors",
+      "status": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "lifecycle_read_data",
+      "status": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "document_control_registers",
+      "status": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "controlled_document_audit_timeline",
+      "status": "PENDING_LIVE_SCHEMA"
+    }
+  ],
+  "planned_stock_mutation_rpcs": [
+    {
+      "name": "create_grn",
+      "status": "DISABLED",
+      "signature": "PENDING_LIVE_SCHEMA",
+      "persistent_client_uuid_required": true
+    },
+    {
+      "name": "material_issue",
+      "status": "DISABLED",
+      "signature": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "material_return",
+      "status": "DISABLED",
+      "signature": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "material_transfer",
+      "status": "DISABLED",
+      "signature": "PENDING_LIVE_SCHEMA"
+    },
+    {
+      "name": "material_adjustment",
+      "status": "DISABLED",
+      "signature": "PENDING_LIVE_SCHEMA"
+    }
+  ],
+  "storage": {
+    "private_signed_urls_only": true,
+    "default_ttl_seconds": 300,
+    "public_urls_allowed": false
+  }
+}
