@@ -11,7 +11,7 @@ Do not add any service key, database password, signing secret, or third-party cr
 
 ## Environment mapping
 
-The SSM1 Portal & Wizard project is configured for Supabase project rzskhndweihuczbdhoxk at https://rzskhndweihuczbdhoxk.supabase.co. Android Gradle pins SUPABASE_URL to this value and rejects a mismatch; its ignored local.properties contains the same URL and the portal publishable key. This resolves URL identity only: live schema, RLS, auth, storage authorization, and mobile data synchronization remain unverified. DEV/UAT/PROD separation is **not evidenced**. Do not add another backend authority.
+The SSM-new-web Portal & Wizard project is configured for Supabase project rzskhndweihuczbdhoxk at https://rzskhndweihuczbdhoxk.supabase.co. Android Gradle pins SUPABASE_URL to this value and rejects a mismatch; its ignored local.properties contains the same URL and the portal publishable key. This resolves URL identity only: live schema, RLS, auth, storage authorization, and mobile data synchronization remain unverified. DEV/UAT/PROD separation is **not evidenced**. Do not add another backend authority.
 
 ## App flow
 

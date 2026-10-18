@@ -7,7 +7,7 @@
 
 > [!IMPORTANT]
 > **Living Engineering Reference & Review Protocol**:  
-> Whenever an engineering agent or developer updates, extends, or refactors a portal feature, this Knowledge Base **must be reviewed first**. After applying functional changes, verify the feature via the live browser controller, capture fresh screenshots, update this document, and cross-reference changes in [`SSM_ONE_WEB_PORTAL_MASTER_PLAN.md`](file:///c:/Users/Test/Documents/antigravity/SSM1/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md).
+> Whenever an engineering agent or developer updates, extends, or refactors a portal feature, this Knowledge Base **must be reviewed first**. After applying functional changes, verify the feature via the live browser controller, capture fresh screenshots, update this document, and cross-reference changes in [`SSM_ONE_WEB_PORTAL_MASTER_PLAN.md`](file:///c:/Users/Test/Documents/SSM-new/SSM-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md).
 
 ---
 
@@ -81,7 +81,7 @@ Every stock delta creates an unalterable audit log entry containing the exact ti
 ## Module 2: Mouser Electronics Component Intelligence & Auto-Fill
 
 ### 2.1 Overview & Capabilities
-The Mouser Intelligence Module ([`src/lib/mouser-service.ts`](file:///c:/Users/Test/Documents/antigravity/SSM1/src/lib/mouser-service.ts)) provides instant automotive component enrichment:
+The Mouser Intelligence Module ([`src/lib/mouser-service.ts`](file:///c:/Users/Test/Documents/SSM-new/SSM-new-web/src/lib/mouser-service.ts)) provides instant automotive component enrichment:
 - **1-Click Lookup**: Entering an MPN (e.g., `STM32G0B1VCT6`, `EG915N-EU`, `TCAN1042VDRQ1`, `LMR14050SDDAR`, `SM5S24A-E3/2D`, `MX150-33472-1601`) fetches verified manufacturer parameters.
 - **Automotive Qualification**: Recognizes AEC-Q100 (ICs), AEC-Q200 (Passives), and AIS-140 compliance.
 - **Dual-Currency Commercials**: Tentative unit costs in both USD ($) and Indian Rupees (₹), complete with volume price tiers (1, 100, 1k, 10k).
@@ -153,7 +153,7 @@ Navigating to `http://localhost:8080/?role=mech` opens the Mechanical department
 ## Module 4: Purchasing SCM R&D BOM Review & Sourcing Optimization
 
 ### 4.1 Overview & Capabilities
-The `PurchasingBOMReviewTable` ([`src/components/PurchasingBOMReviewTable.tsx`](file:///c:/Users/Test/Documents/antigravity/SSM1/src/components/PurchasingBOMReviewTable.tsx)) bridges R&D engineering BOMs and procurement execution:
+The `PurchasingBOMReviewTable` ([`src/components/PurchasingBOMReviewTable.tsx`](file:///c:/Users/Test/Documents/SSM-new/SSM-new-web/src/components/PurchasingBOMReviewTable.tsx)) bridges R&D engineering BOMs and procurement execution:
 - Evaluates 10 critical automotive components for `HLPL-OBD4-01` / `HLPL-AI4T-01`.
 - Compares R&D target costs against quoted supplier prices (e.g. +$2.12 / 4.8% unit savings).
 - Flags long lead-time components (e.g., Quectel 4G modem at 14 weeks) and recommends dual-source alternates.
@@ -168,7 +168,7 @@ The `PurchasingBOMReviewTable` ([`src/components/PurchasingBOMReviewTable.tsx`](
 ## Module 5: Quality Assurance DVP&R Pre-Compliance Certification
 
 ### 5.1 Overview & Capabilities
-The `QualityAssuranceDVPReviewTable` ([`src/components/QualityAssuranceDVPReviewTable.tsx`](file:///c:/Users/Test/Documents/antigravity/SSM1/src/components/QualityAssuranceDVPReviewTable.tsx)) operationalizes IATF 16949 §8.3.4 design verification:
+The `QualityAssuranceDVPReviewTable` ([`src/components/QualityAssuranceDVPReviewTable.tsx`](file:///c:/Users/Test/Documents/SSM-new/SSM-new-web/src/components/QualityAssuranceDVPReviewTable.tsx)) operationalizes IATF 16949 §8.3.4 design verification:
 - Tracks 10 mandatory automotive electrical and environmental tests:
   - ISO 7637-2 Transients (Pulse 1, 2a, 3a/b)
   - ISO 16750-2 Load Dump 5b (40V clamp)
@@ -320,7 +320,7 @@ Icon-only compact navigation with SS badge, tooltips, and fast collapse/expand t
 ## Module 11: Dual-Lifecycle Smart BOM Architecture & 'What-If' Stock Simulation
 
 ### 11.1 Architecture & Separation
-The Smart BOM workspace ([`DualLifecycleSmartBOMWorkspace.tsx`](file:///c:/Users/Test/Documents/antigravity/SSM1/src/components/DualLifecycleSmartBOMWorkspace.tsx)) explicitly decouples exploratory engineering drafts from governed production releases:
+The Smart BOM workspace ([`DualLifecycleSmartBOMWorkspace.tsx`](file:///c:/Users/Test/Documents/SSM-new/SSM-new-web/src/components/DualLifecycleSmartBOMWorkspace.tsx)) explicitly decouples exploratory engineering drafts from governed production releases:
 - **Tentative Engineering Draft (`v0.3-tentative`)**: Permits provisional candidate MPNs, unverified components, generic placeholders, and dynamic "What-If" stock simulations.
 - **Governed Released Baseline (`Rev A ECO-2026-004`)**: Immutable baseline locked to PPAP Level 3 documentation, AIS-140 TAC type approval, and production kitting. Changes require an authorized Engineering Change Order (ECO number and rationale).
 - **Dynamic "What-If" Simulation**: Recalculates real-time shortages across active released stores for variable planned build quantities (e.g. 5,000 units: 5/7 shortage lines, deficit of $59,150.00).
@@ -335,7 +335,7 @@ The Smart BOM workspace ([`DualLifecycleSmartBOMWorkspace.tsx`](file:///c:/Users
 ## Module 12: Adaptive Purchase Order & Invoice Ingestion Engine
 
 ### 12.1 Multi-Format Ingestion
-The ingestion engine ([`AdaptiveIngestionAndStagingGate.tsx`](file:///c:/Users/Test/Documents/antigravity/SSM1/src/components/AdaptiveIngestionAndStagingGate.tsx)) handles arbitrary supplier spreadsheets from Digi-Key, Mouser, Arrow, and local fabricators:
+The ingestion engine ([`AdaptiveIngestionAndStagingGate.tsx`](file:///c:/Users/Test/Documents/SSM-new/SSM-new-web/src/components/AdaptiveIngestionAndStagingGate.tsx)) handles arbitrary supplier spreadsheets from Digi-Key, Mouser, Arrow, and local fabricators:
 - **Multi-Alias Dictionary Fuzzy Matcher**: Maps 16 standard fields with live matching confidence rating (120% High Confidence match) and dropdown column overrides.
 - **Distributor Presets**: Mouser Electronics Packing List, Digi-Key Billed Invoice, Precision Wiring Delivery Challan, and Arrow Electronics Commercial Billing.
 
@@ -366,7 +366,7 @@ Active stock is only incremented when the Quality team executes an signed **IQC 
 ## Module 14: Complete Plant Machinery & Asset Lifecycle Management
 
 ### 14.1 Asset Fleet & Machine Compatibility Mapping
-The asset management surface ([`LiveInventoryWorkspace.tsx`](file:///c:/Users/Test/Documents/antigravity/SSM1/src/components/LiveInventoryWorkspace.tsx)) tracks production machinery, service test equipment, IMTE calibration instruments, and facility tooling:
+The asset management surface ([`LiveInventoryWorkspace.tsx`](file:///c:/Users/Test/Documents/SSM-new/SSM-new-web/src/components/LiveInventoryWorkspace.tsx)) tracks production machinery, service test equipment, IMTE calibration instruments, and facility tooling:
 - **Machine-to-Component Compatibility**: Maps machines directly to compatible parts via `compatiblePartNumbers` (Yamaha SMT Mounter linked to MCUs/passives; Schleuniger CrimpCenter linked to battery harnesses; Chroma EOL Jig linked to main PCB).
 - **Bulk CSV Ingestion**: Imports asset registers with serial number and tag deduplication.
 - **Audit Schedule Exports**: 1-click downloads for `Asset Register Export (.csv)` and `Calibration & Maintenance Due Schedule (.csv)` (filtered to instruments due within 60 days).
@@ -385,13 +385,13 @@ The asset management surface ([`LiveInventoryWorkspace.tsx`](file:///c:/Users/Te
 ## Module 16: Department Lead Coordination Center, Team & Task Management, and Full-Page Approvals
 
 ### 16.1 Overview & Architecture
-To eliminate cluttered tables and fragmented modals, the portal integrates the **Department Lead Coordination Center** ([`DepartmentLeadCoordinationCenter.tsx`](file:///c:/Users/Test/Documents/antigravity/SSM1/src/components/DepartmentLeadCoordinationCenter.tsx)) into all 11 department hubs, accompanied by a dedicated, full-page approvals surface:
+To eliminate cluttered tables and fragmented modals, the portal integrates the **Department Lead Coordination Center** ([`DepartmentLeadCoordinationCenter.tsx`](file:///c:/Users/Test/Documents/SSM-new/SSM-new-web/src/components/DepartmentLeadCoordinationCenter.tsx)) into all 11 department hubs, accompanied by a dedicated, full-page approvals surface:
 
 - **1-Click Instant Assignee Switcher**: Every task card in Kanban and row in Table view features an inline assignee dropdown. Department Leads can instantly reallocate tasks across their team in zero clicks/dialogs.
 - **Teams Tasks Hub**: Switchable between an interactive Kanban board and dense tabular view, complete with real-time project scoping, priority filtering, and status progression.
 - **Department Projects Hub**: Tracks deliverables, APQP lifecycle stages, target delivery dates, and progress percentages (e.g. `HLPL-AI4T-01` Tata Ace EV 4G at 92%) with 1-click drill-downs into project-specific tasks.
 - **Department Teams & Capacity Matrix**: Visualizes active workloads (e.g. `1 Tasks · 25% Capacity`), competency tiers (`Level 2` to `Level 4 - Advanced Specialist`), and core technical skill tags.
-- **Full-Page Approvals View ([`ApprovalsFullPageView.tsx`](file:///c:/Users/Test/Documents/antigravity/SSM1/src/components/ApprovalsFullPageView.tsx))**: Replaces pop-up dialogs with a full-viewport governance center displaying digital signer authority, risk-classified decision cards (`CRITICAL`, `HIGH`, `MEDIUM`), IATF 16949 §8.3.4 regulatory clauses, and 1-click human sign-offs (`[Approve Gate]`, `[Return for Rework]`, `[Reject]`).
+- **Full-Page Approvals View ([`ApprovalsFullPageView.tsx`](file:///c:/Users/Test/Documents/SSM-new/SSM-new-web/src/components/ApprovalsFullPageView.tsx))**: Replaces pop-up dialogs with a full-viewport governance center displaying digital signer authority, risk-classified decision cards (`CRITICAL`, `HIGH`, `MEDIUM`), IATF 16949 §8.3.4 regulatory clauses, and 1-click human sign-offs (`[Approve Gate]`, `[Return for Rework]`, `[Reject]`).
 - **Sidebar Notification Cleanup**: Notification links have been removed from the sidebar. The interactive notification bell on the top header serves as the sole, non-cluttered alert center.
 
 ### 16.2 Verified Visual Evidence
@@ -416,7 +416,7 @@ To eliminate cluttered tables and fragmented modals, the portal integrates the *
 ## Module 17: Living Update Protocol for Engineering Agents
 
 When adding, modifying, or refactoring portal features:
-1. **Pre-Check**: Read this Knowledge Base and [`SSM_ONE_WEB_PORTAL_MASTER_PLAN.md`](file:///c:/Users/Test/Documents/antigravity/SSM1/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md) to understand existing data models and UI patterns.
+1. **Pre-Check**: Read this Knowledge Base and [`SSM_ONE_WEB_PORTAL_MASTER_PLAN.md`](file:///c:/Users/Test/Documents/SSM-new/SSM-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md) to understand existing data models and UI patterns.
 2. **Execute Changes**: Apply TypeScript-strict modifications (`exactOptionalPropertyTypes: true`).
 3. **Verify Locally**:
    - `npx tsc --noEmit` (ensure 0 type errors).
@@ -424,6 +424,6 @@ When adding, modifying, or refactoring portal features:
 4. **Capture Visual Evidence**: Use the browser controller / Playwright script to capture screenshots into `docs/images/` and the conversation brain directory.
 5. **Update Knowledge Base & Master Plan**:
    - Add new feature descriptions, parameters, and screenshots to this Knowledge Base.
-   - Update [`SSM_ONE_WEB_PORTAL_MASTER_PLAN.md`](file:///c:/Users/Test/Documents/antigravity/SSM1/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md) completed milestones and relevant sections.
+   - Update [`SSM_ONE_WEB_PORTAL_MASTER_PLAN.md`](file:///c:/Users/Test/Documents/SSM-new/SSM-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md) completed milestones and relevant sections.
 6. **Git Sync**: Commit and push to `origin/main` without rewriting history to maintain Lovable synchronization.
 

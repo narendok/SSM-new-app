@@ -2,7 +2,7 @@
 
 **System ID:** `HLPL-MOB-SCMS-PARITY-01`  
 **Governing Standards:** IATF 16949:2016, ISO 9001:2015, AEC-Q100, AIS-140 / TAC ARAI, ISO/IEC 27001:2022  
-**Local Workspace:** `c:\Users\Test\AndroidStudioProjects\SSM-new-app`  
+**Local Workspace:** `c:\Users\Test\Documents\SSM-new\SSM-new-app`  
 **Target Project:** `HLPL-AI4T-01` (Tata Ace EV 4G Telematics Gateway — 50,000 units / ₹20.33 Cr)  
 **Client Partner:** Tata Motors Limited · EV Fleet Division  
 **Automated Verification Tool:** `verify_app.ps1` (100% Green, All 6 Gates Passed)

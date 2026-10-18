@@ -364,4 +364,4 @@ current evidence.
 
 ## Planning scope
 
-Use docs/planning/SSM_ONE_ANDROID_BUILD_PLAN.md for Android implementation, stage order and build/device verification. The web portal master plan lives in sibling SSMOneWeb/docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md and owns web/backend work plus contract handoff only. Mobile contracts stay under docs/backend-handoff, mobile evidence under docs/evidence; web evidence stays under SSMOneWeb/docs/evidence. Do not merge the two build queues.
+Use docs/planning/SSM_ONE_ANDROID_BUILD_PLAN.md for Android implementation, stage order and build/device verification. The web portal master plan lives in sibling SSM-new-web/docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md and owns web/backend work plus contract handoff only. Mobile contracts stay under docs/backend-handoff, mobile evidence under docs/evidence; web evidence stays under SSM-new-web/docs/evidence. Do not merge the two build queues.

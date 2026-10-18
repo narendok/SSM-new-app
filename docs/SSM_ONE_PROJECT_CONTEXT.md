@@ -1,6 +1,6 @@
 # SSM One — Project Context and Current State
 
-Web/backend requirements and delivery roadmap: [Web portal plan location](../../SSMOneWeb/docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md), refined through 14 October 2026. It supersedes dated planning layouts and incorporates the latest Sales, feasibility, four-group Drive, Excel register and DOCX refinements. The implementation checkpoints below remain historical evidence, not newly verified completion claims.
+Web/backend requirements and delivery roadmap: [Web portal plan location](../../SSM-new-web/docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md), refined through 14 October 2026. It supersedes dated planning layouts and incorporates the latest Sales, feasibility, four-group Drive, Excel register and DOCX refinements. The implementation checkpoints below remain historical evidence, not newly verified completion claims.
 
 Latest implementation checkpoint: [2026-10-03 final-framework increment](evidence/final-framework-implementation-2026-10-03.md).
 Latest follow-on: [department Drive categories and ownership preflight](evidence/department-drive-categories-2026-10-03.md),
@@ -12,7 +12,7 @@ source work is reported implemented; protected lifecycle acceptance and legacy
 Drive ownership/source mapping remain pending. The full final target below is
 not complete. Preserve the dated boundaries in the checkpoint.
 
-Latest target plan: [Web portal master plan — refined 2026-10-14](../../SSMOneWeb/docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md),
+Latest target plan: [Web portal master plan — refined 2026-10-14](../../SSM-new-web/docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md),
 derived from the user's final DOCX. It maps the full document inventory, nine macro
 stages and web/mobile delivery packs into the eight existing departments. This is
 a planning update; it does not deploy contracts, change roles or update historical

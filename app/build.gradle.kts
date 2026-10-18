@@ -16,7 +16,7 @@ val supabaseUrl = localProperties.getProperty("SUPABASE_URL")
     ?.takeIf { it.isNotBlank() }
     ?: "https://rzskhndweihuczbdhoxk.supabase.co"
 require(supabaseUrl.trimEnd('/') == "https://rzskhndweihuczbdhoxk.supabase.co") {
-    "Android must use the SSM1 portal Supabase project; configured SUPABASE_URL does not match the approved authority."
+    "Android must use the SSM-new-web portal Supabase project; configured SUPABASE_URL does not match the approved authority."
 }
 val supabaseAnonKey = localProperties.getProperty("SUPABASE_ANON_KEY")
     ?.takeIf { it.isNotBlank() }

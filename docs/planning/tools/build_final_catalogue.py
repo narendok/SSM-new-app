@@ -1,4 +1,4 @@
-# Historical source extraction only; current web catalogue is SSMOneWeb/docs/planning/SSM_ONE_DOCUMENT_CATALOGUE.md/json. Do not recreate an active Android business catalogue.
+# Historical source extraction only; current web catalogue is SSM-new-web/docs/planning/SSM_ONE_DOCUMENT_CATALOGUE.md/json. Do not recreate an active Android business catalogue.
 """Create a planning inventory from every item in the final DOCX annexure.
 
 This writes local reference documents only. It is not a database seed/migration.
@@ -94,7 +94,7 @@ lines = ["# Final source document catalogue — 2026-10-03", "",
          "Status: **planning reference; no templates, records, certificates or permissions created.**", "",
          f"All **{len(items)}** item/note blocks from the source annexure are retained below. Codes and descriptions are copied as reference labels, not new official identifiers. Owner mapping is a recommendation within the eight agreed departments, not a live access grant.", "",
          "The source's combined entries remain combined here. Implementation may split them into linked record families (for example infrastructure versus liability risks), while retaining the original source block. Missing template files and certificates must be shown as missing/unverified, not as completed records.", "",
-         "See [implementation plan](../../../SSMOneWeb/docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md) and the [machine-readable reference](FINAL_DOCUMENT_CATALOGUE_2026-10-03.json).", "",
+         "See [implementation plan](../../../SSM-new-web/docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md) and the [machine-readable reference](FINAL_DOCUMENT_CATALOGUE_2026-10-03.json).", "",
          f"Source SHA-256: `{reference['sha256']}`", ""]
 last = None
 def cell(value):

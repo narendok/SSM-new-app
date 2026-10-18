@@ -4,19 +4,19 @@
 
 Use **SSM New** as the web portal display name and **SSM-new-app** as the Android launcher/project name. The web repository/package slug is `ssm-new`; the Android repository is `SSM-new-app`. Keep the existing Android `applicationId` and namespace stable; changing them would create a different installed Android app identity.
 
-Read this file when working on the Android companion from the SSM1 Antigravity workspace. The portal's architecture and current integration status are in [SSM One Web Portal Master Plan, §25](../SSM_ONE_WEB_PORTAL_MASTER_PLAN.md#25-android-companion-handoff-contract-and-release-gates). The department-owned document and lifecycle audit design is in [HLPL-AI4T-QA-DOCCTRL-00](HLPL-AI4T-QA-DOCCTRL-00.md).
+Read this file when working on the Android companion from the SSM-new Antigravity workspace. The portal's architecture and current integration status are in [SSM One Web Portal Master Plan, §25](../SSM_ONE_WEB_PORTAL_MASTER_PLAN.md#25-android-companion-handoff-contract-and-release-gates). The department-owned document and lifecycle audit design is in [HLPL-AI4T-QA-DOCCTRL-00](HLPL-AI4T-QA-DOCCTRL-00.md).
 
 ## Android project location
 
 The Android Studio project currently resides at:
 
-`C:\Users\Test\AndroidStudioProjects\SSM-new-app`
+`C:\Users\Test\Documents\SSM-new\SSM-new-app`
 
-It is outside the SSM1 folder and is maintained in its own Git repository at `https://github.com/narendok/SSM-new-app.git` on `main`. Android commits do not automatically land in the portal repository or Lovable sync. Work directly in the Android project; do not create a second Android source copy under SSM1.
+It is maintained in its own Git repository at `https://github.com/narendok/SSM-new-app.git` on `main`. Android commits do not automatically land in the portal repository or Lovable sync. Work directly in the Android project; do not create a second Android source copy under SSM-new-web.
 
 ## Corrected backend configuration
 
-- The SSM1 portal's configured Supabase authority is project `rzskhndweihuczbdhoxk` at `https://rzskhndweihuczbdhoxk.supabase.co`.
+- The SSM-new portal's configured Supabase authority is project `rzskhndweihuczbdhoxk` at `https://rzskhndweihuczbdhoxk.supabase.co`.
 - Android Gradle now defaults to this endpoint, rejects a different `SUPABASE_URL`, and fails configuration if the publishable/anon key is empty.
 - The Android project's ignored `local.properties` contains the same URL and the portal publishable key as `SUPABASE_ANON_KEY`. Keep the key out of tracked files, screenshots, logs, and handoff documents.
 - Do not use the historical Android target `yyrvduosyyaluifqvwkr` as a current environment. No separate Dev/UAT backend is approved.
