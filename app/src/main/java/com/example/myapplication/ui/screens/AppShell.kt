@@ -14,7 +14,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import com.example.myapplication.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.AccountCircle
@@ -95,7 +97,7 @@ fun AppShell(viewModel: MainViewModel) {
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "SSM ONE",
+                                    text = stringResource(id = R.string.app_name),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.ExtraBold,
                                     letterSpacing = 0.5.sp
