@@ -1,5 +1,9 @@
 # Android Companion Handoff for Antigravity
 
+## Shared product identity
+
+Use **SSM New** as the web portal display name and **SSM-new-app** as the Android launcher/project name. The web repository/package slug is `ssm-new`; the Android repository is `SSM-new-app`. Keep the existing Android `applicationId` and namespace stable; changing them would create a different installed Android app identity.
+
 Read this file when working on the Android companion from the SSM1 Antigravity workspace. The portal's architecture and current integration status are in [SSM One Web Portal Master Plan, §25](../SSM_ONE_WEB_PORTAL_MASTER_PLAN.md#25-android-companion-handoff-contract-and-release-gates). The department-owned document and lifecycle audit design is in [HLPL-AI4T-QA-DOCCTRL-00](HLPL-AI4T-QA-DOCCTRL-00.md).
 
 ## Android project location
@@ -8,13 +12,7 @@ The Android Studio project currently resides at:
 
 `C:\Users\Test\AndroidStudioProjects\SSM-new-app`
 
-The Android project is a separate Git repository at `https://github.com/narendok/SSM-new-app.git` on `main`. It is outside the SSM1 web folder, so Android commits do not automatically land in the portal repository or Lovable sync. Work directly in this Android repository; do not create a second Android source copy under SSM1.
-
-## Product identity
-
-- Web portal display name: **SSM New** (`narendok/ssm-new`).
-- Android launcher and Gradle project name: **SSM-new-app** (`narendok/SSM-new-app`).
-- Keep Android `applicationId` and namespace stable when changing display names.
+It is outside the SSM1 folder and is maintained in its own Git repository at `https://github.com/narendok/SSM-new-app.git` on `main`. Android commits do not automatically land in the portal repository or Lovable sync. Work directly in the Android project; do not create a second Android source copy under SSM1.
 
 ## Corrected backend configuration
 
