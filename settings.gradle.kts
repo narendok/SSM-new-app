@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SSM New"
+rootProject.name = "SSM-new-app"
 include(":app")
