@@ -6,9 +6,15 @@ Read this file when working on the Android companion from the SSM1 Antigravity w
 
 The Android Studio project currently resides at:
 
-`C:\Users\Test\AndroidStudioProjects\MyApplication`
+`C:\Users\Test\AndroidStudioProjects\SSM-new-app`
 
-It is outside the SSM1 folder. The Android project has no visible `.git` metadata, so Android source edits are not automatically included in the SSM1 Git or Lovable sync. Work directly in the Android project when it is available to the agent; do not create a second Android source copy under SSM1 or report the app as Git-synced without confirming repository metadata and a remote.
+The Android project is a separate Git repository at `https://github.com/narendok/SSM-new-app.git` on `main`. It is outside the SSM1 web folder, so Android commits do not automatically land in the portal repository or Lovable sync. Work directly in this Android repository; do not create a second Android source copy under SSM1.
+
+## Product identity
+
+- Web portal display name: **SSM New** (`narendok/ssm-new`).
+- Android launcher and Gradle project name: **SSM-new-app** (`narendok/SSM-new-app`).
+- Keep Android `applicationId` and namespace stable when changing display names.
 
 ## Corrected backend configuration
 
