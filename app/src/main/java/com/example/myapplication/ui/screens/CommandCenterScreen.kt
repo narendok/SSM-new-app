@@ -1085,7 +1085,7 @@ fun CommandCenterScreen(
                         )
                     } else {
                         Text(
-                            text = "Submit technical request to Hexense Labs Engineering Squad for HLPL-AI4T-01:",
+                            text = "Submit technical request to XYZ Pvt Ltd Engineering Squad for HLPL-AI4T-01:",
                             style = MaterialTheme.typography.bodySmall
                         )
                         OutlinedTextField(

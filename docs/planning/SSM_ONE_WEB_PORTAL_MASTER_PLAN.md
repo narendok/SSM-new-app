@@ -2,7 +2,7 @@
 
 ## Plan Boundary
 
-This document is the single, authoritative master plan for the **Hexense Labs / Six Sense Mobility Smart Company Management System (SCMS) Web Portal and its backend architecture**. It specifies the unified enterprise architecture, operational flows, data schemas, department ownership models, document controls, modular hardware reusability, and delivery roadmap.
+This document is the single, authoritative master plan for the **XYZ Pvt Ltd / XYZ Pvt Ltd Smart Company Management System (SCMS) Web Portal and its backend architecture**. It specifies the unified enterprise architecture, operational flows, data schemas, department ownership models, document controls, modular hardware reusability, and delivery roadmap.
 
 The target is the connected Lovable project `a3399684-daab-4b38-8666-187b96b451af`, managed Supabase PostgreSQL backend, and private Cloud Storage. Web/Supabase owns identities, role permissions, operational records, official document numbering (`HLPL-[PROJ_ID]-[DEPT]-[DOC_TYPE]-[REV]`), transactions, immutable audit logs, automation triggers, and private document storage.
 
@@ -217,7 +217,7 @@ The Purchasing workspace is implemented as a comprehensive four-module command c
 The Quality Assurance workspace incorporates an interactive compliance verification matrix (`QualityAssuranceDVPReviewTable`) operating under IATF 16949 §8.3.4.4 and AIS-140 APQP:
 - **10 Core Automotive Test Regimes**: Tracks electrical transients (ISO 7637-2), load dump clamping (ISO 16750-2 Pulse 5b), reverse polarity/jump-start, radiated/conducted emissions (CISPR 25 Class 3), electrostatic discharge (ISO 10605), thermal shock (ISO 16750-4), water/dust ingress (ISO 20653 IP67), road vibration (AIS-140 Annex 8), emergency packet protocol (AIS-140 Annex 3), and HTOL 500-hour endurance.
 - **Dual Lab Facility Routing**:
-  - **Internal Lab**: Hexense In-House Chambers & R&D Benches (transient pulse generator, ESD gun, dual-chamber thermal oven, burn-in rack).
+  - **Internal Lab**: XYZ Pvt Ltd In-House Chambers & R&D Benches (transient pulse generator, ESD gun, dual-chamber thermal oven, burn-in rack).
   - **Outsourced Accredited Lab**: NABL / Type Approval facilities (ARAI Pune, ICAT Manesar, TUV Rheinland) for statutory AIS-140 TAC certifications.
 - **Zero-Deviation Traceability**: Tracks Sample Size (DUT count), Target Completion Dates, Test Report Numbers (`HLPL-DVP-TR-01` to `10`), with actions to *Execute Internal Test*, *Attach Lab Certificate*, and *Issue Zero-Deviation Release*.
 
@@ -675,7 +675,7 @@ $$\text{Supplier ASL (Warranty + Validity)} \longleftrightarrow \text{Quotation 
 ## 19. Role-Aware Sidebar Navigation with Favorites & Accordion Work Groups
 
 ### 19.1 Architectural Overview & Core Capabilities
-The Hexense Labs SCMS sidebar navigation adapts intelligently to the signed-in persona (`admin`, department leads, `client`):
+The XYZ Pvt Ltd SCMS sidebar navigation adapts intelligently to the signed-in persona (`admin`, department leads, `client`):
 - **Favorites System at Top**:
   - Always appears first with pinned items.
   - Hovering any item in any work group reveals a pin/unpin star trigger (`★`).
@@ -692,7 +692,7 @@ The Hexense Labs SCMS sidebar navigation adapts intelligently to the signed-in p
   - **Department Lead View**:
     - "For others all expanded": All department work groups (`My work`, `Projects`, `Department workspace`, `Reference`) start **expanded by default** with downward chevrons, giving immediate visibility into all permitted department tasks, workflows, and documents.
 - **Dual Display Modes**:
-  - **Expanded View (`w-64`)**: Full company branding (`SS` monogram badge + Six Sense Mobility / Hexense Labs title), group headers, badges, open task counters, pin stars, and bottom setup wizard status.
+  - **Expanded View (`w-64`)**: Full company branding (`SS` monogram badge + XYZ Pvt Ltd / XYZ Pvt Ltd title), group headers, badges, open task counters, pin stars, and bottom setup wizard status.
   - **Compact Rail View (`w-16`)**: Icon-only navigation with tooltips on hover, active indicator badges, and one-click expand toggle (supporting `[` keyboard shortcut).
   - **Accessible Mobile Drawer**: Complete responsive drawer matching the exact desktop role-aware group structure.
 

@@ -227,7 +227,7 @@ data class DvprTestItem(
     val testTitle: String,
     val condition: String,
     val acceptanceCriteria: String,
-    val lab: String, // "Internal Lab (Hexense)", "Outsourced Lab (ARAI Pune)", "Outsourced Lab (ICAT Manesar)"
+    val lab: String, // "Internal Lab (XYZ Pvt Ltd)", "Outsourced Lab (ARAI Pune)", "Outsourced Lab (ICAT Manesar)"
     val status: String, // "Passed", "In Progress", "Scheduled"
     val technician: String,
     val signOffTimestamp: String? = null
@@ -534,7 +534,7 @@ data class CalibrationCertificate(
     val validUntil: String,
     val uncertaintySpec: String,
     val status: String, // "Valid / Certified", "Expiring (< 30d)", "Expired"
-    val certificateUrl: String = "https://hexenselabs.internal/certs"
+    val certificateUrl: String = "https://example.invalid/certs"
 )
 
 /**

@@ -1,4 +1,4 @@
-# Hexense Labs SCMS: Android Mobile App Full Feature Completion & Continuous Verification Report
+# XYZ Pvt Ltd SCMS: Android Mobile App Full Feature Completion & Continuous Verification Report
 
 **System ID:** `HLPL-MOB-SCMS-PARITY-01`  
 **Governing Standards:** IATF 16949:2016, ISO 9001:2015, AEC-Q100, AIS-140 / TAC ARAI, ISO/IEC 27001:2022  
@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary & Web-Mobile Feature Parity
 
-The SCMS Android mobile application has achieved 100% feature parity with the Hexense Labs SCMS Web Portal specifications (`SSM_ONE_WEB_PORTAL_MASTER_PLAN.md`). All high-impact automotive workflows, multi-departmental sign-offs, stage-gate interlocks, AVL/PO registers, hardware pathing, ECU block diagram architecture, and customer CRM registries are implemented natively in Jetpack Compose and continuously verified against an online Android Virtual Device (`emulator-5554`).
+The SCMS Android mobile application has achieved 100% feature parity with the XYZ Pvt Ltd SCMS Web Portal specifications (`SSM_ONE_WEB_PORTAL_MASTER_PLAN.md`). All high-impact automotive workflows, multi-departmental sign-offs, stage-gate interlocks, AVL/PO registers, hardware pathing, ECU block diagram architecture, and customer CRM registries are implemented natively in Jetpack Compose and continuously verified against an online Android Virtual Device (`emulator-5554`).
 
 ### Feature Parity Matrix
 

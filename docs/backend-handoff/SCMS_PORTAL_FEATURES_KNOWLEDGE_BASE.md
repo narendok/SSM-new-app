@@ -1,9 +1,9 @@
-# Hexense Labs SCMS: Comprehensive Portal Features Knowledge Base
+# XYZ Pvt Ltd SCMS: Comprehensive Portal Features Knowledge Base
 
 **Document ID:** `HLPL-KB-SCMS-FEAT-01`  
 **Revision:** `01`  
 **Governing Standards:** IATF 16949:2016, ISO 9001:2015, AEC-Q100, AIS-140, ISO/IEC 27001:2022  
-**Target Environments:** Hexense Labs SCMS Web Portal, Lovable Cloud (`a3399684-daab-4b38-8666-187b96b451af`), Supabase Postgres  
+**Target Environments:** XYZ Pvt Ltd SCMS Web Portal, Lovable Cloud (`a3399684-daab-4b38-8666-187b96b451af`), Supabase Postgres  
 
 > [!IMPORTANT]
 > **Living Engineering Reference & Review Protocol**:  
@@ -179,7 +179,7 @@ The `QualityAssuranceDVPReviewTable` ([`src/components/QualityAssuranceDVPReview
   - AIS-140 Annexure 8 Random Vibration (10Hz–500Hz)
   - AIS-140 Annexure 3 Emergency Tracking & Protocol
   - High-Temperature Operating Life (HTOL 500 hours)
-- Distinguishes **Internal Lab (Hexense In-House)** from **Outsourced Accredited Lab (ARAI Pune / ICAT Manesar)**.
+- Distinguishes **Internal Lab (XYZ Pvt Ltd In-House)** from **Outsourced Accredited Lab (ARAI Pune / ICAT Manesar)**.
 - Enforces zero-deviation sign-off before manufacturing gates can be unlocked.
 
 ### 5.2 Verified Screenshot Evidence
@@ -280,7 +280,7 @@ Allows purchasing and hardware engineers to configure their official Mouser Sear
 ## Module 10: Role-Aware Sidebar Navigation with Favorites & Dynamic Accordion Work Groups
 
 ### 10.1 Architectural Overview & Core Capabilities
-The Hexense Labs SCMS sidebar navigation adapts intelligently to the signed-in persona (`admin`, department leads, `client`):
+The XYZ Pvt Ltd SCMS sidebar navigation adapts intelligently to the signed-in persona (`admin`, department leads, `client`):
 - **Favorites System at Top**:
   - Always appears first with pinned items.
   - Hovering any item in any work group reveals a pin/unpin star trigger (`★`).
@@ -297,7 +297,7 @@ The Hexense Labs SCMS sidebar navigation adapts intelligently to the signed-in p
   - **Department Lead View**:
     - "For others all expanded": All department work groups (`My work`, `Projects`, `Department workspace`, `Reference`) start **expanded by default** with downward chevrons, giving immediate visibility into all permitted department tasks, workflows, and documents.
 - **Dual Display Modes**:
-  - **Expanded View (`w-64`)**: Full company branding (`SS` monogram badge + Six Sense Mobility / Hexense Labs title), group headers, badges, open task counters, pin stars, and bottom setup wizard status.
+  - **Expanded View (`w-64`)**: Full company branding (`SS` monogram badge + XYZ Pvt Ltd / XYZ Pvt Ltd title), group headers, badges, open task counters, pin stars, and bottom setup wizard status.
   - **Compact Rail View (`w-16`)**: Icon-only navigation with tooltips on hover, active indicator badges, and one-click expand toggle (supporting `[` keyboard shortcut).
   - **Accessible Mobile Drawer**: Complete responsive drawer matching the exact desktop role-aware group structure.
 

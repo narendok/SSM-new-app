@@ -1,5 +1,5 @@
 # ==============================================================================
-# Hexense Labs SCMS Mobile App: Continuous Automated Verification Script
+# XYZ Pvt Ltd SCMS Mobile App: Continuous Automated Verification Script
 # Governed by: IATF 16949:2016, ISO 9001:2015, AEC-Q100, AIS-140, ISO/IEC 27001
 # ==============================================================================
 

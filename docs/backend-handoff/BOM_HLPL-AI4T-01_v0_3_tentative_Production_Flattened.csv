@@ -5,4 +5,4 @@ Item,MPN,Reference Designators,Qty Per Board,Planned Order Qty,Package,Descripti
 4,"SM5S36AHE3_A/I","D1, D2",2,10000,"DO-218AB","Automotive Transient Voltage Suppressor (TVS) 36V, 3600W PAR, ISO 7637-2 Pulse 5a/5b","Mouser Electronics India",1.380,13800.00,"TPSMD36A; SLD36U-017"
 5,"19418-0014","J1",1,5000,"Panel Mount 16-Pin","16-Circuit Hybrid OBD-II Sealed Right-Angle Header Assembly, Automotive Grade","Molex Direct / TTI India",2.950,14750.00,"TE-776262-1; Amphenol AT04-16PA"
 6,"C0603C104K5RACTU (PROVISIONAL)","C1-C10, C15-C24",20,100000,"0603 (1608 Metric)","0.1uF 50V 10% X7R 0603 MLCC Automotive Capacitor Array","Mouser / Digikey",0.015,1500.00,"GCM188R71H104KA57D"
-7,"HLPL-HARN-AI4T-PWR-01","W1",1,5000,"Custom Loom Assembly","High-Voltage 4-Pin Sealed Automotive Battery & BMS Harness Assembly, IP67 Loom","Hexense Greater Noida Plant 2",4.100,20500.00,"HLPL-HARN-OBD2-16P"
+7,"HLPL-HARN-AI4T-PWR-01","W1",1,5000,"Custom Loom Assembly","High-Voltage 4-Pin Sealed Automotive Battery & BMS Harness Assembly, IP67 Loom","XYZ Pvt Ltd Greater Noida Plant 2",4.100,20500.00,"HLPL-HARN-OBD2-16P"

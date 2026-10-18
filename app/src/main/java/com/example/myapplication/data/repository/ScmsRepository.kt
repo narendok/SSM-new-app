@@ -689,7 +689,7 @@ class ScmsRepositoryImpl(
                 testTitle = "Conducted Electrical Transient Immunity (Pulse 1, 2a, 3a/b)",
                 condition = "Pulse 1: -100V, Pulse 2a: +37V, Pulse 3a/b: ±150V",
                 acceptanceCriteria = "Status II (No malfunction, auto recovery)",
-                lab = "Internal Lab (Hexense)",
+                lab = "Internal Lab (XYZ Pvt Ltd)",
                 status = "Passed",
                 technician = "Jordan Blake (QA Lead)",
                 signOffTimestamp = "2026-10-15 17:00"
@@ -700,7 +700,7 @@ class ScmsRepositoryImpl(
                 testTitle = "Centralized Load Dump 5b Pulse Clamping",
                 condition = "Us = 87V, Us* = 40V clamped via SM5S24A TVS, td = 400ms",
                 acceptanceCriteria = "Zero component degradation; MCU watchdog intact",
-                lab = "Internal Lab (Hexense)",
+                lab = "Internal Lab (XYZ Pvt Ltd)",
                 status = "Passed",
                 technician = "Jordan Blake (QA Lead)",
                 signOffTimestamp = "2026-10-16 11:30"
@@ -722,7 +722,7 @@ class ScmsRepositoryImpl(
                 testTitle = "Electrostatic Discharge (ESD) Immunity",
                 condition = "±8 kV contact discharge, ±15 kV air discharge",
                 acceptanceCriteria = "Class A performance; zero memory corruption",
-                lab = "Internal Lab (Hexense)",
+                lab = "Internal Lab (XYZ Pvt Ltd)",
                 status = "Passed",
                 technician = "Jordan Blake (QA Lead)",
                 signOffTimestamp = "2026-10-17 09:45"
@@ -744,7 +744,7 @@ class ScmsRepositoryImpl(
                 testTitle = "IP67 Enclosure Ingress Protection (Dust & Water Submersion)",
                 condition = "Talcum dust 8 hours + 1m water immersion 30 mins",
                 acceptanceCriteria = "Zero dust ingress; zero water penetration into enclosure",
-                lab = "Internal Lab (Hexense)",
+                lab = "Internal Lab (XYZ Pvt Ltd)",
                 status = "Passed",
                 technician = "Samira Holt (MECH Lead)",
                 signOffTimestamp = "2026-10-17 15:00"
@@ -766,7 +766,7 @@ class ScmsRepositoryImpl(
                 testTitle = "Emergency Panic Button & Dual-Server Telematics Transmission",
                 condition = "Simulated crash & panic press under GSM dead-zone",
                 acceptanceCriteria = "NMEA packet queued in flash; sent within 5s of network restore",
-                lab = "Internal Lab (Hexense)",
+                lab = "Internal Lab (XYZ Pvt Ltd)",
                 status = "Passed",
                 technician = "Devon Lane (ESW Lead)",
                 signOffTimestamp = "2026-10-18 01:20"
@@ -1462,7 +1462,7 @@ class ScmsRepositoryImpl(
                 validUntil = "2026-11-10",
                 uncertaintySpec = "±0.5% DC Gain Accuracy",
                 status = "Valid / Certified",
-                certificateUrl = "https://hexense.internal/certs/CAL-2026-089.pdf"
+                certificateUrl = "https://example.invalid/certs/CAL-2026-089.pdf"
             ),
             CalibrationCertificate(
                 certId = "CAL-2026-091",
@@ -1473,7 +1473,7 @@ class ScmsRepositoryImpl(
                 validUntil = "2026-11-20",
                 uncertaintySpec = "±0.02 N (CPK > 1.67)",
                 status = "Expiring (< 30d)",
-                certificateUrl = "https://hexense.internal/certs/CAL-2026-091.pdf"
+                certificateUrl = "https://example.invalid/certs/CAL-2026-091.pdf"
             )
         )
     )
@@ -1560,7 +1560,7 @@ class ScmsRepositoryImpl(
                 deptCode = "EHW",
                 deptName = "Embedded Hardware Engineering",
                 roleTitle = "Hardware Engineering Lead",
-                email = "avery.vale@hexenselabs.com",
+                email = "avery.vale@example.com",
                 phone = "+91 98230 11401",
                 skillMatrixLevel = "L4 Expert / Trainer",
                 certifications = listOf("Altium Designer Pro", "AEC-Q100 Compliance", "High-Speed ECAD Layout")
@@ -1571,7 +1571,7 @@ class ScmsRepositoryImpl(
                 deptCode = "EMF",
                 deptName = "Electronics Manufacturing",
                 roleTitle = "SMT Operations Lead",
-                email = "casey.rowan@hexenselabs.com",
+                email = "casey.rowan@example.com",
                 phone = "+91 98230 11402",
                 skillMatrixLevel = "L4 Expert / Trainer",
                 certifications = listOf("IPC-A-610 Class 3", "Yamaha SMT Programming", "Reflow Thermal Profiling")
@@ -1582,7 +1582,7 @@ class ScmsRepositoryImpl(
                 deptCode = "QA",
                 deptName = "Quality Assurance & APQP",
                 roleTitle = "Quality Assurance Lead",
-                email = "jordan.blake@hexenselabs.com",
+                email = "jordan.blake@example.com",
                 phone = "+91 98230 11403",
                 skillMatrixLevel = "L4 Expert / Trainer",
                 certifications = listOf("IATF 16949 Lead Auditor", "PPAP Level 3", "VDA 6.3 Process Auditor")
@@ -1593,7 +1593,7 @@ class ScmsRepositoryImpl(
                 deptCode = "PUR",
                 deptName = "Purchasing & SCM",
                 roleTitle = "Procurement & Stores Lead",
-                email = "morgan.reed@hexenselabs.com",
+                email = "morgan.reed@example.com",
                 phone = "+91 98230 11404",
                 skillMatrixLevel = "L3 Autonomous Operator",
                 certifications = listOf("ASL Supplier Audit", "ERP Stores Governance", "Dangerous Goods Logistics")
@@ -1604,7 +1604,7 @@ class ScmsRepositoryImpl(
                 deptCode = "ESW",
                 deptName = "Firmware & Software",
                 roleTitle = "Lead Embedded Firmware Architect",
-                email = "devon.lane@hexenselabs.com",
+                email = "devon.lane@example.com",
                 phone = "+91 98230 11405",
                 skillMatrixLevel = "L4 Expert / Trainer",
                 certifications = listOf("AUTOSAR Classic", "ISO 26262 ASIL-B", "Secure Boot & HSM")
@@ -1615,7 +1615,7 @@ class ScmsRepositoryImpl(
                 deptCode = "HROPS",
                 deptName = "HR & Operations",
                 roleTitle = "Security & Facilities Officer",
-                email = "taylor.quinn@hexenselabs.com",
+                email = "taylor.quinn@example.com",
                 phone = "+91 98230 11406",
                 skillMatrixLevel = "L3 Autonomous Operator",
                 certifications = listOf("Factory Act Compliance", "ISO 45001 OHSAS", "CCTV & Physical Security")
@@ -1731,7 +1731,7 @@ class ScmsRepositoryImpl(
                 iatfClause = "IATF 16949 §8.3.4 (Design Review & Verification Gate)",
                 amountInr = 0.0,
                 expenseReasonDetails = "Non-monetary engineering gateway task. Approving this gate unlocks Stage 5 SMT Pilot Build in the APQP Stepper.",
-                vendorOrBeneficiary = "Hexense Labs Internal Engineering",
+                vendorOrBeneficiary = "XYZ Pvt Ltd Internal Engineering",
                 travelPolicyCompliant = true,
                 travelPolicyNotes = "N/A - Quality Gate Approval"
             ),
@@ -1805,7 +1805,7 @@ class ScmsRepositoryImpl(
                 updatedAt = "2026-10-18 10:05",
                 requester = "Taylor Quinn",
                 department = "HROPS",
-                project = "Plant Facility Expansion (Six Sense Mobility Line 2)",
+                project = "Plant Facility Expansion (XYZ Pvt Ltd Line 2)",
                 description = "Procurement and installation of 4x dual-fan overhead ionizing blowers (Desco/Simco-Ion) for manual inspection and repair benches.",
                 riskLevel = "Medium",
                 iatfClause = "IATF 16949 §7.1.3.1 (Plant, Facility & Equipment Planning)",
@@ -2589,7 +2589,7 @@ class ScmsRepositoryImpl(
         // 6. Check Employee / Staff Badge (Stage 9)
         val matchingEmp = _employeeDirectory.value.find { it.employeeId.equals(qUpper, ignoreCase = true) || it.name.contains(q, ignoreCase = true) }
         if (matchingEmp != null || qUpper.startsWith("HLPL-EMP-") || qUpper.startsWith("BADGE-")) {
-            val emp = matchingEmp ?: EmployeeDirectoryRecord(qUpper, "Personnel Member", "OPS", "Operations", "Staff", "staff@hexenselabs.com", "+91 90000 00000", "L3 Autonomous Operator", listOf("Factory Standard"), "Active On Duty")
+            val emp = matchingEmp ?: EmployeeDirectoryRecord(qUpper, "Personnel Member", "OPS", "Operations", "Staff", "staff@example.com", "+91 90000 00000", "L3 Autonomous Operator", listOf("Factory Standard"), "Active On Duty")
             return ResolvedScanResult(
                 rawCode = q,
                 entityType = ScannedEntityType.EMPLOYEE_BADGE,
