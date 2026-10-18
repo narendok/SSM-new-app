@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Engineering
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
@@ -82,6 +83,8 @@ fun CommandCenterScreen(
     val hardwarePath by scmsRepository.hardwarePath.collectAsState()
     val engineeringSquad by scmsRepository.engineeringSquad.collectAsState()
     val clientDeliverables by scmsRepository.clientDeliverables.collectAsState()
+    val approvals by scmsRepository.approvals.collectAsState()
+    val pendingApprovalsCount = approvals.count { it.outcome == "Pending" }
 
     var selectedStageForDetail by remember { mutableStateOf<ApqpStage?>(null) }
     var showRaciMatrix by remember { mutableStateOf(false) }
@@ -89,6 +92,7 @@ fun CommandCenterScreen(
     var showHardwarePathModal by remember { mutableStateOf(false) }
     var showClientTicketModal by remember { mutableStateOf(false) }
     var showTravelerModal by remember { mutableStateOf(false) }
+    var showApprovalsScreen by remember { mutableStateOf(false) }
     var ticketTitle by remember { mutableStateOf("") }
     var ticketDesc by remember { mutableStateOf("") }
     var ticketConfirmationMsg by remember { mutableStateOf<String?>(null) }
@@ -149,6 +153,92 @@ fun CommandCenterScreen(
                         modifier = Modifier.height(28.dp)
                     ) {
                         Text("Switch", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // 1b. Human Approvals & Governance Decision Center Banner (Master Plan §26.3)
+        item {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showApprovalsScreen = true },
+                color = if (pendingApprovalsCount > 0) Color(0xFFFFF3E0) else MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(10.dp),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (pendingApprovalsCount > 0) Color(0xFFFFB74D) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (pendingApprovalsCount > 0) Color(0xFFFFE0B2) else MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Gavel,
+                                    contentDescription = null,
+                                    tint = if (pendingApprovalsCount > 0) Color(0xFFE65100) else MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Approvals & Governance Queue",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (pendingApprovalsCount > 0) Color(0xFFE65100) else MaterialTheme.colorScheme.onSurface
+                                )
+                                if (pendingApprovalsCount > 0) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = Color(0xFFC62828)
+                                    ) {
+                                        Text(
+                                            text = "$pendingApprovalsCount PENDING",
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color.White,
+                                            fontSize = 9.sp
+                                        )
+                                    }
+                                }
+                            }
+                            Text(
+                                text = "Expenses, Travel, POs, Deviations & Office Assets under IATF 16949 §8.3.4",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 10.5.sp,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    FilledTonalButton(
+                        onClick = { showApprovalsScreen = true },
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 3.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.height(28.dp)
+                    ) {
+                        Text("Review", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1066,6 +1156,18 @@ fun CommandCenterScreen(
                     onBack = { showTravelerModal = false }
                 )
             }
+        }
+    }
+
+    if (showApprovalsScreen) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showApprovalsScreen = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            ApprovalsScreen(
+                scmsRepository = scmsRepository,
+                onBack = { showApprovalsScreen = false }
+            )
         }
     }
 }

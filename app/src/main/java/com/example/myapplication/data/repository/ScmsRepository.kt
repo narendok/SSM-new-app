@@ -35,6 +35,9 @@ import com.example.myapplication.data.model.VisitorLogEntry
 import com.example.myapplication.data.model.GatePassRecord
 import com.example.myapplication.data.model.EmployeeDirectoryRecord
 import com.example.myapplication.data.model.AiProceduralQuery
+import com.example.myapplication.data.model.ApprovalDecisionRecord
+import com.example.myapplication.data.model.ApprovalCategory
+import com.example.myapplication.data.model.TravelPolicyRule
 import com.example.myapplication.data.security.SecureStorage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -94,6 +97,10 @@ interface ScmsRepository {
     // Stage 10: AI Procedural Queries
     val aiQueries: StateFlow<List<AiProceduralQuery>>
 
+    // Human Approvals & Governance Center (Master Plan §26.3)
+    val approvals: StateFlow<List<ApprovalDecisionRecord>>
+    val travelPolicyRules: StateFlow<List<TravelPolicyRule>>
+
     fun switchRole(role: DepartmentRole)
     fun lookupMouserCatalog(mpn: String): PartComponent?
     fun registerPart(part: PartComponent): Result<Unit>
@@ -123,6 +130,11 @@ interface ScmsRepository {
     fun verifyGatePass(passNumber: String, securityOfficer: String): Result<Unit>
     fun queryAiAssistant(prompt: String): AiProceduralQuery
     fun resolveScanQuery(query: String): ResolvedScanResult
+
+    // Approvals Decision Methods
+    fun approveGate(approvalId: String, notes: String): Result<Unit>
+    fun rejectGate(approvalId: String, reason: String): Result<Unit>
+    fun returnGate(approvalId: String, reworkNotes: String): Result<Unit>
 }
 
 data class WhatIfSimulationResult(
@@ -1635,6 +1647,178 @@ class ScmsRepositoryImpl(
     )
     override val aiQueries: StateFlow<List<AiProceduralQuery>> = _aiQueries.asStateFlow()
 
+    // 35. Web-Configured Travel Policy Rules (Customizable on Web Portal per Master Plan §26.3)
+    private val _travelPolicyRules = MutableStateFlow(
+        listOf(
+            TravelPolicyRule(
+                ruleId = "POL-TRV-01",
+                categoryName = "Domestic Air Travel & Flight",
+                maxPerDiemInr = 6500.0,
+                requiresPreApprovalAboveInr = 15000.0,
+                allowedHotelTier = "3-Star / Corporate Tier B",
+                flightAdvanceNoticeDays = 7,
+                webConfigVersion = "v2.4-WebAuthority"
+            ),
+            TravelPolicyRule(
+                ruleId = "POL-TRV-02",
+                categoryName = "Local Inter-Plant Transit & Cabs",
+                maxPerDiemInr = 2500.0,
+                requiresPreApprovalAboveInr = 5000.0,
+                allowedHotelTier = "Standard Corporate",
+                flightAdvanceNoticeDays = 0,
+                webConfigVersion = "v2.4-WebAuthority"
+            )
+        )
+    )
+    override val travelPolicyRules: StateFlow<List<TravelPolicyRule>> = _travelPolicyRules.asStateFlow()
+
+    // 36. Approvals & Governance Decision Queue (Master Plan §26.3 & Enterprise Categories)
+    private val _approvals = MutableStateFlow(
+        listOf(
+            // 1. Expense Request
+            ApprovalDecisionRecord(
+                id = "APPR-EXP-001",
+                title = "Rapid Prototyping Thermal Paste & Soldering Flux Consumables",
+                recordId = "EXP-2026-089",
+                category = ApprovalCategory.EXPENSE,
+                outcome = "Pending",
+                updatedAt = "2026-10-18 14:30",
+                requester = "Casey Rowan",
+                department = "EMF",
+                project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
+                description = "Procurement of specialized Henkel Loctite 3880 thermal adhesive and high-temperature lead-free SAC305 solder paste for SMT pilot line testing.",
+                riskLevel = "Medium",
+                iatfClause = "IATF 16949 §8.5.1 (Tooling & Consumables Release)",
+                amountInr = 42500.0,
+                expenseReasonDetails = "Urgent consumable replenishment for SMT Line 2 pilot run. Standard lead time via bulk vendor was 4 weeks; local supplier expedited for trial.",
+                vendorOrBeneficiary = "Sumitron Exports Pvt Ltd",
+                travelPolicyCompliant = true,
+                travelPolicyNotes = "Standard departmental OPEX line item."
+            ),
+            // 2. Travel Expense (with customizable travel policy check)
+            ApprovalDecisionRecord(
+                id = "APPR-TRV-002",
+                title = "OEM Client Plant Site Visit & Telematics Gateway Integration",
+                recordId = "TRV-2026-034",
+                category = ApprovalCategory.TRAVEL,
+                outcome = "Pending",
+                updatedAt = "2026-10-18 11:15",
+                requester = "Devon Lane",
+                department = "ESW",
+                project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
+                description = "On-site engineering calibration and CAN J1939 telemetry logging at Tata Motors Pune Chakan Plant over 3 days.",
+                riskLevel = "Medium",
+                iatfClause = "ISO 9001 §8.4 (Travel & Field Engineering Authorization)",
+                amountInr = 28400.0,
+                expenseReasonDetails = "Flight: BLR-PNQ round trip (₹14,200), Hotel: 2 nights at Lemon Tree Chakan (₹9,200), Local taxi & per diem food (₹5,000). Total claimed ₹28,400.",
+                vendorOrBeneficiary = "Devon Lane (Employee Reimbursement)",
+                travelPolicyCompliant = true,
+                travelPolicyNotes = "Complies with Web Travel Policy POL-TRV-01: Hotel tier verified, corporate discount applied, advance booking within window."
+            ),
+            // 3. Task Approval Request
+            ApprovalDecisionRecord(
+                id = "APPR-TSK-003",
+                title = "Hardware Schematics Frozen Sign-off Gate EHW-SCH-01",
+                recordId = "TSK-EHW-GATE-04",
+                category = ApprovalCategory.TASK,
+                outcome = "Pending",
+                updatedAt = "2026-10-18 09:40",
+                requester = "Avery Vale",
+                department = "EHW",
+                project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
+                description = "Formal sign-off of Stage 4 Schematics after addressing TI Buck regulator thermal relief and transient suppression diode footprint.",
+                riskLevel = "Critical",
+                iatfClause = "IATF 16949 §8.3.4 (Design Review & Verification Gate)",
+                amountInr = 0.0,
+                expenseReasonDetails = "Non-monetary engineering gateway task. Approving this gate unlocks Stage 5 SMT Pilot Build in the APQP Stepper.",
+                vendorOrBeneficiary = "Hexense Labs Internal Engineering",
+                travelPolicyCompliant = true,
+                travelPolicyNotes = "N/A - Quality Gate Approval"
+            ),
+            // 4. Deviation Request for Procurement Teammates
+            ApprovalDecisionRecord(
+                id = "APPR-DEV-004",
+                title = "Procurement Deviation: Secondary Source TVS Diode Automotive Grade",
+                recordId = "DEV-PUR-2026-012",
+                category = ApprovalCategory.PROCUREMENT_DEVIATION,
+                outcome = "Pending",
+                updatedAt = "2026-10-18 15:10",
+                requester = "Morgan Reed",
+                department = "PUR",
+                project = "HLPL-SLCT-01 (AIS-140 Gateway)",
+                description = "Deviation to permit Vishay SM6T36CA (AEC-Q101) as drop-in alternative for Littelfuse TPSMAJ36A due to global 16-week allocation delay.",
+                riskLevel = "High",
+                iatfClause = "IATF 16949 §8.7.1.1 (Customer / Engineering Concession & Deviation)",
+                amountInr = 185000.0,
+                expenseReasonDetails = "Price variance: +₹1.20 per unit for 15,000 pcs lot. EHW team reviewed clamping voltage and confirmed 100% pin-to-pin and electrical compatibility.",
+                vendorOrBeneficiary = "Arrow Electronics India Pvt Ltd",
+                travelPolicyCompliant = true,
+                travelPolicyNotes = "Procurement SCM Concession"
+            ),
+            // 5. Purchase Order Request
+            ApprovalDecisionRecord(
+                id = "APPR-PO-005",
+                title = "Purchase Order Issuance: Quectel LTE Cat 1 Bis Modules 5,000 Pcs",
+                recordId = "HLPL-PO-2026-042",
+                category = ApprovalCategory.PURCHASE_ORDER,
+                outcome = "Pending",
+                updatedAt = "2026-10-18 16:20",
+                requester = "Morgan Reed",
+                department = "PUR",
+                project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
+                description = "Commercial PO release for 5,000 pcs EG915N-EU cellular modules under contracted Master Pricing Agreement.",
+                riskLevel = "Critical",
+                iatfClause = "ISO 9001 §8.4 (Purchasing Authorization & Supplier Control)",
+                amountInr = 5177000.0,
+                expenseReasonDetails = "Batch procurement for Pilot SMT Build and ARAI Type Approval testing batch. Rate locked at ₹1,035.40/unit with 30-day net credit terms.",
+                vendorOrBeneficiary = "Quectel Wireless Solutions Co., Ltd.",
+                travelPolicyCompliant = true,
+                travelPolicyNotes = "Standard PO Disbursement"
+            ),
+            // 6. Finance Approval
+            ApprovalDecisionRecord(
+                id = "APPR-FIN-006",
+                title = "Advance Milestone Disbursement: Molex Hard Injection Tooling",
+                recordId = "FIN-ADV-2026-018",
+                category = ApprovalCategory.FINANCE_DISBURSEMENT,
+                outcome = "Pending",
+                updatedAt = "2026-10-18 12:00",
+                requester = "Priya Voss",
+                department = "FIN",
+                project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
+                description = "40% advance release for precision steel tooling molds for automotive IP67 sealed multi-pin connectors.",
+                riskLevel = "High",
+                iatfClause = "ISO 9001 §8.4.3 (Financial Release & Milestone Settlement)",
+                amountInr = 1450000.0,
+                expenseReasonDetails = "Contractual Phase 1 Tooling Advance against Proforma Invoice PI-MOL-9921 with bank guarantee validated by Accounts.",
+                vendorOrBeneficiary = "Molex India Tooling Division",
+                travelPolicyCompliant = true,
+                travelPolicyNotes = "Commercial Capex Advance"
+            ),
+            // 7. Operations Team Office/Plant Asset Approval
+            ApprovalDecisionRecord(
+                id = "APPR-AST-007",
+                title = "Operations Asset: ESD-Safe Workstation & Ionizer Blowers for Line 2",
+                recordId = "AST-OPS-2026-009",
+                category = ApprovalCategory.OFFICE_ASSET,
+                outcome = "Pending",
+                updatedAt = "2026-10-18 10:05",
+                requester = "Taylor Quinn",
+                department = "HROPS",
+                project = "Plant Facility Expansion (Six Sense Mobility Line 2)",
+                description = "Procurement and installation of 4x dual-fan overhead ionizing blowers (Desco/Simco-Ion) for manual inspection and repair benches.",
+                riskLevel = "Medium",
+                iatfClause = "IATF 16949 §7.1.3.1 (Plant, Facility & Equipment Planning)",
+                amountInr = 85000.0,
+                expenseReasonDetails = "Required to meet ANSI/ESD S20.20 and IATF 16949 zero-ESD audit findings prior to customer plant audit next month.",
+                vendorOrBeneficiary = "Static Control Solutions India",
+                travelPolicyCompliant = true,
+                travelPolicyNotes = "Facility CapEx/Safety Line"
+            )
+        )
+    )
+    override val approvals: StateFlow<List<ApprovalDecisionRecord>> = _approvals.asStateFlow()
+
     override fun switchRole(role: DepartmentRole) {
         _currentRole.value = role
     }
@@ -2497,6 +2681,117 @@ class ScmsRepositoryImpl(
             actionLabel = "Search Mouser Catalog",
             actionRoute = "inventory"
         )
+    }
+
+    override fun approveGate(approvalId: String, notes: String): Result<Unit> {
+        val current = _approvals.value
+        val target = current.find { it.id == approvalId } ?: return Result.failure(IllegalArgumentException("Approval record $approvalId not found"))
+        val signer = "${_currentRole.value.leadName} (${_currentRole.value.title})"
+        val timestamp = currentTime()
+
+        val updatedList = current.map { item ->
+            if (item.id == approvalId) {
+                item.copy(
+                    outcome = "Approved",
+                    comments = notes.ifBlank { "Sign-off verified and approved under ISO/IATF compliance." },
+                    signedBy = signer,
+                    signedAt = timestamp,
+                    updatedAt = timestamp
+                )
+            } else {
+                item
+            }
+        }
+        _approvals.value = updatedList
+
+        // Immutable Audit Log Attribution
+        val auditEntry = AuditLogEntry(
+            id = "AUDIT-APPR-${UUID.randomUUID().toString().take(6).uppercase()}",
+            timestamp = timestamp,
+            actor = signer,
+            action = "APPROVE_GOVERNANCE_GATE",
+            partMpn = "${target.id} (${target.recordId})",
+            quantityDelta = if (target.amountInr > 0) target.amountInr.toInt() else 1,
+            reason = "Approved gate '${target.title}' [${target.category.label}]. Notes: $notes. Clause: ${target.iatfClause}. Amount: ₹${target.amountInr}",
+            lotNumber = target.recordId
+        )
+        _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+
+        return Result.success(Unit)
+    }
+
+    override fun rejectGate(approvalId: String, reason: String): Result<Unit> {
+        val current = _approvals.value
+        val target = current.find { it.id == approvalId } ?: return Result.failure(IllegalArgumentException("Approval record $approvalId not found"))
+        val signer = "${_currentRole.value.leadName} (${_currentRole.value.title})"
+        val timestamp = currentTime()
+
+        val updatedList = current.map { item ->
+            if (item.id == approvalId) {
+                item.copy(
+                    outcome = "Rejected",
+                    comments = reason.ifBlank { "Rejected due to non-conformance with requirements." },
+                    signedBy = signer,
+                    signedAt = timestamp,
+                    updatedAt = timestamp
+                )
+            } else {
+                item
+            }
+        }
+        _approvals.value = updatedList
+
+        // Immutable Audit Log Attribution
+        val auditEntry = AuditLogEntry(
+            id = "AUDIT-REJ-${UUID.randomUUID().toString().take(6).uppercase()}",
+            timestamp = timestamp,
+            actor = signer,
+            action = "REJECT_GOVERNANCE_GATE",
+            partMpn = "${target.id} (${target.recordId})",
+            quantityDelta = 0,
+            reason = "Rejected gate '${target.title}' [${target.category.label}]. Reason: $reason. Clause: ${target.iatfClause}",
+            lotNumber = target.recordId
+        )
+        _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+
+        return Result.success(Unit)
+    }
+
+    override fun returnGate(approvalId: String, reworkNotes: String): Result<Unit> {
+        val current = _approvals.value
+        val target = current.find { it.id == approvalId } ?: return Result.failure(IllegalArgumentException("Approval record $approvalId not found"))
+        val signer = "${_currentRole.value.leadName} (${_currentRole.value.title})"
+        val timestamp = currentTime()
+
+        val updatedList = current.map { item ->
+            if (item.id == approvalId) {
+                item.copy(
+                    outcome = "Returned",
+                    comments = reworkNotes.ifBlank { "Returned to requesting lead for revisions." },
+                    signedBy = signer,
+                    signedAt = timestamp,
+                    updatedAt = timestamp
+                )
+            } else {
+                item
+            }
+        }
+        _approvals.value = updatedList
+
+        // Immutable Audit Log Attribution
+        val auditEntry = AuditLogEntry(
+            id = "AUDIT-RET-${UUID.randomUUID().toString().take(6).uppercase()}",
+            timestamp = timestamp,
+            actor = signer,
+            action = "RETURN_FOR_REWORK",
+            partMpn = "${target.id} (${target.recordId})",
+            quantityDelta = 0,
+            reason = "Returned gate '${target.title}' [${target.category.label}] for rework. Notes: $reworkNotes. Clause: ${target.iatfClause}",
+            lotNumber = target.recordId
+        )
+        _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+
+        return Result.success(Unit)
     }
 }
 

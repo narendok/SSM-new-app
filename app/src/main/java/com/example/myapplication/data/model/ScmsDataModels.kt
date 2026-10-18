@@ -599,3 +599,59 @@ data class AiProceduralQuery(
     val referencedSop: String,
     val confidencePct: Int
 )
+
+/**
+ * Functional Categories for Human Approvals Center per Master Plan §26.3 & Enterprise Ops.
+ */
+enum class ApprovalCategory(val label: String, val badgeColorHex: Long) {
+    EXPENSE("Expense Request", 0xFFE65100),
+    TRAVEL("Travel & Stay Expense", 0xFF00838F),
+    TASK("Task Approval", 0xFF2E7D32),
+    PROCUREMENT_DEVIATION("Procurement Deviation", 0xFFC2185B),
+    PURCHASE_ORDER("Purchase Order (PO)", 0xFF1565C0),
+    FINANCE_DISBURSEMENT("Finance & Advance", 0xFF6A1B9A),
+    OFFICE_ASSET("Office & Plant Asset", 0xFF455A64)
+}
+
+/**
+ * Enterprise Human Approval & Governance Gate Decision Record (Master Plan §26.3).
+ * Captures detailed expense reasons, budget impact, procurement deviations, and IATF/ISO governance.
+ */
+@Serializable
+data class ApprovalDecisionRecord(
+    val id: String,
+    val title: String,
+    val recordId: String,
+    val category: ApprovalCategory,
+    val outcome: String, // "Pending", "Approved", "Rejected", "Returned"
+    val updatedAt: String,
+    val requester: String,
+    val department: String,
+    val project: String,
+    val description: String,
+    val riskLevel: String, // "Critical", "High", "Medium", "Low"
+    val iatfClause: String,
+    val amountInr: Double = 0.0,
+    val expenseReasonDetails: String = "",
+    val vendorOrBeneficiary: String = "",
+    val comments: String? = null,
+    val signedBy: String? = null,
+    val signedAt: String? = null,
+    // Customizable travel policy check indicators (policy rule configured on web portal)
+    val travelPolicyCompliant: Boolean = true,
+    val travelPolicyNotes: String = ""
+)
+
+/**
+ * Web-Configured Travel & Expense Policy Rules for Verification in Mobile (Master Plan §26.3).
+ */
+@Serializable
+data class TravelPolicyRule(
+    val ruleId: String,
+    val categoryName: String,
+    val maxPerDiemInr: Double,
+    val requiresPreApprovalAboveInr: Double,
+    val allowedHotelTier: String,
+    val flightAdvanceNoticeDays: Int,
+    val webConfigVersion: String = "v2.4-WebAuthority"
+)

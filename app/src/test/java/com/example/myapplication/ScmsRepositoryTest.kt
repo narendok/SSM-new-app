@@ -529,6 +529,90 @@ class ScmsRepositoryTest {
         assertEquals("SCMS Automotive Operations Standard", qmsResponse.detectedTopic)
         assertTrue(qmsResponse.referencedSop.contains("IATF 16949"))
     }
+
+    @Test
+    fun testApprovalCategoriesAndDecisionFlow() {
+        val initialApprovals = repository.approvals.value
+        assertTrue("Approvals queue must contain seeded governance records", initialApprovals.isNotEmpty())
+
+        // 1. Check all user-specified enterprise categories are populated
+        val expenseReq = initialApprovals.find { it.category == com.example.myapplication.data.model.ApprovalCategory.EXPENSE }
+        assertNotNull("Expense request must exist", expenseReq)
+        assertEquals("Casey Rowan", expenseReq?.requester)
+        assertEquals(42500.0, expenseReq?.amountInr ?: 0.0, 0.01)
+
+        val travelReq = initialApprovals.find { it.category == com.example.myapplication.data.model.ApprovalCategory.TRAVEL }
+        assertNotNull("Travel expense request must exist", travelReq)
+        assertTrue(travelReq!!.travelPolicyCompliant)
+        assertEquals("Devon Lane", travelReq.requester)
+
+        val taskReq = initialApprovals.find { it.category == com.example.myapplication.data.model.ApprovalCategory.TASK }
+        assertNotNull("Task approval request must exist", taskReq)
+
+        val devReq = initialApprovals.find { it.category == com.example.myapplication.data.model.ApprovalCategory.PROCUREMENT_DEVIATION }
+        assertNotNull("Procurement deviation must exist", devReq)
+        assertEquals("Morgan Reed", devReq?.requester)
+
+        val poReq = initialApprovals.find { it.category == com.example.myapplication.data.model.ApprovalCategory.PURCHASE_ORDER }
+        assertNotNull("Purchase Order request must exist", poReq)
+
+        val finReq = initialApprovals.find { it.category == com.example.myapplication.data.model.ApprovalCategory.FINANCE_DISBURSEMENT }
+        assertNotNull("Finance approval must exist", finReq)
+
+        val assetReq = initialApprovals.find { it.category == com.example.myapplication.data.model.ApprovalCategory.OFFICE_ASSET }
+        assertNotNull("Office/Plant asset approval must exist", assetReq)
+        assertEquals("Taylor Quinn", assetReq?.requester)
+
+        // 2. Test Approval Decision Flow with Audit Attribution
+        val targetId = expenseReq!!.id
+        val approveResult = repository.approveGate(targetId, "Verified against SMT Line 2 pilot budget. Approved.")
+        assertTrue(approveResult.isSuccess)
+
+        val approvedItem = repository.approvals.value.find { it.id == targetId }!!
+        assertEquals("Approved", approvedItem.outcome)
+        assertTrue(approvedItem.signedBy!!.contains("Executive Admin / MD"))
+        assertEquals("Verified against SMT Line 2 pilot budget. Approved.", approvedItem.comments)
+
+        // 3. Test Reject Flow
+        val devTargetId = devReq!!.id
+        val rejectResult = repository.rejectGate(devTargetId, "Secondary vendor TVS clamp voltage exceeds tolerance.")
+        assertTrue(rejectResult.isSuccess)
+
+        val rejectedItem = repository.approvals.value.find { it.id == devTargetId }!!
+        assertEquals("Rejected", rejectedItem.outcome)
+        assertEquals("Secondary vendor TVS clamp voltage exceeds tolerance.", rejectedItem.comments)
+
+        // 4. Test Return for Rework Flow
+        val poTargetId = poReq!!.id
+        val returnResult = repository.returnGate(poTargetId, "Please re-negotiate 45-day payment terms with Quectel.")
+        assertTrue(returnResult.isSuccess)
+
+        val returnedItem = repository.approvals.value.find { it.id == poTargetId }!!
+        assertEquals("Returned", returnedItem.outcome)
+        assertEquals("Please re-negotiate 45-day payment terms with Quectel.", returnedItem.comments)
+
+        // 5. Verify Immutable Audit Trail Entries
+        val auditLogs = repository.auditLogs.value
+        val latestApproveAudit = auditLogs.find { it.action == "APPROVE_GOVERNANCE_GATE" }
+        assertNotNull("Audit entry for approval must be recorded", latestApproveAudit)
+        assertTrue(latestApproveAudit!!.reason.contains("Verified against SMT Line 2"))
+
+        val latestRejectAudit = auditLogs.find { it.action == "REJECT_GOVERNANCE_GATE" }
+        assertNotNull("Audit entry for rejection must be recorded", latestRejectAudit)
+
+        val latestReturnAudit = auditLogs.find { it.action == "RETURN_FOR_REWORK" }
+        assertNotNull("Audit entry for return must be recorded", latestReturnAudit)
+    }
+
+    @Test
+    fun testWebConfiguredTravelPolicyVerification() {
+        val rules = repository.travelPolicyRules.value
+        assertTrue("Travel policy rules must be present", rules.isNotEmpty())
+        val airRule = rules.find { it.ruleId == "POL-TRV-01" }!!
+        assertEquals(6500.0, airRule.maxPerDiemInr, 0.01)
+        assertEquals(15000.0, airRule.requiresPreApprovalAboveInr, 0.01)
+        assertEquals("v2.4-WebAuthority", airRule.webConfigVersion)
+    }
 }
 
 

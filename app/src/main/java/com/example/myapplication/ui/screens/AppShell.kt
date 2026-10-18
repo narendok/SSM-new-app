@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.model.AuthState
@@ -66,11 +67,14 @@ fun AppShell(viewModel: MainViewModel) {
     val selectedTab by viewModel.selectedTab.collectAsState()
     val authState by viewModel.authState.collectAsState()
     val currentRole by viewModel.scmsRepository.currentRole.collectAsState()
+    val approvals by viewModel.scmsRepository.approvals.collectAsState()
+    val pendingApprovalsCount = approvals.count { it.outcome == "Pending" }
 
     var showAuthDialog by remember { mutableStateOf(false) }
     var showRoleSwitcherDialog by remember { mutableStateOf(false) }
     var showScannerModal by remember { mutableStateOf(false) }
     var showAiAssistantModal by remember { mutableStateOf(false) }
+    var showApprovalsModal by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -157,6 +161,35 @@ fun AppShell(viewModel: MainViewModel) {
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp
                             )
+                        }
+                    }
+                    IconButton(
+                        onClick = { showApprovalsModal = true },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.TopEnd) {
+                            Icon(
+                                imageVector = Icons.Default.Gavel,
+                                contentDescription = "Approvals & Governance Center",
+                                tint = if (pendingApprovalsCount > 0) Color(0xFFE65100) else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(19.dp)
+                            )
+                            if (pendingApprovalsCount > 0) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color(0xFFC62828),
+                                    modifier = Modifier.size(13.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "$pendingApprovalsCount",
+                                            color = Color.White,
+                                            fontSize = 8.5.sp,
+                                            fontWeight = FontWeight.Black
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     IconButton(
@@ -302,5 +335,17 @@ fun AppShell(viewModel: MainViewModel) {
             scmsRepository = viewModel.scmsRepository,
             onDismiss = { showAiAssistantModal = false }
         )
+    }
+
+    if (showApprovalsModal) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showApprovalsModal = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            ApprovalsScreen(
+                scmsRepository = viewModel.scmsRepository,
+                onBack = { showApprovalsModal = false }
+            )
+        }
     }
 }
