@@ -1,18 +1,18 @@
-> Historical reference snapshot. Current web/backend authority: [web master plan](../../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md), �28 (19 October 2026). Android execution authority: [Android plan](../planning/SSM_ONE_ANDROID_BUILD_PLAN.md), �9. Completion claims below must be read with those current evidence qualifications.`n`n# SSM One - Web Portal Master Plan
+# SSM One - Web Portal Implementation Plan
 
 ## Plan Boundary
 
-This document is the single, authoritative master plan for the **XYZ Pvt Ltd / XYZ Pvt Ltd Smart Company Management System (SCMS) Web Portal and its backend architecture**. It specifies the unified enterprise architecture, operational flows, data schemas, department ownership models, document controls, modular hardware reusability, and delivery roadmap.
+This document is the detailed implementation subplan for the SSM One web portal and backend. The cross-platform authority is the [SSM-new root master plan](../SSM_ONE_MASTER_PLAN.md); this web plan must follow its shared department names, platform contracts, delivery gates, and acceptance rules. It specifies the portal architecture, operational flows, data schemas, department ownership, document controls, and web delivery roadmap.
 
 The target is the connected Lovable project `a3399684-daab-4b38-8666-187b96b451af`, managed Supabase PostgreSQL backend, and private Cloud Storage. Web/Supabase owns identities, role permissions, operational records, official document numbering (`HLPL-[PROJ_ID]-[DEPT]-[DOC_TYPE]-[REV]`), transactions, immutable audit logs, automation triggers, and private document storage.
 
-Evidence generated or imported for web source belongs in `docs/evidence/`. All previous redundant or fragmented plan files have been consolidated directly into this master plan to eliminate ambiguity and maintain a single source of truth.
+Evidence generated or imported for web source belongs in `docs/evidence/`. Shared product decisions live in the project-root master plan; this file contains the detailed web implementation requirements.
 
 ---
 
 ## 1. Authority and How to Use This Plan
 
-1. **Single Source of Truth**: This document supersedes all dated planning briefs, fragmented roadmap notes, and temporary plan files. If code or documentation diverges, this Master Plan governs the target architecture.
+1. **Plan hierarchy**: The project-root [SSM_ONE_MASTER_PLAN.md](../SSM_ONE_MASTER_PLAN.md) is the shared cross-platform authority. This document governs detailed web implementation only. Historical web plans and temporary notes are source material for reconciliation, not parallel active instructions.
 2. **Automotive & Enterprise Standards**:
    - **IATF 16949:2016** & **ISO 9001:2015**: Quality management, customer-oriented processes (COP), contract review gates, design verification (DVP&R), PPAP Level 3, and full part traceability.
    - **AIS-140 / TAC**: Telematics and emergency system certification (ARAI/ICAT).
@@ -32,9 +32,9 @@ Evidence generated or imported for web source belongs in `docs/evidence/`. All p
 
 ---
 
-## 2. One Portal, Eleven Functional Departments
+## 2. One Portal, Twelve Functional Departments
 
-The digital backbone integrates eleven canonical automotive departments. Every employee accesses permitted work, tasks, documents, and notifications through the same unified records, filtered by department ownership.
+The digital backbone integrates twelve canonical automotive departments. Every employee accesses permitted work, tasks, documents, and notifications through the same unified records, filtered by department ownership.
 
 ```mermaid
 graph TD
@@ -49,34 +49,34 @@ graph TD
 
     subgraph Engineering & Design ["Product Engineering & Design"]
         EHW["2. EHW: Embedded Hardware Engineering<br/>Schematics · PCB Layout · BOM · DFMEA"]
-        EFW["3. EFW: Embedded Firmware Engineering<br/>RTOS Kernel · HAL Drivers · Bootloader · FOTA"]
-        CSW["4. CSW: Cloud & Application Software<br/>Telematics Backend · Protocols · BLE · GUI Tools"]
+        FW["3. FW: Embedded Firmware Engineering<br/>RTOS Kernel · HAL Drivers · Bootloader · FOTA"]
+        SW["4. SW: Cloud & Application Software<br/>Telematics Backend · Protocols · BLE · GUI Tools"]
         MECH["5. MECH: Mechanical Engineering<br/>IP67 Enclosures · Harness Drawings · Thermal CAD"]
     end
 
     subgraph Supply & Manufacturing ["Procurement, Manufacturing & Service"]
         PUR["6. PUR: Purchasing & Supply Chain<br/>Dual-Track Proto/Mass · AVL · POs · Stores"]
-        EMF["8. EMF: Manufacturing & Assembly<br/>SMT Line 2 · Thermal Profiling · Control Plan"]
-        TST["9. TST: Production & EOL Testing<br/>Automated Test Jigs · 100% PDI · Calibration"]
+        EMF["8. EMF: Electronics Manufacturing<br/>Outsourced PCBA receipt · Box-build · Packaging"]
+        MMF["9. MMF: Mechanical Manufacturing<br/>Mechanical fabrication · Finishing · Subassembly"]
         SIT["11. SIT: Service & IT Infrastructure<br/>Cloud Drive · Telematics Server · Field RMA"]
     end
 
     CC --> SAL & QA & FIN & HROPS
-    CC --> EHW & EFW & CSW & MECH
-    CC --> PUR & EMF & TST & SIT
+    CC --> EHW & FW & SW & MECH
+    CC --> PUR & EMF & MMF & SIT
 ```
 
 | Department Code | Full Department Title | Primary Record Type | Core Operational Ownership & Deliverables |
 |---|---|---|---|
 | **SAL** | Sales & Business Development | `Enquiry` | Customer Register.xlsx, RFQ intake, SOR analysis (`SAL-SOR-01`), bilateral mNDA (`SAL-mNDA-01`), contract reviews (`HLPL/F/MKT/01`), quotations (`SAL-QUO-01`), customer purchase orders (`SAL-PO-01`). |
 | **EHW** | Embedded Hardware Engineering | `PRS` | System architecture, Hardware PRS (`EHW-PRS-01`), schematics (`EHW-SCH-01`), preliminary/frozen BOMs (`EHW-BOM-01`), hardware DFMEA (`EHW-DFMEA-01`), Gerber archives, AEC-Q100 compliance. |
-| **EFW** | Embedded Firmware Engineering | `Firmware release` | Low-level MCU firmware, Firmware Requirements (`EFW-FRS-01`), Bootloader, RTOS kernel bring-up, HAL peripheral drivers, CAN/LIN protocol stack, secure dual-bank FOTA, cryptographic binary signing (`EFW-BIN-01`). |
-| **CSW** | Cloud & Application Software | `Software package` | Telematics application software, Software Requirements (`CSW-SRS-01`), AIS-140/MQTT/HTTP protocol engine, BLE 5.2 mobile companion app, cloud API contracts, desktop diagnostic & flashing GUI tools (`CSW-TOOL-01`). |
+| **FW** | Embedded Firmware Engineering | `Firmware release` | Low-level MCU firmware, Firmware Requirements (`FW-FRS-01`), Bootloader, RTOS kernel bring-up, HAL peripheral drivers, CAN/LIN protocol stack, secure dual-bank FOTA, cryptographic binary signing (`FW-BIN-01`). |
+| **SW** | Cloud & Application Software | `Software package` | Telematics application software, Software Requirements (`SW-SRS-01`), AIS-140/MQTT/HTTP protocol engine, BLE 5.2 mobile companion app, cloud API contracts, desktop diagnostic & flashing GUI tools (`SW-TOOL-01`). |
 | **MECH** | Mechanical Engineering | `Mechanical CAD` | Mechanical Requirements (`MECH-MRS-01`), 3D CAD modeling, IP67 enclosure tooling (`ENC-MECH-CAD-01`), wiring harness pinout drawings (`HARN-MECH-DWG-01`), thermal CFD simulation, vibration fixture design. |
 | **PUR** | Purchasing & SCM | `Purchase order` | Sourcing Feasibility (`PUR-SRS-01`), Approved Vendor List (AVL), dual-track sourcing (Proto soft-tooling vs Mass production), PR/RFQ/PO issuance, supplier PPAP Level 3 review, stock allocation. |
 | **QA** | Quality Assurance & APQP | `Quality inspection` | Quality & DVP&R Requirements (`QA-QRS-01`), APQP roadmap (`HLPL-APQP-001`), DVP&R matrix (`QA-DVP-01`, 18 electrical/environmental tests), ISO 7637-2 compliance, iCAT Type Approval TAC cert (`QA-TAC-01`), NCR/CAPA logs. |
-| **EMF** | Manufacturing & Assembly | `Work instruction` | Manufacturing DFM Requirements (`EMF-PRS-01`), 10-zone reflow thermal profiling, 3D solder paste inspection (SPI), automated optical inspection (AOI), Process Control Plan (`EMF-CP-01`), SMT work instructions. |
-| **TST** | Production & EOL Testing Jigs | `Calibration log` | EOL Test Jigs Requirements (`TST-TRS-01`), automated functional testing (FCT) jigs, CAN bus verification, flashing rigs, 100% PDI inspection certification (`TST-PDI-01`), calibration logs. |
+| **EMF** | Electronics Manufacturing | `Production traveler` | Electronics manufacturing requirements (`EMF-MPR-01`), receipt/traceability of accepted outsourced PCBAs, enclosure integration and box-build, harness/accessory installation, controlled firmware loading, in-line/final checks, packaging and production traveler. In-house SMT/PCBA assembly is out of scope. |
+| **MMF** | Mechanical Manufacturing | `Mechanical production traveler` | Mechanical manufacturing requirements (`MMF-MPR-01`), enclosure/part fabrication or controlled supplier receipt, finishing, mechanical subassembly, fit/dimensional checks, tooling and handoff to EMF for final electronics integration. |
 | **FIN** | Accounts & Finance | `Commercial quotation` | Financial Feasibility & Cost Model (`FIN-CFS-01`), project budget tracking, commercial margin analysis, milestone billing, GST/HSN tax invoices (`FIN-INV-01`), payment reconciliation. |
 | **SIT** | Service & IT Infrastructure | `Service ticket` | Infrastructure Requirements (`SIT-SRS-01`), enterprise Cloud Drive storage, telematics backend gateway, OTA server monitoring, role-based access control, field vehicle mounting checklist (`SIT-MNT-01`), RMA ticketing. |
 | **HR/OPS** | HR & Operations | `Audit report` | Competency & Safety Requirements (`HROPS-CRS-01`), employee competence matrix (`HLPL/F/HR/03`), QMS internal audits, Six Sigma DMAIC registers, Signed-In Company Directory, Corporate Legal Documents & Letterheads. |
@@ -88,16 +88,16 @@ graph TD
 ### 3.1 Role & Persona Switcher
 The portal incorporates an instant **Role & Persona Switcher** in the header allowing 1-click verification of department context, permission boundaries, and filtered queues:
 1. **Executive Admin / MD**: Master authority, full cross-department rollup, system template configuration, and PMSS override.
-2. **12 Department Leads**:
+2. **12 Department Roles**:
    - `SAL Lead`: Priya Sharma (Sales & BD)
    - `EHW Lead`: Avery Vale (Embedded Hardware Engineering)
-   - `EFW Lead`: Devon Lane (Embedded Firmware Engineering)
-   - `CSW Lead`: Maya Lin (Cloud & Application Software Engineering)
+   - `FW Lead`: Devon Lane (Embedded Firmware Engineering)
+   - `SW Lead`: Maya Lin (Cloud & Application Software Engineering)
    - `MECH Lead`: Samira Holt (Mechanical Engineering)
    - `PUR Lead`: Morgan Reed (Purchasing & SCM)
    - `QA Lead`: Jordan Blake (Quality Assurance)
    - `EMF Lead`: Casey Rowan (Electronics Manufacturing)
-   - `TST Lead`: Mina Cross (EOL Testing & Jigs)
+   - `MMF Lead`: Owner TBD; do not reuse the former TST persona without owner approval
    - `FIN Lead`: Priya Voss (Finance & Accounts)
    - `SIT Lead`: Kai Morgan (Service & IT Infrastructure)
    - `HR Lead`: Taylor Quinn (HR & Operations)
@@ -151,7 +151,7 @@ Every department overview features five standardized, high-density KPI cards eng
 The workspace header provides two complementary, instant creation mechanisms:
 1. **Universal Tracked Task (`[Create Task]`)**:
    - Present across all 12 departments.
-   - Auto-generates department-scoped task identifier: `TASK-[DEPT]-[NUM]` (e.g. `TASK-SAL-004`, `TASK-EHW-012`, `TASK-EFW-008`, `TASK-CSW-015`).
+   - Auto-generates department-scoped task identifier: `TASK-[DEPT]-[NUM]` (e.g. `TASK-SAL-004`, `TASK-EHW-012`, `TASK-FW-008`, `TASK-SW-015`).
    - Automatically synchronizes with the Daily Checklist, Today lane, and Priority queues.
 2. **Primary Domain Record (`[Create <RecordType>]`)**:
    - Primary accent button dynamically configured to the department's core deliverable:
@@ -163,7 +163,7 @@ The workspace header provides two complementary, instant creation mechanisms:
      - Purchasing: `[Create Purchase order]`
      - Quality: `[Create Quality inspection]`
      - Manufacturing: `[Create Work instruction]`
-     - EOL Testing: `[Create Calibration log]`
+     - Production testing / inspection: `[Create Production Test Record]`
      - Finance: `[Create Commercial quotation]`
      - Service & IT: `[Create Service ticket]`
      - HR & Ops: `[Create Audit report]`
@@ -181,13 +181,13 @@ Directly beneath the lifecycle stepper, each department workspace embeds a **Dep
 |---|---|---|---|---|---|---|
 | **SAL** | Customer enquiry & lead intake (`SAL-ENQ-01`) | Customer SOR intake & analysis (`SAL-SOR-01`) | Mutual NDA generator (`SAL-mNDA-01`) | Commercial quotation builder (`SAL-QUO-01`) | Contract review record (`HLPL/F/MKT/01`) | `/01_Governance_and_QMS` |
 | **EHW** | Hardware PRS & system architecture (`EHW-PRS-01`) | Schematic capture & design freeze (`EHW-SCH-01`) | Preliminary & production BOM (`EHW-BOM-01`) | Hardware DFMEA risk assessment (`EHW-DFMEA-01`) | Gerber & fabrication release (`EHW-GERBER-01`) | `/02_Hardware_Engineering` |
-| **EFW** | Embedded Firmware Requirements (`EFW-FRS-01`) | MCU board support package (BSP) & HAL | CAN J1939 / LIN device drivers | Secure dual-bank FOTA setup | Production binary signing (`EFW-BIN-01`) | `/03_Firmware_Engineering` |
-| **CSW** | Software Requirements Specification (`CSW-SRS-01`) | AIS-140 & IoT telemetry protocol parser | Mobile App BLE 5.2 interface | Telematics cloud & OTA gateway | PC diagnostic & EOL host GUI (`CSW-TOOL-01`) | `/04_Software_Engineering` |
+| **FW** | Embedded Firmware Requirements (`FW-FRS-01`) | MCU board support package (BSP) & HAL | CAN J1939 / LIN device drivers | Secure dual-bank FOTA setup | Production binary signing (`FW-BIN-01`) | `/03_Firmware_Engineering` |
+| **SW** | Software Requirements Specification (`SW-SRS-01`) | AIS-140 & IoT telemetry protocol parser | Mobile App BLE 5.2 interface | Telematics cloud & OTA gateway | PC diagnostic & EOL host GUI (`SW-TOOL-01`) | `/04_Software_Engineering` |
 | **MECH** | Mechanical Requirements Sheet (`MECH-MRS-01`) | IP67 enclosure 3D CAD modeling (`MECH-CAD-01`) | Wiring harness drawing & pinout (`HARN-DWG-01`) | Thermal dissipation simulation (`MECH-THM-01`) | Ingress & vibration fixture (`MECH-TOOL-01`) | `/05_Mechanical_Engineering` |
 | **PUR** | Sourcing & Component Feasibility (`PUR-SRS-01`) | Sourcing PR & RFQ issuance | Proto vs Mass vendor evaluation | Commercial purchase order (`PUR-PO-01`) | Approved Vendor List (AVL) update | `/06_Purchasing_and_SCM` |
 | **QA** | Quality & DVP&R Requirements (`QA-QRS-01`) | APQP gate milestone review (`QA-APQP-01`) | DVP&R test plan matrix (`QA-DVP-01`) | Type Approval TAC coordination (`QA-TAC-01`) | Non-conformance & CAPA report (`QA-CAPA-01`) | `/07_Quality_Assurance` |
-| **EMF** | Manufacturing DFM Requirements (`EMF-PRS-01`) | SMT Line 2 thermal profiling (`EMF-TP-01`) | 3D SPI & AOI inspection setup (`EMF-AOI-01`) | Process Control Plan (`EMF-CP-01`) | PCB traveler & box-build WI (`EMF-WI-01`) | `/08_Electronics_Manufacturing` |
-| **TST** | Production EOL Test Requirements (`TST-TRS-01`) | Automated EOL test jig setup | CAN bus functional test suite | Automated MCU firmware flashing | 100% PDI inspection cert (`TST-PDI-01`) | `/09_EOL_Testing_Jigs` |
+| **EMF** | Electronics Manufacturing Process Requirements (`EMF-MPR-01`) | Outsourced PCBA receipt & traceability | Enclosure integration / box-build | Approved firmware load and in-line checks | Final assembly, packaging & traveler (`EMF-WI-01`) | `/08_Electronics_Manufacturing` |
+| **MMF** | Mechanical Manufacturing Process Requirements (`MMF-MPR-01`) | Enclosure fabrication/finishing | Mechanical subassembly and fit checks | Production tooling and work instructions | Handoff to EMF for box-build integration | `/09_Mechanical_Manufacturing` |
 | **FIN** | Financial Feasibility & Cost Model (`FIN-CFS-01`) | Project NRE & BOM cost model | Customer advance deposit match | GST commercial tax invoice (`FIN-INV-01`) | Supplier PO payment release | `/10_Finance_and_Accounts` |
 | **SIT** | Infrastructure Requirements (`SIT-SRS-01`) | Symmetrical Cloud Drive sync | Telematics server endpoint config | Private S3 signed storage token | Vehicle mounting & RMA ticket (`SIT-MNT-01`) | `/11_Service_and_IT` |
 | **HR/OPS**| Competency & Safety Requirements (`HROPS-CRS-01`)| Employee skill matrix review (`HLPL/F/HR/03`) | IATF 16949 internal audit | Corporate legal agreement / mNDA | Six Sigma DMAIC improvement | `/12_HR_and_Operations` |
@@ -242,7 +242,7 @@ sequenceDiagram
     autonumber
     actor Customer as Customer / OEM
     actor Sales as Sales Lead (SAL)
-    actor Engineering as HODs (EHW, EFW, CSW, MECH, PUR, QA, FIN)
+    actor Engineering as HODs (EHW, FW, SW, MECH, PUR, QA, FIN)
     actor Admin as Executive Admin
 
     Customer->>Sales: RFQ & Technical Scope / SOR
@@ -267,15 +267,15 @@ sequenceDiagram
    - Embeds the **Platform Architecture Selector**: chooses Reusable Platform vs. Hybrid vs. Clean Sheet.
    - Links pre-qualified Motherboard, Secondary PCB, Harness, Firmware, and Enclosure assets.
    - Calculates development skips (weeks saved and NRE avoided).
-   - Dispatches review tasks and requirement sheet authoring to the engineering & commercial HODs (EHW, EFW, CSW, MECH, PUR, QA, FIN).
+   - Dispatches review tasks and requirement sheet authoring to the engineering & commercial HODs (EHW, FW, SW, MECH, PUR, QA, FIN).
 4. **Multi-Department Feasibility Input & Requirement Sheets (Gate 2)**:
    - Each HOD evaluates the customer SOR from their domain perspective, formulates their formal Requirement Sheet / Process 01 points (Hardware PRS, Firmware FRS, Software SRS, Mechanical MRS, Sourcing Feasibility, Quality DVP&R Scope, Finance Cost Model), flags risks, confirms lead times, and records formal sign-off.
    - Locking all HOD sign-offs compiles the official **Contract Review Record (`HLPL/F/MKT/01`)**.
 5. **Consolidated Requirement Freeze & Commercial Lock (Gate 3)**:
    - Formally generates and freezes the **Complete System Requirements Package** alongside the Commercial Quotation:
      - Hardware PRS (`HLPL-[PROJ_ID]-EHW-PRS-01`)
-     - Firmware FRS (`HLPL-[PROJ_ID]-EFW-FRS-01`)
-     - Software SRS (`HLPL-[PROJ_ID]-CSW-SRS-01`)
+     - Firmware FRS (`HLPL-[PROJ_ID]-FW-FRS-01`)
+     - Software SRS (`HLPL-[PROJ_ID]-SW-SRS-01`)
      - Mechanical MRS (`HLPL-[PROJ_ID]-MECH-MRS-01`)
      - Quality QRS (`HLPL-[PROJ_ID]-QA-QRS-01`)
      - Commercial Quotation (`HLPL-[PROJ_ID]-SAL-QUO-01`).
@@ -293,7 +293,7 @@ A **Project is a Customer Commercial Commitment**, not a single physical hardwar
 
 ```mermaid
 graph TD
-    subgraph Master Catalog ["Authoritative Master Asset Libraries (EHW / ESW / MECH)"]
+    subgraph Master Catalog ["Authoritative Master Asset Libraries (EHW / FW / SW / MECH)"]
         PCB1["Master Motherboard<br/><code>HLPL-MOD-PCB-01 Rev 03</code>"]
         PCB2["Master Dual-CAN Board<br/><code>HLPL-MOD-PCB-02 Rev 01</code>"]
         HARN1["Molex MX150 14-Pin<br/><code>HLPL-HARN-MX150-14P</code>"]
@@ -360,16 +360,16 @@ In Gate 4/5 (Hardware Kick-off):
 - If `canSkipStage4PoC === true` (PCB and Firmware are pre-certified under AEC-Q100 / AIS-140):
   - The system displays the **⚡ Pre-Certified Platform Architecture Detected** banner.
   - Option A (*Clean Sheet / PoC Research*) is marked optional.
-  - Option B (*Direct SMT Pilot Build*) is automatically **RECOMMENDED (PLATFORM REUSED)**.
-  - Advancing hardware kickoff jumps directly to **Stage 5 (SMT Pilot Build)**, waiving 14–17 weeks of redundant bench development.
+  - Option B (*Outsourced PCBA + in-house box-build pilot*) is recommended when the PCBA supplier lot, released design, incoming acceptance, and EMF/MMF readiness are approved. In-house SMT/PCBA assembly is out of scope.
+  - A justified pilot may proceed to **Stage 5 (outsourced-PCBA pilot / in-house box-build)** only after the required design, supplier, quality, and production readiness gates are approved. Do not assume a duration waiver.
 
 ### 6.5 Automated Stage Gate Dependency & Manufacturing Interlock Rules
 To guarantee automotive product integrity under IATF 16949 §8.3 and prevent premature manufacturing investment:
 - **Hardware Schematics Critical Path Interlock**:
-  $$\text{Stage 5 (SMT Pilot)} \lor \text{Stage 7 (Mass Production)} \implies \text{Status}(\text{EHW-SCH-01}) == \text{Released}$$
-  - **Rule**: Neither manufacturing tooling (SMT Line 2 reflow profiling) nor Pilot/Mass production may proceed until **Stage 4 Hardware Schematics (`EHW-SCH-01`)** has been officially certified and released by Embedded Hardware.
+  $$\text{Stage 5 (pilot assembly)} \lor \text{Stage 7 (Mass Production)} \implies \text{Status}(\text{EHW-SCH-01}) == \text{Released}$$
+  - **Rule**: Neither in-house box-build nor pilot/mass production may proceed until **Stage 4 Hardware Schematics (`EHW-SCH-01`)** has been officially certified and released by Embedded Hardware.
   - **Enforcement Engine**: The system programmatically locks downstream stages, displaying an explicit interlock banner:
-    > *"Interlock Enforced: Stage 4 Hardware Schematics (EHW-SCH-01) must be released and signed off by Embedded Hardware before SMT Line 2 tooling and Pilot assembly can commence."*
+    > *"Interlock Enforced: Stage 4 Hardware Schematics (EHW-SCH-01) must be released and signed off by Embedded Hardware before outsourced PCBA procurement or pilot box-build can commence."*
 - **Client-Facing Stage Dependency Matrix**: Surfaced in the Client Portal view (`?role=client`), showing Stage ID, Stage Name, Mandatory Prerequisites, Dependency Status, and Production Interlock state.
 
 ---
@@ -414,7 +414,7 @@ Extends the governed inventory experience into an enterprise inventory-and-asset
 #### Architectural Principles & Boundaries
 1. **Wire Harnesses as Assemblies**: Wire harnesses (`HLPL-HARN-...`) are modeled as project-linked connector-and-wire assemblies, not raw material hardness. They carry wire specifications (FLRY-B thin-wall ISO 6722, TXL cross-linked SAE J1128), connector pins, approved substitutes, and assembly crimp tooling links.
 2. **Dual-Discovery Classification**: Harnesses possess one controlled primary category (`Wire Harnesses`) plus `Mechanical` and `Electrical` cross-tags for multi-department discovery.
-3. **Asset Decoupling**: Production machinery (`Yamaha YS12 SMT`), mechanical equipment (`Komax Gamma 255 Wire Crimper`, `Branson 2000X Ultrasonic Welder`), testing fixtures (`Automated EOL Rig`), and compliance test rigs (`EM Test UCS 500N`) live in a dedicated serialized register with calibration intervals, custodians, and compatible-part links, completely separated from stock-part inventory.
+3. **Asset Decoupling**: Supplier-owned PCBA equipment (if used by an approved supplier), mechanical equipment (`Komax Gamma 255 Wire Crimper`, `Branson 2000X Ultrasonic Welder`), company-owned test fixtures (if applicable), and compliance test rigs (`EM Test UCS 500N`) live in a dedicated serialized register with calibration intervals, custodians, and compatible-part links, completely separated from stock-part inventory.
 4. **Server-Side Project Team Recipient Scope Validation**: A component or harness can be issued only to an active member of its linked project team (`projectTeamRoster[projectCode]`), rejecting cross-project, inactive, or department-ineligible personnel.
 5. **Quality-Held Lot Stock Rule**: Any stock received under "Pending IQC" or placed in quarantine is placed in `held` stock and programmatically blocked from issuance:
    $$\text{Available Stock} = \max\left(0, (\text{Released} \text{ or } \text{OnHand}) - \text{Held} - \text{Allocated}\right)$$
@@ -458,7 +458,7 @@ Auto-drafted templates render complete, authentic engineering sheets (not metada
 ## 9. Dynamic RACI Matrix & Inter-Department Stage Notifications
 
 ### 9.1 RACI Configuration
-The portal administration panel features an interactive **RACI Responsibility Matrix** defining department roles across all 9 lifecycle stages:
+The target portal administration panel provides a **versioned RACI Responsibility Matrix** defining applicable department roles across lifecycle stages. Any existing prototype matrix or stage-owner table is illustrative until backed by the governed registry and persisted versioned configuration described in §28.11:
 - **R (Responsible)**: Department executing the primary deliverable.
 - **A (Accountable)**: Final gatekeeper and sign-off authority.
 - **C (Consulted)**: Functional contributors providing feasibility and design input.
@@ -466,9 +466,11 @@ The portal administration panel features an interactive **RACI Responsibility Ma
 
 ### 9.2 Automated Stage Handoff Routing
 When any department completes a gate or signs a deliverable:
-1. The system evaluates the active RACI matrix for the current stage.
-2. Generates actionable alert records for all *Responsible*, *Accountable*, and *Informed* departments.
+1. The system evaluates the project's pinned matrix version and current stage applicability.
+2. Creates scoped actionable alerts for assigned *Responsible* and *Accountable* owners; *Informed* parties receive notifications only when authorized for the linked record.
 3. Notification bell updates with badge count; alert cards display 1-click `[Review Handoff]` actions linking directly to the pending document.
+
+An RACI or task assignment does not grant access. The authenticated backend independently checks organization membership, project/record scope, capability, and signer authority before returning data or accepting a decision.
 
 ---
 
@@ -479,14 +481,14 @@ The portal incorporates a complete, interactive simulation of the **Tata Ace EV 
 | Stage | Name & Intent | Primary Controlled Deliverable | Owning Dept |
 |---|---|---|---|
 | **Stage 1** | Client & Sales Intake | Customer SOR (`HLPL-AI4T-SAL-SOR-01`) & mNDA (`SAL-mNDA-01`) | `SAL` |
-| **Stage 2** | Multi-Dept Feasibility Gate | Contract Review Record (`HLPL/F/MKT/01`) with 7 HOD Requirement Sheets (`EHW`, `EFW`, `CSW`, `MECH`, `PUR`, `QA`, `FIN`) | `SAL` / All |
-| **Stage 3** | Requirement Freeze & Commercial Lock | Consolidated Requirements Package (`EHW-PRS-01`, `EFW-FRS-01`, `CSW-SRS-01`, `MECH-MRS-01`, `QA-QRS-01`) & Quotation (`SAL-QUO-01`) | `EHW` / `EFW` / `CSW` / `SAL` |
-| **Stage 4** | Design & Development (PoC) | Schematics (`EHW-SCH-01`), Preliminary BOM (`EHW-BOM-01`), PoC Firmware (`EFW-BIN-01`), Telematics Application Stack (`CSW-APP-01`) | `EHW` / `EFW` / `CSW` |
-| **Stage 5** | Pilot Build & SMT Setup | Process Control Plan (`EMF-CP-01`), SMT Line 2 Thermal Profile | `EMF` / `PUR` |
+| **Stage 2** | Multi-Dept Feasibility Gate | Contract Review Record (`HLPL/F/MKT/01`) with 7 HOD Requirement Sheets (`EHW`, `FW`, `SW`, `MECH`, `PUR`, `QA`, `FIN`) | `SAL` / All |
+| **Stage 3** | Requirement Freeze & Commercial Lock | Consolidated Requirements Package (`EHW-PRS-01`, `FW-FRS-01`, `SW-SRS-01`, `MECH-MRS-01`, `QA-QRS-01`) & Quotation (`SAL-QUO-01`) | `EHW` / `FW` / `SW` / `SAL` |
+| **Stage 4** | Design & Development (PoC) | Schematics (`EHW-SCH-01`), Preliminary BOM (`EHW-BOM-01`), PoC Firmware (`FW-BIN-01`), Telematics Application Stack (`SW-APP-01`) | `EHW` / `FW` / `SW` |
+| **Stage 5** | Pilot Build & Manufacturing Readiness | Released PCBA supplier/lot record, EMF box-build traveler, MMF enclosure/fit checks, and controlled process instructions | `PUR` / `QA` / `EMF` / `MMF` |
 | **Stage 6** | DVP&R Pre-Compliance | DVP&R Matrix (`QA-DVP-01`) with 18 electrical/environmental tests | `QA` |
 | **Stage 7** | Production Release & PPAP L3 | Gerber Rev B, Hardware DFMEA (`EHW-DFMEA-01`), Supplier PPAP | `EHW` / `PUR` |
 | **Stage 8** | TAC Type Approval & Mass Run | AIS-140 TAC Certificate (`QA-TAC-01`), PO Sync (`SAL-PO-01`) | `QA` / `SAL` |
-| **Stage 9** | PDI Inspection & Invoicing | Automated EOL PDI Certificate (`TST-PDI-01`), Commercial Invoice (`FIN-INV-01`) | `TST` / `FIN` |
+| **Stage 9** | Production Inspection & Invoicing | EMF final assembly/test record, MMF mechanical inspection record, QA disposition, Commercial Invoice (`FIN-INV-01`) | `EMF` / `MMF` / `QA` / `FIN` |
 
 ### Master Document Dossier Binder
 A unified modal tab allows viewing and downloading all 12 automotive deliverables in a single binder, complete with live stage progression percentage and audit history.
@@ -497,7 +499,7 @@ A unified modal tab allows viewing and downloading all 12 automotive deliverable
 
 ### 11.1 Signed-In Company Directory (§11.1)
 - Real-time directory modal accessible from the portal navigation.
-- Department filter chips (`ALL`, `SAL`, `EHW`, `ESW`, `MECH`, `PUR`, `QA`, `EMF`, `TST`, `FIN`, `SIT`, `HR/OPS`).
+- Department filter chips (`ALL`, `SAL`, `EHW`, `FW`, `SW`, `MECH`, `PUR`, `QA`, `EMF`, `MMF`, `FIN`, `SIT`, `HR/OPS`).
 - Search by employee name, role title, or key technical competency.
 - Individual staff cards show photo, official designation, direct phone extension, email, and competency skill tags derived from Skill Matrix `HLPL/F/HR/03`.
 
@@ -517,9 +519,9 @@ A unified modal tab allows viewing and downloading all 12 automotive deliverable
 ## 12. Completed Milestones & Remaining Delivery Roadmap
 
 ### Completed Milestones
-- [x] **11 Functional Departments**: Symmetrical hubs for SAL, EHW, ESW, MECH, PUR, QA, EMF, TST, FIN, SIT, and HR/OPS.
+- [x] **12 Functional Departments**: Symmetrical hubs for SAL, EHW, FW, SW, MECH, PUR, QA, EMF, MMF, FIN, SIT, and HR/OPS.
 - [x] **Universal Department Overview**: Compact 5-metric cards (`Today`, `Priority`, `Pending`, `Approvals`, `Progress`), dual creation action bar (`[Create Task]` + `[Create <RecordType>]`), project scope filter, and 5 numbered process menu shortcuts.
-- [x] **Admin Persona & Role Switcher**: Instant switching between Executive Admin, 11 HODs, and Client Portal persona.
+- [x] **Admin Persona & Role Switcher**: Instant switching between Executive Admin, 12 HODs, and Client Portal persona.
 - [x] **AI4T 9-Stage Lifecycle Simulator**: Complete 9-stage progression with 12-document master dossier.
 - [x] **Decoupled Architecture & PCB Reusability (Master Plan §5)**: Multi-PCB linking, modular harnesses, firmware stacks, and enclosures.
 - [x] **Development Process Skip Engine**: Time/cost calculations with automated Stage 4 PoC waiver.
@@ -537,7 +539,7 @@ A unified modal tab allows viewing and downloading all 12 automotive deliverable
   - Direct file upload dropzone supporting PDF, DOCX, XLSX, STEP, ZIP, HEX with progress bar and SHA-256 verification.
   - S3 / Lovable Cloud Storage private access indicator, download buttons, and revision tracking.
 - [x] **Phase 2: Department-Wise Process Menus & Action Shortcuts (§4, §12)**:
-  - Structured 5 numbered process shortcuts for all 11 departments (55 total processes) in `departmentProcesses`.
+  - Structured 5 numbered process shortcuts for all 12 departments (60 total processes) in `departmentProcesses`.
   - Clicking any process shortcut immediately opens `RecordForm` pre-filled with the exact canonical record type, specific title, pre-filled scope linking to the target Cloud Drive folder, project ID, location, and priority.
 - [x] **Clean Compilation & Automated Tests**: 0 TypeScript errors (`npx tsc --noEmit`), production build passing, Playwright regression suite passing with 100% success across all phases.
 
@@ -547,7 +549,7 @@ A unified modal tab allows viewing and downloading all 12 automotive deliverable
   - A prior automated UI verification exists (`test_phase3_verification.js`), but it does not establish real Supabase Auth, production-safe RLS, or durable end-to-end persistence; complete §27 acceptance before marking this phase done.
 - [x] **Purchasing Context (PUR) R&D BOM Review Table (§4.5)**: Interactive table reviewing tentative R&D parts, real-time variance costing, 10-week long-lead buffer PO alerts, and SCM CSV export (`PurchasingBOMReviewTable`).
 - [x] **Quality Assurance (QA) DVP&R Certification Matrix (§4.6)**: 10 automotive tests with Internal Lab vs. Outsourced Accredited Lab (ARAI / ICAT) classification and zero-deviation release (`QualityAssuranceDVPReviewTable`).
-- [x] **Automated Stage Gate & Manufacturing Interlock (§6.5)**: Hardware Schematics (`EHW-SCH-01`) critical gate enforcing locked states for Stage 5 SMT Pilot and Stage 7 PPAP.
+- [x] **Automated Stage Gate & Manufacturing Interlock (§6.5)**: Hardware Schematics (`EHW-SCH-01`) critical gate enforcing locked states for Stage 5 pilot build and Stage 7 PPAP.
 - [x] **Department-Scoped Document Vault & Client Sanitization (§7.4)**: Role-based document access (prepared/reviewed/controlled) with internal cost/DFMEA redaction for clients.
 - [x] **Operational Enterprise Baseline & UI Standards (§1.4)**: Permanent retirement of demo/fictional markers, integration of real automotive OEM accounts, and compact dashboard typography.
 - [x] **Governed Inventory & Asset Management Architecture (§14)**: 6-tab workspace for Component Register, Wire Harnesses with cross-tags, Project Material Issuance with server-scoped team validation, GRN & IQC hold vs released availability gate, Serialized Production Assets & Machinery, and immutable movement audit log.
@@ -574,7 +576,7 @@ This consolidated master plan incorporates all requirements, specifications, and
 3. `roadmap.md` (Milestone progress and delivery phases).
 4. `scms_master_plan_gap_analysis.md` (Company Directory §11, Decision Log §11, Legal Hub §11).
 5. Master Plan §5 Decoupled Product Architecture & PCB Reusability (Multi-PCB, interchangeable harnesses, firmware stacks, automated skips, and Stage 4 PoC waiver).
-6. Portal Overview Excellence: Compact 5-metric cards, dual-action record creation (`[Create Task]` + `[Create <RecordType>]`), 11 departmental process menus, and project scoping.
+6. Portal Overview Excellence: Compact 5-metric cards, dual-action record creation (`[Create Task]` + `[Create <RecordType>]`), 12 departmental process menus, and project scoping.
 7. Governed Inventory & Asset Replica Plan: Server-side project-team recipient validation, GRN lot traceability, IQC hold availability gate, wire harness cross-tags, and separate serialized capital asset register (§14).
 8. Mouser Electronics Component Intelligence Module: MPN auto-fetch, AEC-Q validation, dual-currency pricing, PDF datasheets, and category mapping (§15).
 9. Department-Adaptive Inventory Views: EHW, PUR, MECH, and Universal column presets and 5-tab deep part inspection modal (§16).
@@ -601,7 +603,7 @@ The governed inventory engine (`LiveInventoryWorkspace.tsx`) operationalizes IAT
    - Splits incoming shipments into accepted and held/quarantined quantities.
    - Hard availability gate: held or rejected lots are completely excluded from material issuance until formal quality release.
 5. **Governed Asset Register (Tab 5)**:
-   - Tracks serialized capital machinery (SMT chip mounters, 10-zone reflow ovens, automated EOL test jigs, laser markers) separate from consumable components.
+   - Tracks company-owned production assets separately from consumables. Outsourced PCBA equipment remains supplier-owned and is governed through supplier qualification and audit records.
    - Captures facility location, department custody, maintenance logs, and calibration validity.
    - Maintains compatibility relationships linking machines to the components and harnesses they process.
 6. **Stock Movement & Immutable Audit Trail (Tab 6)**:
@@ -729,7 +731,7 @@ The Smart BOM engine (`DualLifecycleSmartBOMWorkspace.tsx`) enforces strict sepa
    - Formally locked revision tied to committed customer requirements (`Tata Motors HLPL-AI4T-01`), PPAP Level 3, and AIS-140 TAC type approval.
    - Strict validation: Every line item must map to an active, approved component in the component catalog with verified AEC-Q100/AEC-Q200 standards.
    - Immutable once released: Any engineering modification requires an authorized Engineering Change Order (ECO number and rationale).
-   - Authoritative baseline for production kitting, formal Purchase Requisitions, and shop floor SMT execution.
+   - Authoritative baseline for production kitting, formal Purchase Requisitions, and shop-floor box-build and final assembly; outsourced PCBA is tracked through supplier and lot records.
 
 ### 20.2 "What-If" Stock Availability Simulation & Revision Diff Engine
 - **Dynamic Simulation**: Engineers enter planned production build quantities (e.g. 1,000 to 50,000 units). The system dynamically evaluates live released stock, calculates line shortages, computes shortage costs, and flags long-lead components.
@@ -774,7 +776,7 @@ $$\text{Import Review Gate} \xrightarrow{\text{Accept}} \text{GRN Draft Generate
 
 ### 23.1 Asset Taxonomy & Compatibility Linking
 The asset management surface (`LiveInventoryWorkspace.tsx`) governs production machinery, test fixtures, calibration instruments, and facility tooling:
-- **Machine-to-Component Compatibility**: Maps machinery directly to compatible parts via `compatiblePartNumbers` (e.g., Yamaha SMT Mounter linked to MCU and passives; Schleuniger CrimpCenter linked to battery wire harnesses and sealed headers; Chroma EOL Jig linked to main PCB).
+- **Machine-to-Component Compatibility**: Maps machinery directly to compatible parts via `compatiblePartNumbers` (e.g., approved PCBA supplier equipment linked to an outsourced PCBA process; Schleuniger CrimpCenter linked to battery wire harnesses and sealed headers; Chroma EOL Jig linked to the main PCB).
 - **Bulk CSV Ingestion**: Imports asset registers with serial number and tag deduplication.
 - **Audit Schedule Exports**:
   - `Asset Register Export (.csv)`: Complete fleet register with custodians, room/bench locations, operational states, and warranty terms.
@@ -826,7 +828,7 @@ The related department-owned document lifecycle and audit design is tracked in `
 To address usability feedback regarding cluttered department views, awkward approval pop-ups, and sidebar redundancy, the portal architecture has been refined with three major operational pillars:
 1. **Full-Page Approvals View**: Replaced legacy pop-up modals (`modal === "approvals"`) with a first-class, dedicated full-page governance surface (`view === "approvals"`), matching the design language of Orders, Quotations, and Customers, complete with IATF 16949:2016 §8.3.4 and ISO 9001:2015 governance gates.
 2. **Sidebar Notification Cleanup**: Removed redundant notification links (`dept-alerts`) from the sidebar navigation. The interactive notification bell on the top header serves as the sole, authoritative alert center.
-3. **Department Lead Coordination Center (`DepartmentLeadCoordinationCenter.tsx`)**: Created a streamlined, uncluttered management hub embedded across all 11 department workspaces, providing dedicated surfaces for **Department Tasks**, **Projects**, and **Department Teams**.
+3. **Department Lead Coordination Center (`DepartmentLeadCoordinationCenter.tsx`)**: Created a streamlined, uncluttered management hub embedded across all 12 department workspaces, providing dedicated surfaces for **Department Tasks**, **Projects**, and **Department Teams**.
 
 ### 26.2 Department Lead Coordination Center Architecture
 Embedded into all department hubs (`src/routes/index.tsx`), the Coordination Center organizes department operations into three distinct tabs:
@@ -862,7 +864,7 @@ Embedded into all department hubs (`src/routes/index.tsx`), the Coordination Cen
   - `[Reject]`: Formally rejects with mandatory root cause justification.
 
 ### 26.4 Expanded Multi-Department Engineering Roster
-The underlying enterprise roster (`demoTeam`) has been expanded from 11 isolated leads to a comprehensive 36-member engineering team across all 11 functional departments, ensuring realistic capacity balancing and multi-user delegation across Embedded Hardware (`EHW`), Firmware (`ESW`), Mechanical (`MECH`), Purchasing (`PUR`), Quality (`QA`), Manufacturing (`EMF`), Testing (`TST`), Finance (`FIN`), IT (`SIT`), and HR (`HR/OPS`).
+The intended enterprise roster is a 36-member cross-functional team across 12 departments. The new MMF owner is still unassigned, and the former TST roster/records require explicit mapping. Do not claim the roster migration or twelve-role access is complete until the app, backend contracts, and owner-approved identities match the revised department model.
 
 
 ---
@@ -874,7 +876,7 @@ Provide a repeatable, safe demonstration for every department lead using named s
 
 ### 27.2 Current Verified Gaps
 - `DepartmentLeadLoginModal.tsx` holds email/password pairs in browser source and locally matches credentials. The roster exposes those passwords in the UI. This is not Supabase authentication, does not create a trusted server session, and must not be used as an operational security boundary.
-- As of 19 October, the explicitly labeled browser-local demo picker includes all eleven departments (including SIT and HR/OPS), Admin and Client. This fixes preview coverage only; these entries are not authenticated backend accounts.
+- As of 19 October, the explicitly labeled browser-local demo picker includes all twelve departments (including SIT and HR/OPS), Admin and Client. This fixes preview coverage only; these entries are not authenticated backend accounts.
 - `src/integrations/supabase/client.ts` requires `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (or server equivalents). A local `.env` file exists, but presence alone does not verify correct values, reachable project, applied migrations, Auth configuration, or access policies.
 - `20261003_scms_core_schema.sql` creates broad `USING (true)` / `WITH CHECK (true)` policies for anonymous/public read and write on operational tables. These policies are incompatible with department lead confinement and must be replaced or explicitly isolated before real-user demo access.
 - Existing Supabase migrations define organization/department membership and RLS concepts separately from the legacy core schema. The canonical source of truth, migration order, ownership model, and actual web data paths need reconciliation before claims of end-to-end persistence.
@@ -887,12 +889,12 @@ Use these as acceptance journeys, not just dashboard screenshots. Each journey m
 |---|---|---|
 | SAL | Priya Sharma | Review an OEM enquiry, complete feasibility intake, and hand off an approved opportunity to engineering. |
 | EHW | Avery Vale | Review project requirements and tentative BOM, submit a schematic/design gate package, and see manufacturing remain blocked until approval. |
-| ESW | Devon Lane | Review firmware requirements, attach a release candidate record, and track QA verification status. |
+| FW | Devon Lane | Review firmware requirements, attach a release candidate record, and track QA verification status. |
 | MECH | Samira Holt | Review enclosure/harness deliverable and link its controlled revision to the project. |
 | PUR | Morgan Reed | Review supplier quote/PO sample, reconcile a receiving draft, and leave stock quarantined pending QA disposition. |
 | QA | Jordan Blake | Review DVP&R evidence, return one incomplete item, then approve only a complete fixture package with audit attribution. |
 | EMF | Casey Rowan | Review a controlled work instruction and demonstrate the release prerequisite for a pilot build. |
-| TST | Mina Cross | Review EOL test results, record a safe sample disposition, and link failures to a traceable issue. |
+| MMF | Owner TBD | Review an enclosure/subassembly traveler, verify fit/finish evidence, and hand off the accepted assembly to EMF. Lead identity and access provisioning remain open. |
 | FIN | Priya Voss | Review a sample project budget/quotation with financial details hidden from unauthorized departments and the client. |
 | SIT | Kai Morgan | Review access/storage health and demonstrate a denied unauthorized access attempt plus authorized document access. |
 | HR/OPS | Taylor Quinn | Review a skill/training record and a QMS/legal document workflow with confidential fields restricted. |
@@ -900,23 +902,23 @@ Use these as acceptance journeys, not just dashboard screenshots. Each journey m
 ### 27.4 Required Implementation Sequence
 1. **Choose and verify the target**: confirm the exact Supabase project/organization dedicated to this demo, its URL and publishable key, and that no service-role or third-party secrets enter browser code. Verify connectivity and report project identity without printing secrets.
 2. **Reconcile schema and migrations**: identify the canonical operational schema, migration history, migration application state, and which client/service paths read and write each module. Resolve duplicate/conflicting tables and the legacy open policies. Define required role/department/project ownership columns and indexes.
-3. **Provision sample Auth users safely**: create one disposable sample account per each of the eleven departments, plus separate admin and client accounts only if those journeys are in scope. Use a server-side admin utility or Supabase Auth dashboard/CLI; never ship passwords or service-role keys to the client. Use unique temporary passwords, require reset where feasible, and document expiry/rotation. Do not reuse credentials embedded in source.
+3. **Provision sample Auth users safely**: create one disposable sample account for each department only after its lead identity is owner-approved, plus separate admin and client accounts only if those journeys are in scope. Use a server-side admin utility or Supabase Auth dashboard/CLI; never ship passwords or service-role keys to the client. Use unique temporary passwords, require reset where feasible, and document expiry/rotation. Do not reuse credentials embedded in source.
 4. **Bind authorization to trusted identity**: after `supabase.auth.signInWithPassword`, resolve active organization membership, department, and role from protected database records (or verified claims). Derive permissions server-side/RLS. Remove local persona/credential matching as an auth mechanism; persona preview may remain only as an explicitly marked, read-only design preview that cannot mutate data.
 5. **Enforce and verify RLS**: anonymous users cannot read or write protected records; each lead sees only authorized department/project data; mutations require the correct permission; admin access is explicitly scoped; client users see only approved shared fields and published documents. Include storage bucket policies and signed-file access checks.
 6. **Seed a coherent end-to-end sample program**: create a small linked project scenario with one actionable item for every department, realistic dates/statuses/owners, cross-department handoffs, at least one pending approval, safe inventory fixture data, and client-visible published status. Seed idempotently with a clear `demo` namespace/marker and reset procedure. Avoid fake production stock, financial postings, or customer notifications.
 7. **Connect demo screens to cloud records**: identify each page that still reads/writes browser state or constants; wire its intended reads and mutations to the approved Supabase schema, show loading/empty/error/offline states, and make success contingent on the server response. Provide a visible connectivity/sync state and last successful sync time.
-8. **Acceptance walkthrough for all leads**: sign in separately as each of the eleven leads; verify correct home/workspace, assigned queue, list/detail visibility, one safe create/update action persisted after refresh, audit event attribution, denial of another department's protected record, sign-out and session expiry. Verify admin cross-department view and client sanitization separately if included.
+8. **Acceptance walkthrough for all leads**: sign in separately for each of the twelve department roles after owner identity is approved; verify correct home/workspace, assigned queue, list/detail visibility, one safe create/update action persisted after refresh, audit event attribution, denial of another department's protected record, sign-out and session expiry. Verify admin cross-department view and client sanitization separately if included.
 9. **Evidence and operating guide**: capture per-role screenshots or a short walkthrough, record tested project/migration version and date, list demo-only data and account reset/expiry steps, and update this plan only when checks pass. Never include passwords in screenshots or committed source.
 
 ### 27.5 Definition of Done
-- All eleven department lead users authenticate through Supabase Auth; credentials are not present in shipped frontend source or visible in the credential roster.
+- All twelve department lead users authenticate through Supabase Auth; credentials are not present in shipped frontend source or visible in the credential roster.
 - Role and department come from verified server-backed membership/claims, and database plus storage RLS deny unauthorized cross-department/client access.
 - A coherent, resettable demo dataset supports at least one representative journey for every department lead and can be explored after a fresh login or page refresh.
 - Successful writes persist in Supabase and have an attributable audit trail; failed/offline writes are shown as failed and never presented as completed.
-- Migration state, project identity, RLS checks, all eleven role walkthroughs, admin/client boundaries, and evidence are recorded here before this milestone is marked complete.
+- Migration state, project identity, RLS checks, all twelve role walkthroughs, admin/client boundaries, and evidence are recorded here before this milestone is marked complete.
 
 ### 27.6 Remaining Plan Quality Work
-Before treating this document as the final department-lead delivery plan, reconcile all milestone checkboxes with current code and cloud evidence; add an owner, dependency, acceptance evidence, and target sequence to each remaining phase; validate that the eleven department names, lead roster, permissions, sample journeys, and terminology match; and distinguish implemented UI from cloud-backed functionality throughout. Keep the Android handoff gates in §25 tracked separately from web demo readiness.
+Before treating this document as the final department-lead delivery plan, reconcile all milestone checkboxes with current code and cloud evidence; add an owner, dependency, acceptance evidence, and target sequence to each remaining phase; validate that the twelve department names, lead roster, permissions, sample journeys, and terminology match; and distinguish implemented UI from cloud-backed functionality throughout. Keep the Android handoff gates in §25 tracked separately from web demo readiness.
 
 
 Company-name anonymization: current repository display labels, planning/reference snapshots and synthetic examples use XYZ Pvt Ltd. Live business records, identities, backend configuration, official document codes and published Git history were not changed. Sanitized schema/reference text is not a claim of an altered installed database. Image/binary contents and historical commits require separate review; a source sync is not deployment.
@@ -934,7 +936,7 @@ Live Lovable inspection found no enabled sign-in method and zero rows in organiz
 
 | Area | Corrected behavior | Evidence boundary |
 |---|---|---|
-| All eleven department leads | Tasks, approvals, badges, projects, documents, references and roster use relevant department/explicit assignment context. No unrelated global lists by default. | Department route/directory checks; browser-local data only. |
+| All twelve department leads | Tasks, approvals, badges, projects, documents, references and roster use relevant department/explicit assignment context. No unrelated global lists by default. | Department route/directory checks; browser-local data only. |
 | Tasks and project navigation | My Tasks opens the assigned queue; Active Projects opens linked workspaces. Service's unused lifecycle shortcut is removed. Task creation validates roster/project choice; reassignment retains due date and project. | Service review/reassignment and saved task checks passed. |
 | Approval handoff | Source-linked request with designated authority; pending review blocks task completion. Current pending state and signer are rechecked inside the saved transaction. | Hardware to Quality approval passed in two open tabs; requester received decision, updated task and notification after refresh. |
 | Persistence and concurrency | Refresh repair preserves edits/drafts; mutations read latest saved state under a shared browser lock, propagate storage events, and avoid stale form overwrite. | Fourteen focused tests, TypeScript and production build passed. This is not server concurrency certification. |
@@ -950,7 +952,7 @@ Live Lovable inspection found no enabled sign-in method and zero rows in organiz
 | 3 | Web/backend implementer; verified contracts | Replace the complete operational workflow with authenticated shared reads/writes, server numbering, approval/audit transactions, concurrency and idempotency. Keep local demo isolated until replacement is complete. | Fresh sessions on independent clients see the same committed records; failed writes remain failed. |
 | 4 | Department owners; actual project information | Complete document inventory and type-specific templates, provenance, review, revision, release and recipient grants under the [document standardization plan](docs/DOCUMENT_STANDARDIZATION_PLAN.md). Correct every reference label/destination/content mapping. | Owner-reviewed source-backed documents; unreleased/internal files denied to clients and unrelated teams. |
 | 5 | Department owners and QA; sequences 2–4 | Run the real lifecycle from enquiry/feasibility through engineering, procurement, production, test, release, dispatch and service. Gate transitions require actual predecessor records and approved evidence. | Persisted cross-department handoffs, negative tests and traceable audit; no simulation used as production evidence. |
-| 6 | Web QA, then Android owner | Repeat all eleven roles plus Admin/Client: queue, detail, create/update, approvals/rework, projects, documents, references, team, notifications and logout. Hand over only verified contracts to Android. | Per-role browser evidence and a separately recorded Android acceptance run. |
+| 6 | Web QA, then Android owner | Repeat all twelve roles plus Admin/Client: queue, detail, create/update, approvals/rework, projects, documents, references, team, notifications and logout. Hand over only verified contracts to Android. | Per-role browser evidence and a separately recorded Android acceptance run. |
 
 ### 28.4 Android handoff and final completion rule
 
@@ -960,19 +962,19 @@ Final portal acceptance requires real authenticated shared persistence, server-e
 
 ### 28.5 Standard department task board — 19 October 2026
 
-My Tasks and department workspace task views share DepartmentLeadCoordinationCenter across all eleven lead roles. Default My Tasks assignee is the active lead; authorized department/team and project filters remain available. Board order is Today / In Progress (left), Under Review / Gate (middle), To Do (right), with Completed & Released below, collapsed by default with an expand arrow and count. Each task belongs to one lane: approved/released precedes review, then open work explicitly in progress or due today, then backlog. Start stores explicit workStatus while preserving the canonical status enum, project and due date; no notes-based progress inference. Search, due-date/priority sorting, reassignment, task detail and table view use the same department data and guarded mutations. Missing due dates remain missing. Android parity is a future client requirement, not an APK change.
+My Tasks and department workspace task views share DepartmentLeadCoordinationCenter across all twelve lead roles. Default My Tasks assignee is the active lead; authorized department/team and project filters remain available. Board order is Today / In Progress (left), Under Review / Gate (middle), To Do (right), with Completed & Released below, collapsed by default with an expand arrow and count. Each task belongs to one lane: approved/released precedes review, then open work explicitly in progress or due today, then backlog. Start stores explicit workStatus while preserving the canonical status enum, project and due date; no notes-based progress inference. Search, due-date/priority sorting, reassignment, task detail and table view use the same department data and guarded mutations. Missing due dates remain missing. Android parity is a future client requirement, not an APK change.
 
 Task-board verification: [dated implementation and browser checks](docs/evidence/TASK_BOARD_STANDARD_2026-10-19.md). TypeScript, 15 tests and production build passed; Hardware, Finance and Service My Tasks parity, Service Start, completed expansion/collapse and desktop lane order were checked in Lovable.
 
 ### 28.6 One department project workspace — 19 October 2026
 
-Department home/summary and Project Workspace navigation use one consistent page for all eleven lead roles. A single Workspace project dropdown selects All projects or an authorized department-linked project. Project identity/customer/stage/date, progress, standard task board, authorized documents/references, approval summaries, department records and recorded task owners derive from the same selection. Project matching uses explicit UUID/code/source references; unlinked documents stay in the department-wide overview rather than being assigned by filename or title. Missing source values and empty sections are explicit. Create-record context and new-task default follow the selection, while existing department mutation/approval guards remain authoritative for the prototype. Project-specific owner lists show only recorded task owners; the department roster remains the authorized assignment source. Older specialist inventory, procurement and governance routes remain separate tools, not implicit project evidence. This is a web prototype UI increment, not shared-backend or Android runtime acceptance.
+Department home/summary and Project Workspace navigation use one consistent page for all twelve lead roles. A single Workspace project dropdown selects All projects or an authorized department-linked project. Project identity/customer/stage/date, progress, standard task board, authorized documents/references, approval summaries, department records and recorded task owners derive from the same selection. Project matching uses explicit UUID/code/source references; unlinked documents stay in the department-wide overview rather than being assigned by filename or title. Missing source values and empty sections are explicit. Create-record context and new-task default follow the selection, while existing department mutation/approval guards remain authoritative for the prototype. Project-specific owner lists show only recorded task owners; the department roster remains the authorized assignment source. Older specialist inventory, procurement and governance routes remain separate tools, not implicit project evidence. This is a web prototype UI increment, not shared-backend or Android runtime acceptance.
 
-Browser verification of `8fabb5f`: **PASSED**. Verified in live preview at `https://ssm-new.lovable.app` using automated Chrome DevTools Protocol (CDP) and headless capture. Hardware (`EHW`, Avery Vale) verified for All Projects (`89%`, 1 task, 6 docs, 1 approval), dynamic switch to `HLPL-SLCT-01` (`100%`, 0 tasks, 2 docs, 0 approvals), dynamic switch to `HLPL-BCU-02` (`0%`, 1 task in Today/Progress, 0 docs, 1 approval), and clean revert to All. Complete project isolation verified with zero state bleed. Testing (`TST`, Mina Cross) verified on consolidated workspace with `All projects` (`50%`, 1 task in To Do) and scoped `HLPL-SLCT-01` (`0%`, 1 task retained). Zero console errors. Evidence recorded in [workspace consolidation checkpoint](docs/evidence/WORKSPACE_CONSOLIDATION_2026-10-19.md) and screenshots `docs/evidence/ehw_workspace_*.png` and `docs/evidence/tst_workspace_*.png`. Priority 0 gate is closed.
+Browser verification of `8fabb5f`: **PASSED**. Verified in live preview at `https://ssm-new.lovable.app` using automated Chrome DevTools Protocol (CDP) and headless capture. Hardware (`EHW`, Avery Vale) verified for All Projects (`89%`, 1 task, 6 docs, 1 approval), dynamic switch to `HLPL-SLCT-01` (`100%`, 0 tasks, 2 docs, 0 approvals), dynamic switch to `HLPL-BCU-02` (`0%`, 1 task in Today/Progress, 0 docs, 1 approval), and clean revert to All. Complete project isolation verified with zero state bleed. Testing workspace (historical TST role, Mina Cross; not an active department) verified on consolidated workspace with `All projects` (`50%`, 1 task in To Do) and scoped `HLPL-SLCT-01` (`0%`, 1 task retained). Zero console errors. Evidence recorded in [workspace consolidation checkpoint](docs/evidence/WORKSPACE_CONSOLIDATION_2026-10-19.md) and screenshots `docs/evidence/ehw_workspace_*.png` and `docs/evidence/tst_workspace_*.png`. Priority 0 gate is closed.
 
 ### 28.7 Antigravity execution roadmap
 
-Follow the [detailed completion and improvement plan](docs/ANTIGRAVITY_PORTAL_COMPLETION_HANDOFF_2026-10-19.md). Priority 0 (workspace browser verification of `8fabb5f`) is complete and evidenced. The remaining execution gates are Priority 1 (eleven-role UX regression and lane exclusivity), Priority 2 (secure shared backend and identity), Priority 3 (actual lifecycle gates and document standardization), and Priority 4 (Android contract parity), with owners, dependencies, and acceptance evidence. Do not mark these remaining planned gates complete until their prerequisites and live operational tests pass.
+Follow the [detailed completion and improvement plan](docs/ANTIGRAVITY_PORTAL_COMPLETION_HANDOFF_2026-10-19.md). Priority 0 (workspace browser verification of `8fabb5f`) is complete and evidenced. The remaining execution gates are Priority 1 (twelve-role UX regression and lane exclusivity), Priority 2 (secure shared backend and identity), Priority 3 (actual lifecycle gates and document standardization), and Priority 4 (Android contract parity), with owners, dependencies, and acceptance evidence. Do not mark these remaining planned gates complete until their prerequisites and live operational tests pass.
 
 ### 28.8 Dual Telematics Lifecycles, Hardware Modifications, Quality Agency Standards & Interactive Stepper — 19 October 2026
 
@@ -983,7 +985,7 @@ To demonstrate both standard platform reuse and full hardware modification lifec
    - **Lifecycle Impact**: Stage 4 PoC Hardware Redesign waived entirely, saving ₹6.5 Lakhs NRE and 14 weeks of engineering turnaround. Rapidly moves through firmware adaptation, regression validation, and SOP.
 2. **Hardware Modification Project (`HLPL-BCU-02` — Ashok Leyland Commercial Telematics Gateway)**:
    - **Hardware Core**: Requires architectural hardware modification to add Bluetooth Low Energy (BLE 5.2 Nordic Semiconductor nRF52840 SoC) for wireless TPMS (tire pressure monitoring) and refrigerated cargo cold-chain temperature sensors, along with dual isolated CAN (CAN-FD) and 3.7V Lithium-ion backup battery.
-   - **Full Stage 1 to 9 Lifecycle**: Originates from OEM enquiry/SOR $\rightarrow$ Stage 2 Feasibility requiring unanimous sign-off across all 6 HODs (EHW RF trace design, ESW Zephyr RTOS BLE stack, MECH IP67 RF window, PUR Nordic nRF52840 chip sourcing, QA iCAT & NABL testing, FIN ₹8.4L NRE) $\rightarrow$ OEM quotation acceptance $\rightarrow$ Stage 4 PoC revision (`HLPL-MOD-PCB-04-BLE` Rev 01) $\rightarrow$ Stage 5 Prototyping $\rightarrow$ Stage 6 DVP&R $\rightarrow$ Stage 7 Tooling $\rightarrow$ Stage 8 Pilot Production $\rightarrow$ Stage 9 SOP & OEM Feedback.
+   - **Full Stage 1 to 9 Lifecycle**: Originates from OEM enquiry/SOR $\rightarrow$ Stage 2 Feasibility requiring unanimous sign-off across all 6 HODs (EHW RF trace design, FW Zephyr RTOS BLE stack, MECH IP67 RF window, PUR Nordic nRF52840 chip sourcing, QA iCAT & NABL testing, FIN ₹8.4L NRE) $\rightarrow$ OEM quotation acceptance $\rightarrow$ Stage 4 PoC revision (`HLPL-MOD-PCB-04-BLE` Rev 01) $\rightarrow$ Stage 5 Prototyping $\rightarrow$ Stage 6 DVP&R $\rightarrow$ Stage 7 Tooling $\rightarrow$ Stage 8 Pilot Production $\rightarrow$ Stage 9 SOP & OEM Feedback.
 
 #### 2. Quality Agency & DVP&R Verification Standards
 In alignment with MoRTH CMVR and automotive compliance requirements, designated testing parameters and evidence records are embedded:
@@ -1015,26 +1017,45 @@ A dedicated interactive component (`src/components/ProjectLifecyclePlayerAndDeta
 #### 1. Rationale and Architectural Decoupling
 Following review of customer-oriented automotive processes (IATF 16949 COP), two critical structural corrections were enacted across the Master Plan and portal architecture:
 1. **Explicit Separation of Firmware and Software (12 Functional Departments)**:
-   - Previously, low-level MCU firmware and high-level telematics/cloud software were conflated under `ESW`.
-   - The architecture now formally establishes **12 distinct departments**:
-     - **`EFW` (Embedded Firmware Engineering)**: Owns low-level microcontroller bare-metal/RTOS kernels (Zephyr/FreeRTOS), hardware abstraction layers (HAL), peripheral device drivers, memory layouts, vehicle bus stacks (CAN J1939 / LIN), bootloader security, and fail-safe dual-bank FOTA orchestration.
-     - **`CSW` (Cloud & Application Software Engineering)**: Owns high-level telematics protocol engines (AIS-140 Annexure 8, MQTT, HTTP, Protobuf), mobile BLE 5.2 companion apps (sensor interfaces), cloud IoT backend integrations, and desktop PC diagnostic / EOL flashing host GUI tools.
+   - Previously, low-level MCU firmware and high-level telematics/cloud software were conflated under the legacy `ESW` identifier.
+   - The architecture now formally establishes **12 distinct departments**. Canonical names are **FW** (Firmware) and **SW** (Cloud & Application Software); EFW and CSW are retired transitional labels, and legacy ESW is a read-compatibility alias only. Do not use EFW, CSW or ESW for new UI labels, department codes, or document IDs. Existing IDs remain unchanged until an explicit, reference-safe migration is approved:
+     - **`FW` (Embedded Firmware Engineering)**: Owns low-level microcontroller bare-metal/RTOS kernels (Zephyr/FreeRTOS), hardware abstraction layers (HAL), peripheral device drivers, memory layouts, vehicle bus stacks (CAN J1939 / LIN), bootloader security, and fail-safe dual-bank FOTA orchestration.
+     - **`SW` (Cloud & Application Software Engineering)**: Owns high-level telematics protocol engines (AIS-140 Annexure 8, MQTT, HTTP, Protobuf), mobile BLE 5.2 companion apps (sensor interfaces), cloud IoT backend integrations, and desktop PC diagnostic / EOL flashing host GUI tools.
 2. **Universal Feasibility Requirement Discipline (Process 01 Across Every Department)**:
    - In accordance with automotive engineering rigor, **no department jumps directly into downstream implementation or tooling** (e.g. Firmware does not start with board support packages, nor Mechanical with 3D CAD modeling).
    - **Process 01 for every department is their Domain Requirements Specification**:
      - `SAL`: Customer Enquiry Intake (`SAL-ENQ-01`) & SOR Analysis (`SAL-SOR-01`)
      - `EHW`: Hardware Product Requirements Specification (`EHW-PRS-01`)
-     - `EFW`: Embedded Firmware Requirements Specification (`EFW-FRS-01`)
-     - `CSW`: Cloud & Application Software Requirements Specification (`CSW-SRS-01`)
+     - `FW`: Embedded Firmware Requirements Specification (`FW-FRS-01`)
+     - `SW`: Cloud & Application Software Requirements Specification (`SW-SRS-01`)
      - `MECH`: Mechanical Requirements Specification (`MECH-MRS-01`)
      - `PUR`: Sourcing & Component Feasibility Matrix (`PUR-SRS-01`)
      - `QA`: Quality Assurance & DVP&R Requirements Specification (`QA-QRS-01`)
-     - `EMF`: Manufacturing DFM Process Requirements Specification (`EMF-PRS-01`)
-     - `TST`: Production EOL Test Jigs Requirements Specification (`TST-TRS-01`)
+     - `EMF`: Electronics Manufacturing Process Requirements (`EMF-MPR-01`)
+     - `MMF`: Mechanical Manufacturing Process Requirements (`MMF-MPR-01`)
      - `FIN`: Commercial Cost Target & Financial Feasibility Sheet (`FIN-CFS-01`)
      - `SIT`: Cloud Infrastructure & Field Service Requirements Specification (`SIT-SRS-01`)
      - `HR/OPS`: Competency, Safety & Compliance Requirements Specification (`HROPS-CRS-01`)
 
 #### 2. Feasibility Handoff & Stage 3 Requirement Freeze Contract
 - **Stage 2 Multi-Department Feasibility**: During Stage 2, each of the relevant department HODs reviews the OEM SOR/inquiry, prepares their formal domain requirement sheet, confirms lead times, flags risks, and records sign-off into the consolidated **Contract Review Record (`HLPL/F/MKT/01`)**.
-- **Stage 3 Requirement Freeze**: Formally freezes the entire Multi-Department Requirements Package (`EHW-PRS-01`, `EFW-FRS-01`, `CSW-SRS-01`, `MECH-MRS-01`, `QA-QRS-01`, etc.) alongside the Commercial Quotation (`SAL-QUO-01`). Engineering development cannot commence until this frozen baseline is signed off by the Executive Admin and Lead Authority.
+- **Stage 3 Requirement Freeze**: Formally freezes the entire Multi-Department Requirements Package (`EHW-PRS-01`, `FW-FRS-01`, `SW-SRS-01`, `MECH-MRS-01`, `QA-QRS-01`, etc.) alongside the Commercial Quotation (`SAL-QUO-01`). Engineering development cannot commence until this frozen baseline is signed off by the Executive Admin and Lead Authority.
+
+
+### 28.10 Production organization: Electronics and Mechanical Manufacturing — 19 October 2026
+
+Production has exactly two departments: **EMF — Electronics Manufacturing** and **MMF — Mechanical Manufacturing**. Retire TST/EOL Testing as an active department; testing remains a process performed by the relevant production team, with QA owning test criteria, independent disposition, nonconformance control and release authority. Preserve historical TST identifiers and records; do not auto-reassign the old TST roster or records. Assign only by explicit record/process ownership and quarantine ambiguous items for review.
+
+EMF starts with accepted PCBA receipt and traceability, then enclosure integration/box-build, harness/accessory installation, controlled firmware loading, in-line/final checks, packaging and production travelers. In-house bare-board fabrication and SMT/PCBA assembly (placement, reflow, SPI/AOI) are out of scope. PUR manages outsourced PCBA supplier/PO coordination, QA owns supplier-quality criteria and disposition, and EHW owns the released design/specification package. MMF owns mechanical part/enclosure fabrication or controlled supplier receipt, finishing, mechanical subassembly and fit/dimensional checks. EMF and MMF use a documented handoff for final product integration. Keep MECH (Mechanical Engineering/design) separate from MMF (Mechanical Manufacturing/production). Do not assign the former TST lead to MMF without owner confirmation.
+
+### 28.11 Extensible department registry and versioned lifecycle responsibility matrix — 19 October 2026
+
+The current 12 departments are the starting organization, not a fixed ceiling. Keep lifecycle stages stable and independent from department structure. Use stable stage IDs and a governed, backend-owned department registry so a future department can be added or an existing one renamed, split, merged, or deactivated without changing historical stage identities.
+
+Replace hard-coded stage-owner assumptions with a versioned responsibility matrix keyed by lifecycle template/version, stage ID, department ID, role/capability, and project/product/process applicability. Store RACI assignments separately from required approver/signatory capability. Projects pin the accepted matrix version. Matrix changes require an authorized administrator, effective date, impact preview, audit entry, and an explicit decision whether they apply to new projects or a currently active project through a reviewed change. Never rewrite prior task ownership, completed stage evidence, approval attribution, or signatures. Renames preserve IDs and aliases; splits/merges require explicit mapping of records and responsibilities.
+
+Treat HR/OPS and other shared functions as horizontal services that participate only when relevant, not as mandatory gates in every lifecycle stage. Examples include capacity and staffing readiness, onboarding, competency/training, and safety/compliance evidence. Confidential HR data remains HR-authorized. Stage applicability must support multiple departments working in parallel, explicit not-applicable decisions with rationale, and a named accountable owner for each required gate. Normally each decision/work package has one Accountable owner; multiple Responsible/Consulted parties are allowed.
+
+Authorization remains independent from RACI: an assignment does not create access, and “Informed” does not imply permission to read. New departments get no inherited visibility or signing rights. The same registry, matrix version, project pinning, and authorization semantics must be exposed to Android through the verified backend contract.
+
+**Implementation status:** this is a planning requirement. Existing “Dynamic RACI” milestone/checklist entries describe the current prototype surface only; they do not certify a persistent, versioned, project-pinned responsibility matrix or backend authorization. Acceptance requires adding a department without code-level enum changes, proving no inherited access, verifying stage routing and authorized signing, and confirming an existing project's pinned version and history remain unchanged after a later template revision.

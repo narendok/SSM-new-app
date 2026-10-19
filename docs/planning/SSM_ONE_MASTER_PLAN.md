@@ -1,0 +1,81 @@
+# SSM One Cross-Platform Master Plan
+
+Last reconciled: 19 October 2026
+Status: Active planning baseline. This file is the shared authority for the SSM-new project. Detailed platform documents below implement this plan and must not redefine its cross-platform decisions.
+
+## Scope and authority
+
+SSM One includes the web portal and its backend, the Android client, and shared operational data/document contracts. The web and Android plans are implementation-specific subplans. Where details conflict, this root plan governs shared scope, terminology, sequencing, and acceptance; each platform plan governs its own technical implementation. The former SSMone Web plan at `C:\Users\Admin\AndroidStudioProjects\SSMone\SSMone-Web\docs\planning\SSM_ONE_WEB_PORTAL_MASTER_PLAN.md` is an older source, not a parallel active plan. It is reviewed as historical input; reconcile any unique still-valid requirements into these SSM-new plans before archiving or deleting anything. New planning updates go only to this root and the relevant platform handoff.
+
+- Reference Web implementation: [SSM_ONE_WEB_PORTAL_MASTER_PLAN.md](ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md)
+- Document standards: [DOCUMENT_STANDARDIZATION_PLAN.md](ssm-new-web/docs/DOCUMENT_STANDARDIZATION_PLAN.md)
+- Antigravity/Codex handoff and evidence: [ANTIGRAVITY_SYNC_STATUS.md](ssm-new-web/docs/ANTIGRAVITY_SYNC_STATUS.md)
+- Android implementation: [SSM_ONE_ANDROID_BUILD_PLAN.md](SSM-new-app/docs/planning/SSM_ONE_ANDROID_BUILD_PLAN.md)
+- Document-control reference: [SSM One Document Catalogue — Auto-Drafting, Audit, and Native Upload Rules](SSM_ONE_PLANNING_LIBRARY/SSM%20One%20Document%20Catalogue%20-%20Auto-Drafting%20Audit%20and%20Native%20Upload%20Rules.md) ([source mapping JSON](SSM_ONE_PLANNING_LIBRARY/SSM%20One%20Document%20Catalogue%20-%20Auto-Drafting%20Audit%20and%20Native%20Upload%20Rules.json))
+- Electronics-specific product lifecycle and APQP crosswalk: [Electronics Project Lifecycle and APQP Roadmap](SSM_ONE_PLANNING_LIBRARY/Electronics%20Project%20Lifecycle%20and%20APQP%20Roadmap.md)
+- Generic SSM One software/product delivery sequence: [Product Build Roadmap](SSM_ONE_PLANNING_LIBRARY/Feature%20Roadmap/Product%20Build%20Roadmap.md)
+
+## Product and architecture decisions
+
+1. **One extensible department model across platforms.** The current baseline departments are SAL, EHW, FW, SW, MECH, PUR, QA, EMF, MMF, FIN, SIT, and HR/OPS. This is the present organization, not a permanent limit. Departments are managed as stable-ID registry records; future departments can be added through governed configuration. A department sees its own records and records explicitly assigned to it; filters and role assignments must never widen authorization.
+2. **Final engineering names.** `FW` means Firmware. `SW` means Cloud & Application Software. Do not use EFW, CSW, or ESW as active department labels, new department codes, or new document-ID prefixes. Treat old EFW/CSW values as transitional aliases and ESW as a legacy merged-data alias. Preserve existing entity/document IDs until a reference-safe migration is explicitly specified. Map aliases only from explicit ownership evidence; quarantine ambiguous legacy records for review.
+3. **Web/backend is the source of truth.** Authenticated membership and server-side policy determine identity, department, permissions, records, approvals, official numbering, audit history, and private files. A URL role or browser-local demo role is not authentication or authorization.
+4. **Android consumes verified contracts.** It must use the same project, department, task, document, approval, and permission semantics as web. Do not implement a second independent source of truth or claim parity before authenticated cross-platform tests pass.
+5. **Project and lifecycle evidence must be real and traceable.** Project selection uses stable project identity and explicit links. A screen transition, fixture, generated document, or simulated approval is not proof of an operational lifecycle. Stage gates require recorded authorized decisions and linked evidence.
+6. **Document-specific output.** Documents use controlled, type-specific formats populated only from the selected project's verified information. Missing or conflicting values remain explicit; no sample specifications, prices, results, certificates, dates, or signatures are invented. Preview and exported files must agree and preserve revision history.
+
+## Production department model
+
+Production has exactly two manufacturing departments: **EMF — Electronics Manufacturing** and **MMF — Mechanical Manufacturing**. The existing TST/EOL Testing department is retired as a separate department; test execution becomes an assigned production process in EMF or MMF, while QA owns independent test criteria, quality disposition, nonconformance control, and release authority. Do not automatically reassign historical TST records or its lead; map each record by explicit ownership or quarantine it for review.
+
+EMF owns receiving and traceability of accepted outsourced PCB assemblies (PCBAs), enclosure integration/box-build, harness and accessory installation, controlled firmware loading, in-line functional checks, final assembly, packaging, and production travelers. In-house bare-board fabrication and SMT/PCBA assembly (placement, reflow, SPI/AOI) are out of scope for now. If PCBA is outsourced, PUR owns supplier/PO/commercial coordination, QA owns supplier-quality acceptance criteria and disposition, and EHW owns the released design/specification package. MMF owns mechanical part fabrication/finishing and mechanical subassembly/inspection; exact in-house versus supplier operations are configured per capability and project. EMF and MMF coordinate the final product integration handoff.
+
+**Naming and boundaries:** MECH remains Mechanical Engineering (design); MMF is Mechanical Manufacturing (production). Keep any dedicated test-lab capability as a QA-owned function unless a separately approved organization decision creates a stand-alone test department.
+
+## Lifecycle stages, department registry, and responsibility assignments
+
+Keep the lifecycle stage model independent from the organization chart. The approved lifecycle template defines stable stage IDs, order, gate intent, evidence, and transition rules. Department and role assignments are configured against a stage template and the applicable project, product, process, and capability; changing the organization chart must not require renaming or rebuilding lifecycle stages. The current 12 departments are the initial registry, and the model must support adding, splitting, renaming, deactivating, or merging departments as the company grows.
+
+Use a versioned responsibility matrix keyed by lifecycle template/version, stage ID, department ID, role/capability, and applicability. It records RACI responsibility and separately identifies required approver/signatory authority. Each project pins the matrix/template version accepted at its baseline. A governed change may take effect for new projects or through an explicit project change with impact review and re-approval; it must not silently rewrite historical decisions, completed work, or signed records. Preserve stable IDs and effective dates; renames use aliases, and splits/merges require explicit record ownership mapping.
+
+HR/OPS, Finance, Service/IT, QA, and other shared functions can contribute horizontally wherever applicable; they are not forced into every stage as sequential gates. Stage events create work only when the matrix says it applies and an authorized owner is assigned. HR/OPS examples include staffing/capacity, competency and training, onboarding, and safety/compliance readiness, with confidential personnel fields restricted to authorized HR users. An assignment or RACI entry does not itself grant data access: authenticated membership, project/record scope, and capability policy remain independent authorization checks. “Informed” means notification eligibility, never automatic read permission.
+
+Governance rules: normally one Accountable owner per decision/work package; Responsible, Consulted, and Informed assignments may be multiple. Every required gate must have an accountable owner and authorized signer or be explicitly marked not applicable with rationale. Configuration changes require an authorized admin, effective date, impact preview, audit record, and tests for old-project stability and new-project routing. New departments receive no inherited project, document, team, or approval access by default. Web and Android consume the same backend-owned registry and matrix contract.
+
+## Departmental Requirement Sheets & Feasibility Freeze (Stage 2 Gate)
+
+Each department that is applicable to the project prepares its domain-specific requirement sheet during Stage 2 Feasibility analysis before downstream engineering work begins. The responsibility matrix decides applicability and the accountable owner; shared-service contributions are included when relevant:
+1. **SAL — Customer & Commercial Feasibility (SOR / mNDA)**: Validates customer SOR, commercial pricing, volume schedules, and contractual warranty/liability terms.
+2. **EHW — Hardware Product Requirement Sheet (EHW-PRS)**: Defines electrical architecture, MCU selection, power regulation (9V–36V transient clamping), component obsolescence/AEC-Q ratings, and PCB layout constraints.
+3. **FW — Firmware Product Requirement Sheet (FW-FRS)**: Defines RTOS kernel (FreeRTOS/Zephyr), memory map, HAL bring-up, interrupt priorities, protocol drivers (CAN J1939/OBD-II), and dual-bank bootloader fail-safe OTA requirements.
+4. **SW — Software Requirement Specification (SW-SRS)**: Defines cloud telemetry ingestion protocols (AIS-140 MQTT/TLS 1.3), Bluetooth GATT schemas (TPMS/temperature), fleet APIs, webhooks, and production line diagnostic flashing GUI tools.
+5. **MECH — Mechanical Requirement Sheet (MECH-MRS)**: Defines 3D form factor, enclosure IP67 sealing, vibration/drop dampening, thermal dissipation, connector clearance, and mold tooling feasibility.
+6. **PUR — Sourcing & Supply Chain Feasibility (PUR-BOM)**: Verifies Approved Supplier List (ASL), long-lead component availability, MOQ, and dual-sourcing strategy.
+7. **QA — Quality & Compliance Requirement Sheet (QA-QRS)**: Defines DVP&R test matrix, automotive compliance standards (AIS-140, ISO 7637-2, ISO 16750), type approvals (iCAT/ARAI), and incoming lot sampling plans.
+8. **EMF — Electronics Manufacturing Feasibility (EMF-DFM)**: Verifies accepted outsourced PCBA supplier/lot interfaces, incoming traceability, box-build and line-integration capability, controlled programming, and in-line/final functional testing. In-house SMT, placement, reflow, SPI/AOI, and bare-board fabrication are outside the current scope.
+9. **MMF — Mechanical Manufacturing Feasibility (MMF-DFM)**: Verifies plastic injection molding, CNC machining, gasket tooling, and mechanical assembly tolerances.
+10. **FIN — Financial & Capital Feasibility**: Verifies payment credit terms, NRE tooling amortization, BOM margin threshold, and cash-flow requirements.
+11. **SIT — Service & IT Infrastructure Feasibility**: Defines server hosting capacity, network security/ISMS, telemetry database backup, and field RMA diagnostic procedures.
+12. **HR/OPS — Human Resources & Operational Competency Feasibility**: Assesses technician IPC-A-610 workmanship training, ESD certification, and staffing requirements.
+
+All 12 departmental requirement points compile into the unified **Contract Review & Feasibility Report (`HLPL/F/MKT/01`)**. Formal sign-off and requirement freeze are mandatory before engineering kickoff.
+
+## User-confirmed workflow and UX requirements
+
+- All department roles use a consistent task board: Today / In Progress on the left, Review in its own lane, To Do on the right, and Completed collapsed by default with an expand control. A task appears in one lane only.
+- Department workspace is one project-aware view. A project selector scopes project identity, tasks, linked documents/references, approvals, and recorded owners to that project while leaving unlinked department records clearly separate.
+- Team, task, approval, reference, and document views default to department-relevant information while retaining explicitly authorized collaboration.
+- Lifecycle gates and document generation must be backed by real persistent records and attributable actions before the portal is described as operational end to end.
+
+## Delivery sequence and current gate
+
+1. **Batch 1 — department identity, migration, routing and preservation.** Antigravity reports 29 automated tests and TypeScript passing; Codex independently reproduced those results on 19 October. This batch is **not signed off**: the implementation still uses EFW/CSW active IDs instead of FW/SW, and must incorporate the production model change from TST to MMF while preserving historic TST records. Codex could not verify localhost from this execution environment, and the local production build stopped at a sandbox EPERM while preparing a shared `node_modules` output directory. Antigravity must reconcile canonical role names and re-run build/browser evidence in its authorized environment.
+2. **Batch 2 — document catalogue and type-specific templates.** The current catalogue records 38 logical families, 89 unique source blocks, and 90 family-source links because source block B0545 maps to two families; D02 and D04 are clarification-only. These are catalogue coverage counts, not required output-file quantities. Reconcile required outputs, project/department ownership, feasibility against actual project information, dependencies, acceptance evidence, and target phase.
+3. **Batch 3 — authenticated backend and operational lifecycle.** Verify organization and users, authentication, server-side authorization/RLS, persistence, audit history, private file access, notifications, approval gates, and full project lifecycle in a non-production test environment before production deployment.
+4. **Batch 4 — Android contract parity.** Implement only against verified web/backend contracts. Run separate Android build, device/navigation, offline/cache isolation, permissions, and cross-platform round-trip acceptance.
+
+Lovable editor preview, localhost, published deployment, backend, and Android are separate environments; report evidence for each separately. A passing local test suite does not certify the live service or production data.
+
+## Acceptance standard
+
+Close a batch only when the exact source revision and changed files are identified; required automated checks pass; browser/runtime behavior is independently reproduced for relevant roles; negative access tests pass; persisted state and cross-links survive refresh; and evidence is recorded in the sync ledger. Keep unresolved risks and failed checks visible. Do not mark a simulated flow as complete operational functionality.
