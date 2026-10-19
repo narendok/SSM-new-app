@@ -6,7 +6,7 @@
 
 **Target Repository:** `C:/Users/Admin/AndroidStudioProjects/SSM-new/SSM-new-app`
 
-**Web / Backend Master Plan Reference:** [Authoritative web master plan](../../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md), §28 (19 October 2026). Android-local web plan copies are historical references.
+**Cross-platform Master Plan Reference:** [SSM-new root master plan](../../../SSM_ONE_MASTER_PLAN.md). The [detailed web implementation plan](../../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md) is a subordinate web handoff; Android-local copies are historical references.
 **Authoritative Backend Contracts:** [`docs/backend-handoff/mobile_backend_contract.json`](../backend-handoff/mobile_backend_contract.json), [`docs/backend-handoff/MOBILE_BACKEND_CONTRACT.md`](../backend-handoff/MOBILE_BACKEND_CONTRACT.md), [`docs/backend-handoff/ANDROID_BACKEND_HANDOFF.md`](../backend-handoff/ANDROID_BACKEND_HANDOFF.md)
 
 ---
@@ -29,7 +29,7 @@ flowchart TD
 
     subgraph WebPortal["Web Portal (Lovable a3399684-daab-4b38-8666-187b96b451af / ssm-new-web)"]
         WEB_UI["TanStack Start / React 19 / Vite Web App"]
-        WEB_WORKSPACES["11 Department Lead Workspaces"]
+        WEB_WORKSPACES["12 Department Lead Workspaces"]
         WEB_EDITORS["Rich DOCX, XLSX & Lifecycle Generators"]
     end
 
@@ -78,7 +78,7 @@ flowchart LR
    - Filtered by the active presentation department, with quick links to assigned project cards and task checklists.
    - Honest metric presentation: unavailable or restricted metrics are clearly badged as *Restricted* or *Unavailable* rather than rendering dummy zeroes.
 2. **Work (Departmental Operational Queues)**:
-   - Primary operational surface exposing the 8 enterprise department workflows based on user permissions.
+   - Primary operational surface exposing the 12 enterprise department workflows based on user permissions.
    - Filterable by department, status, project, and priority.
 3. **Search & Scan**:
    - High-performance barcode and QR scanner using CameraX and ML Kit / ZXing.
@@ -106,7 +106,7 @@ The application adheres to Material Design 3 with comprehensive Light and Dark t
 
 ## 3. Departmental Coverage (8 Workspaces)
 
-The Android app provides operational mobile clients for all 8 enterprise departments:
+The Android app provides operational mobile clients for all 12 enterprise departments:
 
 ```mermaid
 graph TD
@@ -418,7 +418,7 @@ Company-name anonymization: current repository display labels, planning/referenc
 
 This is a documentation/handoff update, not an Android implementation or device verification. Existing stage/build claims above describe historical checkpoints; they do not prove current live integration. No Kotlin, Gradle, APK or backend changes were made for this update, and Android tests/build were not rerun for documentation alone.
 
-The [authoritative web checkpoint](../../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md#28-cross-department-portal-correction-and-production-acceptance--19-october-2026) records fixes to department scoping, navigation, document drafts, task field retention, serialized local edits, designated approvals and client routing. Fourteen web tests, TypeScript/build and a two-tab Hardware-to-Quality round trip passed locally. These results do not certify Android behavior or shared server persistence. [Web browser evidence](../../../ssm-new-web/docs/evidence/DEPARTMENT_SCOPE_FIX_2026-10-19.md).
+The [SSM-new root master plan](../../../SSM_ONE_MASTER_PLAN.md) is the cross-platform authority. The [detailed web checkpoint](../../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md#28-cross-department-portal-correction-and-production-acceptance--19-october-2026) records fixes to department scoping, navigation, document drafts, task field retention, serialized local edits, designated approvals and client routing. Fourteen web tests, TypeScript/build and a two-tab Hardware-to-Quality round trip passed locally. These results do not certify Android behavior or shared server persistence. [Web browser evidence](../../../ssm-new-web/docs/evidence/DEPARTMENT_SCOPE_FIX_2026-10-19.md).
 
 Live Lovable inspection found no enabled sign-in method and no organization/users or operational rows in the inspected core tables. Real organization identity and first administrator work email are required for secure provisioning; no passwords belong in plans/chat. The user approved narendok/ssm-new-web main on 19 October; web fixes and the web plan were pushed through 3403586 and received by Lovable. Live-preview Service task navigation and Finance approval scoping passed. This resolves the earlier automatic-review push block. Production publishing and Android remote sync were not performed.
 
@@ -426,7 +426,7 @@ Live Lovable inspection found no enabled sign-in method and no organization/user
 
 | Area | Required mobile behavior | Dependency / acceptance evidence |
 |---|---|---|
-| Trusted identity and department | Resolve organization, department and capabilities from authenticated protected membership. Cover SAL, EHW, ESW, MECH, PUR, QA, EMF, TST, FIN, SIT and HR/OPS. | Verified Auth/RLS contract; separate authorized identities. Preview roles are never operational authority. |
+| Trusted identity and department | Resolve organization, department and capabilities from authenticated protected membership. Cover SAL, EHW, FW, SW, MECH, PUR, QA, EMF, MMF, FIN, SIT and HR/OPS. TST/EOL testing is a production function with QA oversight, not an active department. | Verified Auth/RLS contract; separate authorized identities. Preview roles are never operational authority. |
 | My Day / Tasks / deep links | Open the actual assigned queue and task; preserve project, due date and source fields on reassignment/update. Empty and denied states are explicit. | Verified task projection/mutation; device navigation and reload tests. |
 | Projects and team | Show authorized linked projects and relevant department roster. A general directory/filter must not widen access beyond server permissions. | Protected project/roster reads, cross-department denial and correct detail destinations. |
 | Approval / rework / notifications | Only designated signers act; pending gates block completion. Server rechecks current state, records rationale/audit, rejects duplicate or stale decisions, and notifies the requester. | Verified online transaction; web-to-mobile and mobile-to-web round trips on independent sessions. |
@@ -445,7 +445,7 @@ Live Lovable inspection found no enabled sign-in method and no organization/user
 
 ### 9.4 Standard task board parity — 19 October 2026
 
-Web now uses one shared task board for all eleven department roles in My Tasks and department workspaces: Today / In Progress left, Review middle, To Do right, Completed collapsed by default with an expand arrow/count. Mobile should adopt the same task grouping and action semantics when verified task contracts are available. A task must occupy only one lane; approved/released and review take precedence over due-today/progress. Preserve assignee, project and due-date fields on updates; retain guarded approval completion. Web browser-local workStatus is not a newly verified backend column or Android contract. No Android source/build/device work is included in this board update.
+Web now uses one shared task board for all twelve department roles in My Tasks and department workspaces: Today / In Progress left, Review middle, To Do right, Completed collapsed by default with an expand arrow/count. Mobile should adopt the same task grouping and action semantics when verified task contracts are available. A task must occupy only one lane; approved/released and review take precedence over due-today/progress. Preserve assignee, project and due-date fields on updates; retain guarded approval completion. Web browser-local workStatus is not a newly verified backend column or Android contract. No Android source/build/device work is included in this board update.
 
 ### 9.5 Department project workspace parity — 19 October 2026
 
@@ -454,3 +454,20 @@ Web consolidates department home/summary and project navigation into one page co
 ### 9.6 Antigravity continuation plan
 
 Continue using the [detailed portal completion handoff](../../../ssm-new-web/docs/ANTIGRAVITY_PORTAL_COMPLETION_HANDOFF_2026-10-19.md), especially sections 6–8 for backend prerequisites and Android acceptance. Workspace browser verification of web `8fabb5f` has passed (evidenced in `ssm-new-web` commit `46b1ac3` / `docs/evidence/WORKSPACE_CONSOLIDATION_2026-10-19.md`). Android runtime/source/build work was not performed in this increment. Preserve existing planning/context edits and the separate Android execution queue.
+
+### 9.6 Canonical firmware and software department naming — 19 October 2026
+
+Use **FW** for Firmware and **SW** for Cloud & Application Software in Android labels, role/deep-link identifiers, and new document IDs. EFW and CSW are retired transitional labels; ESW is a legacy merged-data alias only. Existing source document/entity IDs must remain intact until an explicit, reference-safe migration is approved. Legacy aliases may be normalized only through deterministic ownership mappings; ambiguous ESW records remain quarantined for owner review. Android must consume the canonical web/backend department contract and must not infer ownership from titles or filenames.
+
+
+### 9.7 Production department parity — 19 October 2026
+
+The canonical production departments are EMF (Electronics Manufacturing) and MMF (Mechanical Manufacturing). The former TST/EOL Testing department is not a separate active department; test execution belongs to the relevant production process, while QA owns criteria and independent disposition. Preserve historical TST data and identifiers pending explicit ownership mapping. EMF receives accepted outsourced PCBA and performs in-house box-build, checks and packaging; in-house SMT/PCBA assembly is out of scope. MMF owns mechanical manufacturing and assembly. PUR/QA/EHW retain their distinct supplier, quality, and design responsibilities.
+
+### 9.8 Extensible departments and lifecycle responsibility matrix — 19 October 2026
+
+The current 12 departments are an initial registry, not a product limit. Android must consume a backend-owned, stable-ID department registry and versioned responsibility matrix; do not encode department membership or stage owners as a closed enum or local source of truth. Lifecycle stage IDs remain stable and independent from the department chart. The matrix assigns department, role/capability, RACI, applicability, and any required signer capability to a stage and project context.
+
+Each project uses the responsibility-matrix version accepted at its baseline. Later changes apply to new projects by default; changing an active project requires an authorized, audited change with impact review. Preserve historical stage decisions, assignments, signatures, and IDs. Department additions, splits, merges, renames, and deactivation require explicit mapping and effective dates; adding a department grants no project, document, team, or approval access by default.
+
+Shared functions such as HR/OPS, Finance, SIT, and QA can contribute horizontally when the project/stage applicability says so. HR/OPS may manage staffing, onboarding, competency/training, and safety readiness while confidential personnel information stays restricted. RACI and notification membership never grant record access; Android must rely on server-enforced organization membership, project/record scope, and capability checks. “Informed” is notification eligibility only. Verify both old-project stability and new department routing on the same backend contract before claiming parity. This is a planning requirement; it does not claim Android implementation is complete.
