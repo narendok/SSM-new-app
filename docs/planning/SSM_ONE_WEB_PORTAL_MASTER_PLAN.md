@@ -42,42 +42,44 @@ graph TD
     
     subgraph Commercial & Governance ["Commercial, Quality & Governance"]
         SAL["1. SAL: Sales & Business Development<br/>CRM · Enquiries · Feasibility · Quotations"]
-        QA["6. QA: Quality Assurance & APQP<br/>IATF 16949 · DVP&R · PPAP L3 · TAC Cert"]
-        FIN["9. FIN: Accounts & Finance<br/>Costing · Tax Invoices · Budgets · Ledger"]
-        HROPS["11. HR/OPS: HR & Operations<br/>Skill Matrix · QMS · Corporate Legal & Letterheads"]
+        QA["7. QA: Quality Assurance & APQP<br/>IATF 16949 · DVP&R · PPAP L3 · TAC Cert"]
+        FIN["10. FIN: Accounts & Finance<br/>Costing · Tax Invoices · Budgets · Ledger"]
+        HROPS["12. HR/OPS: HR & Operations<br/>Skill Matrix · QMS · Corporate Legal & Letterheads"]
     end
 
     subgraph Engineering & Design ["Product Engineering & Design"]
         EHW["2. EHW: Embedded Hardware Engineering<br/>Schematics · PCB Layout · BOM · DFMEA"]
-        ESW["3. ESW: Firmware & Software Engineering<br/>RTOS Kernel · CAN J1939 · FOTA · Stack"]
-        MECH["4. MECH: Mechanical Engineering<br/>IP67 Enclosures · Harness Drawings · Thermal CAD"]
+        EFW["3. EFW: Embedded Firmware Engineering<br/>RTOS Kernel · HAL Drivers · Bootloader · FOTA"]
+        CSW["4. CSW: Cloud & Application Software<br/>Telematics Backend · Protocols · BLE · GUI Tools"]
+        MECH["5. MECH: Mechanical Engineering<br/>IP67 Enclosures · Harness Drawings · Thermal CAD"]
     end
 
     subgraph Supply & Manufacturing ["Procurement, Manufacturing & Service"]
-        PUR["5. PUR: Purchasing & Supply Chain<br/>Dual-Track Proto/Mass · AVL · POs · Stores"]
-        EMF["7. EMF: Manufacturing & Assembly<br/>SMT Line 2 · Thermal Profiling · Control Plan"]
-        TST["8. TST: Production & EOL Testing<br/>Automated Test Jigs · 100% PDI · Calibration"]
-        SIT["10. SIT: Service & IT Infrastructure<br/>Cloud Drive · Telematics Server · Field RMA"]
+        PUR["6. PUR: Purchasing & Supply Chain<br/>Dual-Track Proto/Mass · AVL · POs · Stores"]
+        EMF["8. EMF: Manufacturing & Assembly<br/>SMT Line 2 · Thermal Profiling · Control Plan"]
+        TST["9. TST: Production & EOL Testing<br/>Automated Test Jigs · 100% PDI · Calibration"]
+        SIT["11. SIT: Service & IT Infrastructure<br/>Cloud Drive · Telematics Server · Field RMA"]
     end
 
     CC --> SAL & QA & FIN & HROPS
-    CC --> EHW & ESW & MECH
+    CC --> EHW & EFW & CSW & MECH
     CC --> PUR & EMF & TST & SIT
 ```
 
 | Department Code | Full Department Title | Primary Record Type | Core Operational Ownership & Deliverables |
 |---|---|---|---|
 | **SAL** | Sales & Business Development | `Enquiry` | Customer Register.xlsx, RFQ intake, SOR analysis (`SAL-SOR-01`), bilateral mNDA (`SAL-mNDA-01`), contract reviews (`HLPL/F/MKT/01`), quotations (`SAL-QUO-01`), customer purchase orders (`SAL-PO-01`). |
-| **EHW** | Embedded Hardware Engineering | `PRS` | System architecture, PRS (`EHW-PRS-01`), schematics (`EHW-SCH-01`), preliminary/frozen BOMs (`EHW-BOM-01`), hardware DFMEA (`EHW-DFMEA-01`), Gerber archives, AEC-Q100 compliance. |
-| **ESW** | Firmware & Software Engineering | `Firmware release` | Bootloader, RTOS kernel bring-up, CAN J1939 driver, AIS-140 protocol parser, secure dual-bank FOTA, cryptographic signing, TAC compliance testing. |
-| **MECH** | Mechanical Engineering | `Mechanical CAD` | 3D CAD modeling, IP67 enclosure tooling (`ENC-MECH-CAD-01`), wiring harness pinout drawings (`HARN-MECH-DWG-01`), thermal simulation, vibration fixture design. |
-| **PUR** | Purchasing & SCM | `Purchase order` | Approved Vendor List (AVL), dual-track sourcing (Proto soft-tooling vs Mass production), PR/RFQ/PO issuance, supplier PPAP Level 3 review, stock allocation. |
-| **QA** | Quality Assurance & APQP | `Quality inspection` | APQP roadmap (`HLPL-APQP-001`), DVP&R matrix (`QA-DVP-01`, 18 electrical/environmental tests), ISO 7637-2 compliance, Type Approval TAC cert (`QA-TAC-01`), NCR/CAPA logs. |
-| **EMF** | Manufacturing & Assembly | `Work instruction` | 10-zone reflow thermal profiling, 3D solder paste inspection (SPI), automated optical inspection (AOI), Process Control Plan (`EMF-CP-01`), SMT work instructions. |
-| **TST** | Production & EOL Testing Jigs | `Calibration log` | Automated functional testing (FCT) jigs, CAN bus verification, flashing rigs, 100% PDI inspection certification (`TST-PDI-01`), calibration logs. |
-| **FIN** | Accounts & Finance | `Commercial quotation` | Project budget tracking, commercial margin analysis, milestone billing, GST/HSN tax invoices (`FIN-INV-01`), payment reconciliation. |
-| **SIT** | Service & IT Infrastructure | `Service ticket` | Enterprise Cloud Drive storage, telematics backend gateway, OTA server monitoring, role-based access control, field service ticketing. |
-| **HR/OPS** | HR & Operations | `Audit report` | Employee competence matrix (`HLPL/F/HR/03`), QMS internal audits, Six Sigma DMAIC registers, Signed-In Company Directory, Corporate Legal Documents & Letterheads. |
+| **EHW** | Embedded Hardware Engineering | `PRS` | System architecture, Hardware PRS (`EHW-PRS-01`), schematics (`EHW-SCH-01`), preliminary/frozen BOMs (`EHW-BOM-01`), hardware DFMEA (`EHW-DFMEA-01`), Gerber archives, AEC-Q100 compliance. |
+| **EFW** | Embedded Firmware Engineering | `Firmware release` | Low-level MCU firmware, Firmware Requirements (`EFW-FRS-01`), Bootloader, RTOS kernel bring-up, HAL peripheral drivers, CAN/LIN protocol stack, secure dual-bank FOTA, cryptographic binary signing (`EFW-BIN-01`). |
+| **CSW** | Cloud & Application Software | `Software package` | Telematics application software, Software Requirements (`CSW-SRS-01`), AIS-140/MQTT/HTTP protocol engine, BLE 5.2 mobile companion app, cloud API contracts, desktop diagnostic & flashing GUI tools (`CSW-TOOL-01`). |
+| **MECH** | Mechanical Engineering | `Mechanical CAD` | Mechanical Requirements (`MECH-MRS-01`), 3D CAD modeling, IP67 enclosure tooling (`ENC-MECH-CAD-01`), wiring harness pinout drawings (`HARN-MECH-DWG-01`), thermal CFD simulation, vibration fixture design. |
+| **PUR** | Purchasing & SCM | `Purchase order` | Sourcing Feasibility (`PUR-SRS-01`), Approved Vendor List (AVL), dual-track sourcing (Proto soft-tooling vs Mass production), PR/RFQ/PO issuance, supplier PPAP Level 3 review, stock allocation. |
+| **QA** | Quality Assurance & APQP | `Quality inspection` | Quality & DVP&R Requirements (`QA-QRS-01`), APQP roadmap (`HLPL-APQP-001`), DVP&R matrix (`QA-DVP-01`, 18 electrical/environmental tests), ISO 7637-2 compliance, iCAT Type Approval TAC cert (`QA-TAC-01`), NCR/CAPA logs. |
+| **EMF** | Manufacturing & Assembly | `Work instruction` | Manufacturing DFM Requirements (`EMF-PRS-01`), 10-zone reflow thermal profiling, 3D solder paste inspection (SPI), automated optical inspection (AOI), Process Control Plan (`EMF-CP-01`), SMT work instructions. |
+| **TST** | Production & EOL Testing Jigs | `Calibration log` | EOL Test Jigs Requirements (`TST-TRS-01`), automated functional testing (FCT) jigs, CAN bus verification, flashing rigs, 100% PDI inspection certification (`TST-PDI-01`), calibration logs. |
+| **FIN** | Accounts & Finance | `Commercial quotation` | Financial Feasibility & Cost Model (`FIN-CFS-01`), project budget tracking, commercial margin analysis, milestone billing, GST/HSN tax invoices (`FIN-INV-01`), payment reconciliation. |
+| **SIT** | Service & IT Infrastructure | `Service ticket` | Infrastructure Requirements (`SIT-SRS-01`), enterprise Cloud Drive storage, telematics backend gateway, OTA server monitoring, role-based access control, field vehicle mounting checklist (`SIT-MNT-01`), RMA ticketing. |
+| **HR/OPS** | HR & Operations | `Audit report` | Competency & Safety Requirements (`HROPS-CRS-01`), employee competence matrix (`HLPL/F/HR/03`), QMS internal audits, Six Sigma DMAIC registers, Signed-In Company Directory, Corporate Legal Documents & Letterheads. |
 
 ---
 
@@ -86,10 +88,11 @@ graph TD
 ### 3.1 Role & Persona Switcher
 The portal incorporates an instant **Role & Persona Switcher** in the header allowing 1-click verification of department context, permission boundaries, and filtered queues:
 1. **Executive Admin / MD**: Master authority, full cross-department rollup, system template configuration, and PMSS override.
-2. **11 Department Leads**:
+2. **12 Department Leads**:
    - `SAL Lead`: Priya Sharma (Sales & BD)
-   - `EHW Lead`: Avery Vale (Embedded Hardware)
-   - `ESW Lead`: Devon Lane (Firmware & Software)
+   - `EHW Lead`: Avery Vale (Embedded Hardware Engineering)
+   - `EFW Lead`: Devon Lane (Embedded Firmware Engineering)
+   - `CSW Lead`: Maya Lin (Cloud & Application Software Engineering)
    - `MECH Lead`: Samira Holt (Mechanical Engineering)
    - `PUR Lead`: Morgan Reed (Purchasing & SCM)
    - `QA Lead`: Jordan Blake (Quality Assurance)
@@ -110,7 +113,7 @@ The **Home / Command Center** serves as the compact operational hub:
 - **Two-Column Daily Task Checklist**:
   - Left Lane: *Today's Action Items* with quick complete and status toggles.
   - Right Lane: *Pending & Overdue Tasks* with priority indicators (Critical, High, Normal, Low) and assignee badges.
-- **Department Quick Management Grid**: Cards for all 11 departments showing active lead, open task count, pending approvals, and direct deep-link into the department workspace.
+- **Department Quick Management Grid**: Cards for all 12 departments showing active lead, open task count, pending approvals, and direct deep-link into the department workspace.
 
 ---
 
@@ -147,15 +150,16 @@ Every department overview features five standardized, high-density KPI cards eng
 ### 4.2 Dual-Action Record Creation Pattern
 The workspace header provides two complementary, instant creation mechanisms:
 1. **Universal Tracked Task (`[Create Task]`)**:
-   - Present across all 11 departments.
-   - Auto-generates department-scoped task identifier: `TASK-[DEPT]-[NUM]` (e.g. `TASK-SAL-004`, `TASK-EHW-012`).
+   - Present across all 12 departments.
+   - Auto-generates department-scoped task identifier: `TASK-[DEPT]-[NUM]` (e.g. `TASK-SAL-004`, `TASK-EHW-012`, `TASK-EFW-008`, `TASK-CSW-015`).
    - Automatically synchronizes with the Daily Checklist, Today lane, and Priority queues.
 2. **Primary Domain Record (`[Create <RecordType>]`)**:
    - Primary accent button dynamically configured to the department's core deliverable:
      - Sales: `[Create Enquiry]`
-     - Hardware: `[Create PRS]`
-     - Firmware: `[Create Firmware release]`
-     - Mechanical: `[Create Mechanical CAD]`
+     - Hardware: `[Create Hardware PRS]`
+     - Firmware: `[Create Firmware FRS]`
+     - Software: `[Create Software SRS]`
+     - Mechanical: `[Create Mechanical MRS]`
      - Purchasing: `[Create Purchase order]`
      - Quality: `[Create Quality inspection]`
      - Manufacturing: `[Create Work instruction]`
@@ -165,22 +169,28 @@ The workspace header provides two complementary, instant creation mechanisms:
      - HR & Ops: `[Create Audit report]`
    - Generates official document numbering: `HLPL-[PROJ_ID]-[DEPT]-[DOC_TYPE]-[REV]`.
 
-### 4.3 Department Process Menus (Numbered Shortcuts)
-Directly beneath the lifecycle stepper, each department workspace embeds a **Department Process Menu** featuring 5 numbered, direct-creation shortcuts that immediately initialize pre-configured engineering forms and assign the appropriate Cloud Drive folder:
+### 4.3 Department Process Menus (Numbered Shortcuts) & Feasibility Requirement Discipline
+Directly beneath the lifecycle stepper, each department workspace embeds a **Department Process Menu** featuring 5 numbered, direct-creation shortcuts that immediately initialize pre-configured engineering forms and assign the appropriate Cloud Drive folder.
 
-| Dept | Process 01 | Process 02 | Process 03 | Process 04 | Process 05 | Cloud Drive Folder |
+> [!IMPORTANT]
+> **Universal Stage 2 Feasibility Requirement Discipline (Process 01)**:
+> In strict compliance with IATF 16949 COP (Customer Oriented Processes), no department jumps directly into implementation tasks (e.g. Firmware does NOT jump directly to a board support package, nor Mechanical to 3D CAD modeling). 
+> **Process 01 for every department is their Domain Requirements Specification (PRS / FRS / SRS / MRS / etc.)**. During Stage 2 Feasibility, every department evaluates the customer SOR/Enquiry from their unique engineering or operational perspective and releases their formal requirement points into the **Multi-Department Feasibility Report (`HLPL/F/MKT/01`)**. Only after all HOD requirement sheets are approved and frozen at Stage 3 does downstream development proceed.
+
+| Dept | Process 01 (Feasibility Requirement Sheet) | Process 02 | Process 03 | Process 04 | Process 05 | Cloud Drive Folder |
 |---|---|---|---|---|---|---|
-| **SAL** | Customer enquiry & lead intake | Customer SOR intake & analysis | Mutual NDA generator | Commercial quotation builder | Contract review record | `/01_Governance_and_QMS` |
-| **EHW** | System architecture & PRS builder | Schematic capture & design freeze | Preliminary & production BOM | Hardware DFMEA risk assessment | Gerber & fabrication release | `/02_Hardware_Engineering` |
-| **ESW** | MCU board support package (BSP) | CAN J1939 telemetry stack | AIS-140 emergency protocol parser | Secure dual-bank FOTA setup | Production binary signing | `/03_Firmware_and_Software` |
-| **MECH** | IP67 enclosure 3D CAD modeling | Wiring harness drawing & pinout | Thermal dissipation simulation | Injection mold DFM review | Ingress & vibration fixture | `/04_Mechanical_Engineering` |
-| **PUR** | Sourcing PR & RFQ issuance | Proto vs Mass vendor evaluation | Commercial purchase order (PO) | Incoming quality check (IQC) | Approved Vendor List (AVL) update | `/05_Purchasing_and_SCM` |
-| **QA** | APQP gate milestone review | DVP&R test plan configuration | ISO 7637-2 electrical transient | Type Approval TAC coordination | Non-conformance & CAPA report | `/06_Quality_Assurance` |
-| **EMF** | SMT Line 2 thermal profiling | 3D SPI & AOI inspection setup | Process Control Plan (CP) | PCB assembly traveler creation | Final potting & box-build WI | `/07_Electronics_Manufacturing` |
-| **TST** | Automated EOL test jig setup | CAN bus functional test suite | Automated MCU firmware flashing | 100% PDI inspection cert | Test jig sensor calibration | `/08_EOL_Testing_Jigs` |
-| **FIN** | Project NRE & BOM cost model | Customer advance deposit match | GST commercial tax invoice | Supplier PO payment release | Financial margin & audit review | `/09_Finance_and_Accounts` |
-| **SIT** | Symmetrical Cloud Drive sync | Telematics server endpoint config | Private S3 signed storage token | User RBAC permission audit | Field RMA & service ticket | `/10_Service_and_IT` |
-| **HR/OPS**| Employee skill matrix review | IATF 16949 internal audit | Corporate legal agreement / mNDA | Official letterhead generator | Six Sigma DMAIC improvement | `/11_HR_and_Operations` |
+| **SAL** | Customer enquiry & lead intake (`SAL-ENQ-01`) | Customer SOR intake & analysis (`SAL-SOR-01`) | Mutual NDA generator (`SAL-mNDA-01`) | Commercial quotation builder (`SAL-QUO-01`) | Contract review record (`HLPL/F/MKT/01`) | `/01_Governance_and_QMS` |
+| **EHW** | Hardware PRS & system architecture (`EHW-PRS-01`) | Schematic capture & design freeze (`EHW-SCH-01`) | Preliminary & production BOM (`EHW-BOM-01`) | Hardware DFMEA risk assessment (`EHW-DFMEA-01`) | Gerber & fabrication release (`EHW-GERBER-01`) | `/02_Hardware_Engineering` |
+| **EFW** | Embedded Firmware Requirements (`EFW-FRS-01`) | MCU board support package (BSP) & HAL | CAN J1939 / LIN device drivers | Secure dual-bank FOTA setup | Production binary signing (`EFW-BIN-01`) | `/03_Firmware_Engineering` |
+| **CSW** | Software Requirements Specification (`CSW-SRS-01`) | AIS-140 & IoT telemetry protocol parser | Mobile App BLE 5.2 interface | Telematics cloud & OTA gateway | PC diagnostic & EOL host GUI (`CSW-TOOL-01`) | `/04_Software_Engineering` |
+| **MECH** | Mechanical Requirements Sheet (`MECH-MRS-01`) | IP67 enclosure 3D CAD modeling (`MECH-CAD-01`) | Wiring harness drawing & pinout (`HARN-DWG-01`) | Thermal dissipation simulation (`MECH-THM-01`) | Ingress & vibration fixture (`MECH-TOOL-01`) | `/05_Mechanical_Engineering` |
+| **PUR** | Sourcing & Component Feasibility (`PUR-SRS-01`) | Sourcing PR & RFQ issuance | Proto vs Mass vendor evaluation | Commercial purchase order (`PUR-PO-01`) | Approved Vendor List (AVL) update | `/06_Purchasing_and_SCM` |
+| **QA** | Quality & DVP&R Requirements (`QA-QRS-01`) | APQP gate milestone review (`QA-APQP-01`) | DVP&R test plan matrix (`QA-DVP-01`) | Type Approval TAC coordination (`QA-TAC-01`) | Non-conformance & CAPA report (`QA-CAPA-01`) | `/07_Quality_Assurance` |
+| **EMF** | Manufacturing DFM Requirements (`EMF-PRS-01`) | SMT Line 2 thermal profiling (`EMF-TP-01`) | 3D SPI & AOI inspection setup (`EMF-AOI-01`) | Process Control Plan (`EMF-CP-01`) | PCB traveler & box-build WI (`EMF-WI-01`) | `/08_Electronics_Manufacturing` |
+| **TST** | Production EOL Test Requirements (`TST-TRS-01`) | Automated EOL test jig setup | CAN bus functional test suite | Automated MCU firmware flashing | 100% PDI inspection cert (`TST-PDI-01`) | `/09_EOL_Testing_Jigs` |
+| **FIN** | Financial Feasibility & Cost Model (`FIN-CFS-01`) | Project NRE & BOM cost model | Customer advance deposit match | GST commercial tax invoice (`FIN-INV-01`) | Supplier PO payment release | `/10_Finance_and_Accounts` |
+| **SIT** | Infrastructure Requirements (`SIT-SRS-01`) | Symmetrical Cloud Drive sync | Telematics server endpoint config | Private S3 signed storage token | Vehicle mounting & RMA ticket (`SIT-MNT-01`) | `/11_Service_and_IT` |
+| **HR/OPS**| Competency & Safety Requirements (`HROPS-CRS-01`)| Employee skill matrix review (`HLPL/F/HR/03`) | IATF 16949 internal audit | Corporate legal agreement / mNDA | Six Sigma DMAIC improvement | `/12_HR_and_Operations` |
 
 ### 4.4 Project Scope Filtering
 Every department workspace includes an interactive **Project Scope Selector**:
@@ -232,18 +242,18 @@ sequenceDiagram
     autonumber
     actor Customer as Customer / OEM
     actor Sales as Sales Lead (SAL)
-    actor Engineering as HODs (EHW, ESW, MECH, PUR, QA)
+    actor Engineering as HODs (EHW, EFW, CSW, MECH, PUR, QA, FIN)
     actor Admin as Executive Admin
 
-    Customer->>Sales: RFQ & Technical Requirements
+    Customer->>Sales: RFQ & Technical Scope / SOR
     Sales->>Sales: Create Enquiry in Sales Workspace
     Note over Sales: Select Customer from Register or Add Inline
     Sales->>Sales: Internal Review & Platform Asset Linking
     Sales->>Engineering: [Send for Feasibility] (Converts to Opportunity)
-    Note over Engineering: HOD Technical Feasibility Input (Stage 2 Gate)
-    Engineering-->>Sales: 5 HOD Sign-offs & Estimates
+    Note over Engineering: Every Department Formulates Domain Requirement Sheet (Stage 2 Gate)
+    Engineering-->>Sales: 7 HOD Domain Requirement Sheets & Feasibility Sign-offs
     Sales->>Admin: Contract Review HLPL/F/MKT/01 Compiled
-    Admin->>Sales: Commercial Lock & PRS-01 Release (Stage 3 Gate)
+    Admin->>Sales: Commercial Lock & Consolidated Requirements Package (Stage 3 Gate)
     Sales->>Customer: Quotation SAL-QUO-01 Transmitted
     Customer-->>Sales: Purchase Order Issued
     Sales->>Engineering: Project Officially Started (HLPL-PROJ_ID)
@@ -257,13 +267,19 @@ sequenceDiagram
    - Embeds the **Platform Architecture Selector**: chooses Reusable Platform vs. Hybrid vs. Clean Sheet.
    - Links pre-qualified Motherboard, Secondary PCB, Harness, Firmware, and Enclosure assets.
    - Calculates development skips (weeks saved and NRE avoided).
-   - Dispatches review tasks to the 5 engineering HODs (EHW, ESW, MECH, PUR, QA).
-4. **Multi-Department Feasibility Input (Gate 2)**:
-   - Each HOD reviews their technical domain, confirms lead times, flags risks, and records formal sign-off.
-   - Locking all 5 HOD sign-offs compiles the official **Contract Review Record (`HLPL/F/MKT/01`)**.
-5. **Requirement & Commercial Lock (Gate 3)**:
-   - Auto-generates frozen Product Requirement Specification (`HLPL-[PROJ_ID]-EHW-PRS-01`) and Commercial Quotation (`HLPL-[PROJ_ID]-SAL-QUO-01`).
-6. **Project Kick-off**: Formal conversion creates the project workspace, pins master references, and authorises the hardware kickoff track.
+   - Dispatches review tasks and requirement sheet authoring to the engineering & commercial HODs (EHW, EFW, CSW, MECH, PUR, QA, FIN).
+4. **Multi-Department Feasibility Input & Requirement Sheets (Gate 2)**:
+   - Each HOD evaluates the customer SOR from their domain perspective, formulates their formal Requirement Sheet / Process 01 points (Hardware PRS, Firmware FRS, Software SRS, Mechanical MRS, Sourcing Feasibility, Quality DVP&R Scope, Finance Cost Model), flags risks, confirms lead times, and records formal sign-off.
+   - Locking all HOD sign-offs compiles the official **Contract Review Record (`HLPL/F/MKT/01`)**.
+5. **Consolidated Requirement Freeze & Commercial Lock (Gate 3)**:
+   - Formally generates and freezes the **Complete System Requirements Package** alongside the Commercial Quotation:
+     - Hardware PRS (`HLPL-[PROJ_ID]-EHW-PRS-01`)
+     - Firmware FRS (`HLPL-[PROJ_ID]-EFW-FRS-01`)
+     - Software SRS (`HLPL-[PROJ_ID]-CSW-SRS-01`)
+     - Mechanical MRS (`HLPL-[PROJ_ID]-MECH-MRS-01`)
+     - Quality QRS (`HLPL-[PROJ_ID]-QA-QRS-01`)
+     - Commercial Quotation (`HLPL-[PROJ_ID]-SAL-QUO-01`).
+6. **Project Kick-off**: Formal conversion creates the project workspace, pins master references, and authorises downstream engineering development.
 
 ---
 
@@ -463,9 +479,9 @@ The portal incorporates a complete, interactive simulation of the **Tata Ace EV 
 | Stage | Name & Intent | Primary Controlled Deliverable | Owning Dept |
 |---|---|---|---|
 | **Stage 1** | Client & Sales Intake | Customer SOR (`HLPL-AI4T-SAL-SOR-01`) & mNDA (`SAL-mNDA-01`) | `SAL` |
-| **Stage 2** | Multi-Dept Feasibility Gate | Contract Review Record (`HLPL/F/MKT/01`) with 5 HOD sign-offs | `SAL` / All |
-| **Stage 3** | Requirement Freeze & Commercial Lock | Product Requirement Spec (`EHW-PRS-01`) & Quotation (`SAL-QUO-01`) | `EHW` / `SAL` |
-| **Stage 4** | Design & Development (PoC) | Schematics (`EHW-SCH-01`), Preliminary BOM (`EHW-BOM-01`), PoC FW | `EHW` / `ESW` |
+| **Stage 2** | Multi-Dept Feasibility Gate | Contract Review Record (`HLPL/F/MKT/01`) with 7 HOD Requirement Sheets (`EHW`, `EFW`, `CSW`, `MECH`, `PUR`, `QA`, `FIN`) | `SAL` / All |
+| **Stage 3** | Requirement Freeze & Commercial Lock | Consolidated Requirements Package (`EHW-PRS-01`, `EFW-FRS-01`, `CSW-SRS-01`, `MECH-MRS-01`, `QA-QRS-01`) & Quotation (`SAL-QUO-01`) | `EHW` / `EFW` / `CSW` / `SAL` |
+| **Stage 4** | Design & Development (PoC) | Schematics (`EHW-SCH-01`), Preliminary BOM (`EHW-BOM-01`), PoC Firmware (`EFW-BIN-01`), Telematics Application Stack (`CSW-APP-01`) | `EHW` / `EFW` / `CSW` |
 | **Stage 5** | Pilot Build & SMT Setup | Process Control Plan (`EMF-CP-01`), SMT Line 2 Thermal Profile | `EMF` / `PUR` |
 | **Stage 6** | DVP&R Pre-Compliance | DVP&R Matrix (`QA-DVP-01`) with 18 electrical/environmental tests | `QA` |
 | **Stage 7** | Production Release & PPAP L3 | Gerber Rev B, Hardware DFMEA (`EHW-DFMEA-01`), Supplier PPAP | `EHW` / `PUR` |
@@ -993,3 +1009,32 @@ A dedicated interactive component (`src/components/ProjectLifecyclePlayerAndDeta
   - `docs/evidence/lifecycle_bcu02_stage6_icat_dvpr.png`: Stage 6 DVP&R showing iCAT Manesar TAC & NABL 3.7V battery test.
   - `docs/evidence/lifecycle_slct01_reusable_pcb.png`: Select Motors 100% platform reuse (PoC waived).
   - `docs/evidence/lifecycle_stepper_animation.png`: Stepper animation stepping through stages.
+
+### 28.9 Twelve-Department Architecture & Universal Feasibility Requirement Discipline — 19 October 2026
+
+#### 1. Rationale and Architectural Decoupling
+Following review of customer-oriented automotive processes (IATF 16949 COP), two critical structural corrections were enacted across the Master Plan and portal architecture:
+1. **Explicit Separation of Firmware and Software (12 Functional Departments)**:
+   - Previously, low-level MCU firmware and high-level telematics/cloud software were conflated under `ESW`.
+   - The architecture now formally establishes **12 distinct departments**:
+     - **`EFW` (Embedded Firmware Engineering)**: Owns low-level microcontroller bare-metal/RTOS kernels (Zephyr/FreeRTOS), hardware abstraction layers (HAL), peripheral device drivers, memory layouts, vehicle bus stacks (CAN J1939 / LIN), bootloader security, and fail-safe dual-bank FOTA orchestration.
+     - **`CSW` (Cloud & Application Software Engineering)**: Owns high-level telematics protocol engines (AIS-140 Annexure 8, MQTT, HTTP, Protobuf), mobile BLE 5.2 companion apps (sensor interfaces), cloud IoT backend integrations, and desktop PC diagnostic / EOL flashing host GUI tools.
+2. **Universal Feasibility Requirement Discipline (Process 01 Across Every Department)**:
+   - In accordance with automotive engineering rigor, **no department jumps directly into downstream implementation or tooling** (e.g. Firmware does not start with board support packages, nor Mechanical with 3D CAD modeling).
+   - **Process 01 for every department is their Domain Requirements Specification**:
+     - `SAL`: Customer Enquiry Intake (`SAL-ENQ-01`) & SOR Analysis (`SAL-SOR-01`)
+     - `EHW`: Hardware Product Requirements Specification (`EHW-PRS-01`)
+     - `EFW`: Embedded Firmware Requirements Specification (`EFW-FRS-01`)
+     - `CSW`: Cloud & Application Software Requirements Specification (`CSW-SRS-01`)
+     - `MECH`: Mechanical Requirements Specification (`MECH-MRS-01`)
+     - `PUR`: Sourcing & Component Feasibility Matrix (`PUR-SRS-01`)
+     - `QA`: Quality Assurance & DVP&R Requirements Specification (`QA-QRS-01`)
+     - `EMF`: Manufacturing DFM Process Requirements Specification (`EMF-PRS-01`)
+     - `TST`: Production EOL Test Jigs Requirements Specification (`TST-TRS-01`)
+     - `FIN`: Commercial Cost Target & Financial Feasibility Sheet (`FIN-CFS-01`)
+     - `SIT`: Cloud Infrastructure & Field Service Requirements Specification (`SIT-SRS-01`)
+     - `HR/OPS`: Competency, Safety & Compliance Requirements Specification (`HROPS-CRS-01`)
+
+#### 2. Feasibility Handoff & Stage 3 Requirement Freeze Contract
+- **Stage 2 Multi-Department Feasibility**: During Stage 2, each of the relevant department HODs reviews the OEM SOR/inquiry, prepares their formal domain requirement sheet, confirms lead times, flags risks, and records sign-off into the consolidated **Contract Review Record (`HLPL/F/MKT/01`)**.
+- **Stage 3 Requirement Freeze**: Formally freezes the entire Multi-Department Requirements Package (`EHW-PRS-01`, `EFW-FRS-01`, `CSW-SRS-01`, `MECH-MRS-01`, `QA-QRS-01`, etc.) alongside the Commercial Quotation (`SAL-QUO-01`). Engineering development cannot commence until this frozen baseline is signed off by the Executive Admin and Lead Authority.
