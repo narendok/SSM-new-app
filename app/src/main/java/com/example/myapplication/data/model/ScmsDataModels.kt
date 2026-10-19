@@ -9,21 +9,38 @@ enum class DepartmentRole(
     val code: String,
     val title: String,
     val leadName: String,
-    val isClient: Boolean = false
+    val isClient: Boolean = false,
+    val isLegacy: Boolean = false
 ) {
     ADMIN("ADMIN", "Executive Admin / MD", "Executive Command Center"),
     SAL("SAL", "Sales & Business Development", "Priya Sharma"),
     EHW("EHW", "Embedded Hardware Engineering", "Avery Vale"),
-    ESW("ESW", "Firmware & Software Engineering", "Devon Lane"),
+    FW("FW", "Firmware Engineering (RTOS & Bootloader)", "Devon Lane"),
+    SW("SW", "Software Engineering (Cloud & BLE)", "Alex Chen"),
+    ESW("ESW", "Firmware & Software Engineering (Legacy/Transitional)", "Devon Lane", isLegacy = true),
     MECH("MECH", "Mechanical Engineering", "Samira Holt"),
     PUR("PUR", "Purchasing & SCM", "Morgan Reed"),
     QA("QA", "Quality Assurance & APQP", "Jordan Blake"),
-    EMF("EMF", "Electronics Manufacturing", "Casey Rowan"),
-    TST("TST", "EOL Testing & Jigs", "Mina Cross"),
+    EMF("EMF", "Electronics Manufacturing & SMT", "Casey Rowan"),
+    MMF("MMF", "Mechanical Manufacturing & Tooling", "Marcus Vance"),
+    TST("TST", "EOL Testing & Jigs (Legacy/Transitional)", "Mina Cross", isLegacy = true),
     FIN("FIN", "Accounts & Finance", "Priya Voss"),
     SIT("SIT", "Service & IT Infrastructure", "Kai Morgan"),
     HROPS("HROPS", "HR & Operations", "Taylor Quinn"),
-    CLIENT("CLIENT", "Client OEM Portal (Tata Motors)", "Rohan Verma", isClient = true)
+    CLIENT("CLIENT", "Client OEM Portal (Tata Motors)", "Rohan Verma", isClient = true);
+
+    companion object {
+        fun fromCode(code: String): DepartmentRole {
+            val normalized = code.trim().uppercase()
+            return entries.firstOrNull { it.code == normalized }
+                ?: when (normalized) {
+                    "EFW" -> FW
+                    "CSW" -> SW
+                    "HR", "OPS", "HR/OPS" -> HROPS
+                    else -> ADMIN
+                }
+        }
+    }
 }
 
 /**
@@ -264,7 +281,9 @@ data class ControlledDoc(
     val status: String, // "Draft", "Under Review", "Approved", "Released"
     val confidentiality: String = "Confidential",
     val storageBucket: String = "controlled-documents",
-    val storagePath: String = ""
+    val storagePath: String = "",
+    val sha256Hex: String? = null,
+    val byteSize: Long? = null
 )
 
 /**

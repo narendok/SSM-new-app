@@ -613,6 +613,86 @@ class ScmsRepositoryTest {
         assertEquals(15000.0, airRule.requiresPreApprovalAboveInr, 0.01)
         assertEquals("v2.4-WebAuthority", airRule.webConfigVersion)
     }
+
+    @Test
+    fun testCanonical12DepartmentArchitectureAndNormalization() {
+        // 1. Verify all canonical departments are represented
+        val canonicalCodes = listOf("SAL", "EHW", "FW", "SW", "MECH", "PUR", "QA", "EMF", "MMF", "FIN", "SIT", "HROPS")
+        val roles = DepartmentRole.entries.map { it.code }
+        for (code in canonicalCodes) {
+            assertTrue("Canonical department '$code' must exist in DepartmentRole entries", roles.contains(code))
+        }
+
+        // 2. Verify legacy roles are preserved without blanket deletion
+        assertTrue("Legacy ESW must be preserved", roles.contains("ESW"))
+        assertTrue("Legacy TST must be preserved", roles.contains("TST"))
+        assertTrue("ESW must be marked legacy", DepartmentRole.ESW.isLegacy)
+        assertTrue("TST must be marked legacy", DepartmentRole.TST.isLegacy)
+
+        // 3. Normalization through fromCode helper
+        assertEquals(DepartmentRole.FW, DepartmentRole.fromCode("EFW"))
+        assertEquals(DepartmentRole.FW, DepartmentRole.fromCode("fw"))
+        assertEquals(DepartmentRole.SW, DepartmentRole.fromCode("CSW"))
+        assertEquals(DepartmentRole.SW, DepartmentRole.fromCode("sw"))
+        assertEquals(DepartmentRole.HROPS, DepartmentRole.fromCode("HR"))
+        assertEquals(DepartmentRole.HROPS, DepartmentRole.fromCode("ops"))
+        assertEquals(DepartmentRole.ADMIN, DepartmentRole.fromCode("UNKNOWN_DEPT"))
+    }
+
+    @Test
+    fun testOperationalStageGateAdvancementAndPrerequisites() {
+        // Current seed starts at Stage 4 (In Progress)
+        val initialStages = repository.apqpStages.value
+        val stage4 = initialStages.find { it.stageNumber == 4 }!!
+        assertEquals("In Progress", stage4.status)
+
+        // 1. Idempotent advance: advancing to same current stage returns success
+        val sameStageResult = repository.verifyAndAdvanceStageGate(4, "Re-triggering stage 4 check")
+        assertTrue("Idempotent check must succeed", sameStageResult.isSuccess)
+
+        // 2. Cannot skip stages (jumping from 4 to 6 is denied)
+        val skipResult = repository.verifyAndAdvanceStageGate(6, "Attempting illegal stage jump")
+        assertTrue("Skipping stages must fail", skipResult.isFailure)
+        assertTrue(skipResult.exceptionOrNull() is IllegalStateException)
+
+        // 3. Stage 4 Prerequisite check: advancing to Stage 5 requires approved EHW-SCH-01
+        // Initially EHW-SCH-01 is 'Under Review'
+        val advanceTo5Blocked = repository.verifyAndAdvanceStageGate(5, "Attempting stage 5 without approved schematics")
+        assertTrue("Advancing to stage 5 without approved schematics must fail", advanceTo5Blocked.isFailure)
+        assertTrue(advanceTo5Blocked.exceptionOrNull()?.message?.contains("EHW-SCH-01") == true)
+
+        // 4. Now approve EHW-SCH-01 and verify advance to Stage 5 succeeds
+        val docApproveResult = repository.updateControlledDocStatus("HLPL-AI4T-01-EHW-SCH-01", "Approved")
+        assertTrue("Updating document status must succeed", docApproveResult.isSuccess)
+
+        val advanceTo5Allowed = repository.verifyAndAdvanceStageGate(5, "Schematic approved, unlocking SMT Pilot")
+        assertTrue("Advancing to stage 5 must succeed after schematics approval", advanceTo5Allowed.isSuccess)
+
+        val updatedStages = repository.apqpStages.value
+        assertEquals("Approved", updatedStages.find { it.stageNumber == 4 }!!.status)
+        assertEquals("In Progress", updatedStages.find { it.stageNumber == 5 }!!.status)
+
+        // 5. Stage regression is permitted (e.g. back to stage 3 for engineering rework)
+        val regressionResult = repository.verifyAndAdvanceStageGate(3, "Engineering rework triggered by client ECO")
+        assertTrue("Stage regression must be permitted", regressionResult.isSuccess)
+        val regressedStages = repository.apqpStages.value
+        assertEquals("In Progress", regressedStages.find { it.stageNumber == 3 }!!.status)
+        assertEquals("Pending", regressedStages.find { it.stageNumber == 4 }!!.status)
+
+        // 6. Verify audit trail was recorded for gate events
+        val auditLogs = repository.auditLogs.value
+        assertTrue("Must record STAGE_GATE_ADVANCE audit", auditLogs.any { it.action == "STAGE_GATE_ADVANCE" })
+        assertTrue("Must record STAGE_GATE_REGRESSION audit", auditLogs.any { it.action == "STAGE_GATE_REGRESSION" })
+    }
+
+    @Test
+    fun testPrivateAttachmentVaultBucketSecurity() {
+        val buckets = com.example.myapplication.data.repository.PrivateStorageRepositoryImpl.PRIVATE_BUCKETS
+        assertTrue("controlled-documents must be an approved private bucket", buckets.contains("controlled-documents"))
+        assertTrue("project-drive must be an approved private bucket", buckets.contains("project-drive"))
+        assertFalse("public or arbitrary buckets must not be approved", buckets.contains("public-files"))
+        assertEquals("Max signed URL expiry must be 60 seconds", 60, com.example.myapplication.data.repository.PrivateStorageRepositoryImpl.MAX_EXPIRY_SECONDS)
+    }
 }
 
 

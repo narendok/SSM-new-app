@@ -4,10 +4,10 @@
 This document details the security model, backend boundary configuration, and required contract verifications for the SCMS Android Mobile Application.
 
 ## Target Environment
-* **Target Supabase URL**: `https://yyrvduosyyaluifqvwkr.supabase.co`
-* **Target Project ID**: `yyrvduosyyaluifqvwkr`
-* **Target Environment**: Production backend only (No Dev/UAT targets permitted for mobile production build).
-* **Environment Mismatch Note**: Note potential project ID mismatch between legacy local/portal references and the required production backend `yyrvduosyyaluifqvwkr`. All mobile traffic is bound strictly to `yyrvduosyyaluifqvwkr`.
+* **Target Supabase URL**: `https://rzskhndweihuczbdhoxk.supabase.co`
+* **Target Project ID**: `rzskhndweihuczbdhoxk`
+* **Target Environment**: Production backend authority (Lovable backend). The legacy staging project `yyrvduosyyaluifqvwkr` is retired per owner directive.
+* **Environment Configuration**: Verified via `local.properties` (ignored from git) and enforced by build validation in `app/build.gradle.kts`.
 
 ## Security & Auth Boundary
 1. **Credentials Management**:
@@ -20,35 +20,20 @@ This document details the security model, backend boundary configuration, and re
    - OAuth 2.0 PKCE flow (`S256`) is triggered via system browser.
    - Deep link redirect: `com.example.myapplication://auth-callback`.
    - No client secrets are embedded in the APK.
-4. **Authorization**:
-   - Zero local boolean role overrides. Server Row-Level Security (RLS) is authoritative for all data access.
+4. **Authorization & Actor Derivation**:
+   - Server Row-Level Security (RLS) is authoritative.
+   - Server RPC `verify_and_advance_stage_gate` derives the caller identity from authenticated session `auth.uid()` via `resolve_operational_membership()`, denying caller-supplied actor IDs.
 
-## Safe Views Status (Read-Only)
-| Safe View Name | Boundary Status | Column Schema Verification |
+## Operational APQP Stage Gate Advancement Contract (Batch 3/4 Parity)
+| Gate | Rule / Prerequisite | Enforcement |
 | :--- | :--- | :--- |
-| `operational_receiving_purchase_orders` | Boundary Defined (Unimplemented) | `PENDING_LIVE_SCHEMA` |
-| `operational_receiving_purchase_order_items` | Boundary Defined (Unimplemented) | `PENDING_LIVE_SCHEMA` |
-| `operational_purchase_requests` | Boundary Defined (Unimplemented) | `PENDING_LIVE_SCHEMA` |
-| `operational_purchase_request_items` | Boundary Defined (Unimplemented) | `PENDING_LIVE_SCHEMA` |
-| `operational_rfqs` | Boundary Defined (Unimplemented) | `PENDING_LIVE_SCHEMA` |
-| `operational_rfq_vendors` | Boundary Defined (Unimplemented) | `PENDING_LIVE_SCHEMA` |
-| `operational_po_shipments` | Boundary Defined (Unimplemented) | `PENDING_LIVE_SCHEMA` |
-| `operational_vendors` | Boundary Defined (Unimplemented) | `PENDING_LIVE_SCHEMA` |
-| `lifecycle_read_data` | Boundary Defined (Unimplemented) | `PENDING_LIVE_SCHEMA` |
-| `document_control_registers` | Boundary Defined (Unimplemented) | `PENDING_LIVE_SCHEMA` |
-| `controlled_document_audit_timeline` | Boundary Defined (Unimplemented) | `PENDING_LIVE_SCHEMA` |
-
-*Note*: Direct queries to sensitive base tables (finance, base purchase orders, salaries) are strictly forbidden.
-
-## Planned Stock Mutation RPCs (Disabled)
-| Planned RPC | Status | Persistent UUID | Signature Verification |
-| :--- | :--- | :--- | :--- |
-| `create_grn` | Disabled | Client UUID Generated | `PENDING_LIVE_SCHEMA` |
-| `material_issue` | Disabled | Client UUID Generated | `PENDING_LIVE_SCHEMA` |
-| `material_return` | Disabled | Client UUID Generated | `PENDING_LIVE_SCHEMA` |
-| `material_transfer` | Disabled | Client UUID Generated | `PENDING_LIVE_SCHEMA` |
-| `material_adjustment` | Disabled | Client UUID Generated | `PENDING_LIVE_SCHEMA` |
+| **Stage 2** | Feasibility Freeze | Requires approved Contract Review Record (`HLPL/F/MKT/01`) before unlocking Stage 3 |
+| **Stage 3** | Requirements Baseline Freeze | Requires approved domain requirement sheets across all 5 engineering/commercial domains (`EHW-PRS`, `FW-FRS`, `SW-SRS`, `MECH-MRS`, `SAL-QUO`) or approved N/A rationales |
+| **Stage 4** | Hardware Schematics Prerequisite | Requires approved `EHW-SCH-01` before advancing to Stage 5+ |
+| **Any** | Concurrency & Idempotency | Row locking `FOR UPDATE` on backend; duplicate retries return idempotent success; stage regression is permitted |
 
 ## Storage & Document Workflow
-* **Private Storage Access**: Private file access uses `/storage/v1/object/sign/<bucket>/<path>` (expires in 300s). Public storage URLs are disabled.
-* **Document State Transitions**: Disabled on mobile; UI explicitly directs users to the Web Portal for workflow transitions.
+* **Private Attachment Vault**: Private file access uses `/storage/v1/object/sign/<bucket>/<path>` with strict 60-second signed URL expiry.
+* **Approved Private Buckets**: `controlled-documents`, `project-drive`, `pcb-photos`, `datasheet-cache`, `external-staging`.
+* **Public Storage URLs**: Strictly disabled across all mobile endpoints.
+* **Integrity**: Files are bound to organization, department, project, document and exact revision with cryptographic SHA-256 validation.

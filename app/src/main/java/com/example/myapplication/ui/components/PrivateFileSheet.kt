@@ -66,7 +66,7 @@ fun PrivateFileSheet(
                 )
             ) {
                 Text(
-                    text = "Security Notice: Public URLs are strictly disabled. Private file access requires generating short-lived signed URLs (valid 300s).",
+                    text = "Security Notice: Public URLs are strictly disabled. Private file access requires generating short-lived signed URLs (valid 60s).",
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(12.dp)
                 )

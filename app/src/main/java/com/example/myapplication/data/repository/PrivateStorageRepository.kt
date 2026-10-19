@@ -7,7 +7,7 @@ interface PrivateStorageRepository {
     suspend fun getShortLivedSignedUrl(
         bucketName: String,
         filePath: String,
-        expiresInSeconds: Int = 300
+        expiresInSeconds: Int = 60
     ): Result<String>
 }
 
@@ -17,12 +17,14 @@ class PrivateStorageRepositoryImpl(
 ) : PrivateStorageRepository {
 
     companion object {
-        private val PRIVATE_BUCKETS = setOf(
+        val PRIVATE_BUCKETS = setOf(
+            "controlled-documents",
             "project-drive",
             "pcb-photos",
             "datasheet-cache",
             "external-staging"
         )
+        const val MAX_EXPIRY_SECONDS = 60
     }
 
     override suspend fun getShortLivedSignedUrl(
@@ -39,11 +41,12 @@ class PrivateStorageRepositoryImpl(
         if (filePath.isBlank() || filePath.split('/').any { it == ".." }) {
             return Result.failure(IllegalArgumentException("A valid private document path is required."))
         }
+        val safeExpiry = expiresInSeconds.coerceIn(1, MAX_EXPIRY_SECONDS)
         return supabaseClient.createSignedUrl(
             bucketName = bucketName,
             filePath = filePath,
             accessToken = accessToken,
-            expiresInSeconds = expiresInSeconds
+            expiresInSeconds = safeExpiry
         )
     }
 }

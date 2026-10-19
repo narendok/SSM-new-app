@@ -135,6 +135,10 @@ interface ScmsRepository {
     fun approveGate(approvalId: String, notes: String): Result<Unit>
     fun rejectGate(approvalId: String, reason: String): Result<Unit>
     fun returnGate(approvalId: String, reworkNotes: String): Result<Unit>
+
+    // Operational APQP Stage Gate Advancement Contract (Batch 3/4 parity)
+    fun verifyAndAdvanceStageGate(targetStage: Int, comments: String = "", evidenceJson: String? = null): Result<Unit>
+    fun updateControlledDocStatus(docId: String, newStatus: String): Result<Unit>
 }
 
 data class WhatIfSimulationResult(
@@ -2791,6 +2795,129 @@ class ScmsRepositoryImpl(
         )
         _auditLogs.value = listOf(auditEntry) + _auditLogs.value
 
+        return Result.success(Unit)
+    }
+
+    override fun updateControlledDocStatus(docId: String, newStatus: String): Result<Unit> {
+        val currentDocs = _documents.value
+        val docIndex = currentDocs.indexOfFirst { it.docId.equals(docId, ignoreCase = true) }
+        if (docIndex == -1) {
+            return Result.failure(NoSuchElementException("Controlled document '$docId' not found in repository."))
+        }
+        val updatedDocs = currentDocs.toMutableList()
+        val oldDoc = updatedDocs[docIndex]
+        updatedDocs[docIndex] = oldDoc.copy(status = newStatus)
+        _documents.value = updatedDocs
+
+        val auditEntry = AuditLogEntry(
+            id = "AUDIT-DOC-${UUID.randomUUID().toString().take(6).uppercase()}",
+            timestamp = currentTime(),
+            actor = _currentRole.value.leadName,
+            action = "UPDATE_CONTROLLED_DOC_STATUS",
+            partMpn = docId,
+            quantityDelta = 0,
+            reason = "Updated document '$docId' status from '${oldDoc.status}' to '$newStatus'.",
+            lotNumber = oldDoc.revision
+        )
+        _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+        return Result.success(Unit)
+    }
+
+    override fun verifyAndAdvanceStageGate(
+        targetStage: Int,
+        comments: String,
+        evidenceJson: String?
+    ): Result<Unit> {
+        if (targetStage < 1 || targetStage > 9) {
+            return Result.failure(IllegalArgumentException("Invalid target stage $targetStage. APQP stages range from 1 to 9."))
+        }
+
+        val stages = _apqpStages.value
+        val currentStageIndex = stages.indexOfLast { it.status == "Approved" || it.status == "In Progress" }
+        val currentStage = if (currentStageIndex >= 0) stages[currentStageIndex].stageNumber else 1
+
+        if (targetStage == currentStage) {
+            return Result.success(Unit)
+        }
+
+        if (targetStage < currentStage) {
+            val updated = stages.map { stage ->
+                when {
+                    stage.stageNumber < targetStage -> stage.copy(status = "Approved", isLocked = false, isBlockedByPrerequisite = false)
+                    stage.stageNumber == targetStage -> stage.copy(status = "In Progress", isLocked = false, isBlockedByPrerequisite = false)
+                    else -> stage.copy(status = "Pending", isLocked = stage.prerequisiteDoc != null, isBlockedByPrerequisite = stage.prerequisiteDoc != null)
+                }
+            }
+            _apqpStages.value = updated
+            val auditEntry = AuditLogEntry(
+                id = "AUDIT-GATE-${UUID.randomUUID().toString().take(6).uppercase()}",
+                timestamp = currentTime(),
+                actor = _currentRole.value.leadName,
+                action = "STAGE_GATE_REGRESSION",
+                partMpn = "STAGE-$targetStage",
+                quantityDelta = 0,
+                reason = "Regressed APQP stage from $currentStage to $targetStage. Reason: $comments",
+                lotNumber = "STAGE-GATE"
+            )
+            _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+            return Result.success(Unit)
+        }
+
+        if (targetStage > currentStage + 1) {
+            return Result.failure(IllegalStateException("Cannot skip stages: currently at Stage $currentStage, requested Stage $targetStage."))
+        }
+
+        when (targetStage) {
+            2 -> {
+                // Advancing to Stage 2 requires SOR intake
+            }
+            3 -> {
+                val contractReviewApproved = _feasibilityReviews.value.any { review ->
+                    review.verdict.startsWith("FEASIBLE")
+                } || _documents.value.any { doc ->
+                    (doc.docId.contains("MKT-01") || doc.docId.contains("CTR-01") || doc.title.contains("Contract Review", ignoreCase = true)) && doc.status == "Approved"
+                }
+                if (!contractReviewApproved) {
+                    return Result.failure(IllegalStateException("Stage 2 Feasibility Freeze: Approved Contract Review Record (HLPL/F/MKT/01) is required before advancing to Stage 3."))
+                }
+            }
+            4 -> {
+                val docs = _documents.value
+                val hasEhwPrs = docs.any { it.docId.contains("EHW-PRS") && it.status == "Approved" }
+                val hasSalQuo = docs.any { it.docId.contains("SAL-QUO") && it.status == "Approved" }
+                if (!hasEhwPrs || !hasSalQuo) {
+                    return Result.failure(IllegalStateException("Stage 3 Requirements Baseline Freeze: All domain requirements must be approved before advancing to Stage 4."))
+                }
+            }
+            5 -> {
+                val schematicsApproved = _documents.value.any { doc ->
+                    doc.docId.contains("EHW-SCH-01") && doc.status == "Approved"
+                }
+                if (!schematicsApproved) {
+                    return Result.failure(IllegalStateException("Stage 4 Hardware Schematics Prerequisite: Approved EHW-SCH-01 is required before advancing to Stage 5+."))
+                }
+            }
+        }
+
+        val updated = stages.map { stage ->
+            when {
+                stage.stageNumber < targetStage -> stage.copy(status = "Approved", isLocked = false, isBlockedByPrerequisite = false)
+                stage.stageNumber == targetStage -> stage.copy(status = "In Progress", isLocked = false, isBlockedByPrerequisite = false)
+                else -> stage
+            }
+        }
+        _apqpStages.value = updated
+        val auditEntry = AuditLogEntry(
+            id = "AUDIT-GATE-${UUID.randomUUID().toString().take(6).uppercase()}",
+            timestamp = currentTime(),
+            actor = _currentRole.value.leadName,
+            action = "STAGE_GATE_ADVANCE",
+            partMpn = "STAGE-$targetStage",
+            quantityDelta = 0,
+            reason = "Advanced APQP stage from $currentStage to $targetStage. Comments: $comments",
+            lotNumber = "STAGE-GATE"
+        )
+        _auditLogs.value = listOf(auditEntry) + _auditLogs.value
         return Result.success(Unit)
     }
 }
