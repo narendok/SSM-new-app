@@ -1,10 +1,13 @@
 # SSM One — Android Mobile Managing Portal Master Plan
 
-**Document Version:** 2.0 (Refined Architecture & Implementation Plan)  
-**Date:** 18 October 2026  
-**Target Repository:** `C:/Users/Test/Documents/SSM-new/SSM-new-app`  
-**Web / Backend Master Plan Reference:** [`SSM-new-web/docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md`](file:///C:/Users/Test/Documents/SSM-new/SSM-new-web/docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md)  
-**Authoritative Backend Contracts:** [`docs/backend-handoff/mobile_backend_contract.json`](file:///C:/Users/Test/Documents/SSM-new/SSM-new-app/docs/backend-handoff/mobile_backend_contract.json), [`docs/backend-handoff/MOBILE_BACKEND_CONTRACT.md`](file:///C:/Users/Test/Documents/SSM-new/SSM-new-app/docs/backend-handoff/MOBILE_BACKEND_CONTRACT.md), [`docs/backend-handoff/ANDROID_BACKEND_HANDOFF.md`](file:///C:/Users/Test/Documents/SSM-new/SSM-new-app/docs/backend-handoff/ANDROID_BACKEND_HANDOFF.md)
+**Document Version:** 2.1 (Cross-department acceptance checkpoint)
+
+**Date:** 19 October 2026
+
+**Target Repository:** `C:/Users/Admin/AndroidStudioProjects/SSM-new/SSM-new-app`
+
+**Web / Backend Master Plan Reference:** [Authoritative web master plan](../../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md), §28 (19 October 2026). Android-local web plan copies are historical references.
+**Authoritative Backend Contracts:** [`docs/backend-handoff/mobile_backend_contract.json`](../backend-handoff/mobile_backend_contract.json), [`docs/backend-handoff/MOBILE_BACKEND_CONTRACT.md`](../backend-handoff/MOBILE_BACKEND_CONTRACT.md), [`docs/backend-handoff/ANDROID_BACKEND_HANDOFF.md`](../backend-handoff/ANDROID_BACKEND_HANDOFF.md)
 
 ---
 
@@ -24,9 +27,9 @@ flowchart TD
         AUDIT["Immutable Audit Ledger & Data Provenance"]
     end
 
-    subgraph WebPortal["Web Portal (Lovable d758dbf2 / SSM-new-web)"]
+    subgraph WebPortal["Web Portal (Lovable a3399684-daab-4b38-8666-187b96b451af / ssm-new-web)"]
         WEB_UI["TanStack Start / React 19 / Vite Web App"]
-        WEB_WORKSPACES["8 Departmental Web Portals"]
+        WEB_WORKSPACES["11 Department Lead Workspaces"]
         WEB_EDITORS["Rich DOCX, XLSX & Lifecycle Generators"]
     end
 
@@ -295,12 +298,12 @@ The Android client directly implements data structures and calls corresponding t
 
 | Backend Contract Artifact | Purpose & Android Mapping |
 |---|---|
-| [`mobile_backend_contract.json`](file:///C:/Users/Test/Documents/SSM-new/SSM-new-app/docs/backend-handoff/mobile_backend_contract.json) | Complete machine-readable catalog of all 180+ tables, foreign keys, columns, RPC signatures, and bucket paths. |
-| [`MOBILE_BACKEND_CONTRACT.md`](file:///C:/Users/Test/Documents/SSM-new/SSM-new-app/docs/backend-handoff/MOBILE_BACKEND_CONTRACT.md) | Object classification matrix: `MOBILE_READ_SAFE`, `ONLINE_REQUIRED`, `WEB_ONLY`. |
-| [`ANDROID_BACKEND_HANDOFF.md`](file:///C:/Users/Test/Documents/SSM-new/SSM-new-app/docs/backend-handoff/ANDROID_BACKEND_HANDOFF.md) | Safe configuration boundaries, operational projection specifications, RLS rules. |
-| [`LIFECYCLE_ANDROID_READ_CONTRACT_2026-10-02.md`](file:///C:/Users/Test/Documents/SSM-new/SSM-new-app/docs/backend-handoff/LIFECYCLE_ANDROID_READ_CONTRACT_RENDERED_2026-10-03.txt) | Specification for displaying HW_01–HW_37 stages, department templates, and dependency chains. |
-| [`VERIFIED_SAFE_PROCUREMENT_CONTRACT_2026-09-26.md`](file:///C:/Users/Test/Documents/SSM-new/SSM-new-app/docs/backend-handoff/VERIFIED_SAFE_PROCUREMENT_CONTRACT_2026-09-26.md) | Contract for `operational_*` safe views omitting financial/commercial data. |
-| [`VERIFIED_MATERIAL_ISSUE_RETURN_CONTRACT_2026-09-27.md`](file:///C:/Users/Test/Documents/SSM-new/SSM-new-app/docs/backend-handoff/VERIFIED_MATERIAL_ISSUE_RETURN_CONTRACT_2026-09-27.md) | Signatures and idempotency rules for `post_material_issue` and `post_material_return`. |
+| [`mobile_backend_contract.json`](../backend-handoff/mobile_backend_contract.json) | Complete machine-readable catalog of all 180+ tables, foreign keys, columns, RPC signatures, and bucket paths. |
+| [`MOBILE_BACKEND_CONTRACT.md`](../backend-handoff/MOBILE_BACKEND_CONTRACT.md) | Object classification matrix: `MOBILE_READ_SAFE`, `ONLINE_REQUIRED`, `WEB_ONLY`. |
+| [`ANDROID_BACKEND_HANDOFF.md`](../backend-handoff/ANDROID_BACKEND_HANDOFF.md) | Safe configuration boundaries, operational projection specifications, RLS rules. |
+| [`LIFECYCLE_ANDROID_READ_CONTRACT_2026-10-02.md`](../backend-handoff/LIFECYCLE_ANDROID_READ_CONTRACT_RENDERED_2026-10-03.txt) | Specification for displaying HW_01–HW_37 stages, department templates, and dependency chains. |
+| [`VERIFIED_SAFE_PROCUREMENT_CONTRACT_2026-09-26.md`](../backend-handoff/VERIFIED_SAFE_PROCUREMENT_CONTRACT_2026-09-26.md) | Contract for `operational_*` safe views omitting financial/commercial data. |
+| [`VERIFIED_MATERIAL_ISSUE_RETURN_CONTRACT_2026-09-27.md`](../backend-handoff/VERIFIED_MATERIAL_ISSUE_RETURN_CONTRACT_2026-09-27.md) | Signatures and idempotency rules for `post_material_issue` and `post_material_return`. |
 
 ---
 
@@ -407,3 +410,47 @@ Every implementation increment must provide documented evidence meeting these ga
 
 
 Company-name anonymization: current repository display labels, planning/reference snapshots and synthetic examples use XYZ Pvt Ltd. Live business records, identities, backend configuration, official document codes and published Git history were not changed. Sanitized schema/reference text is not a claim of an altered installed database. Image/binary contents and historical commits require separate review; a source sync is not deployment.
+
+
+## 9. Web Cross-Department Audit and Android Acceptance Dependencies — 19 October 2026
+
+### 9.1 Status qualification
+
+This is a documentation/handoff update, not an Android implementation or device verification. Existing stage/build claims above describe historical checkpoints; they do not prove current live integration. No Kotlin, Gradle, APK or backend changes were made for this update, and Android tests/build were not rerun for documentation alone.
+
+The [authoritative web checkpoint](../../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md#28-cross-department-portal-correction-and-production-acceptance--19-october-2026) records fixes to department scoping, navigation, document drafts, task field retention, serialized local edits, designated approvals and client routing. Fourteen web tests, TypeScript/build and a two-tab Hardware-to-Quality round trip passed locally. These results do not certify Android behavior or shared server persistence. [Web browser evidence](../../../ssm-new-web/docs/evidence/DEPARTMENT_SCOPE_FIX_2026-10-19.md).
+
+Live Lovable inspection found no enabled sign-in method and no organization/users or operational rows in the inspected core tables. Real organization identity and first administrator work email are required for secure provisioning; no passwords belong in plans/chat. The user approved narendok/ssm-new-web main on 19 October; web fixes and the web plan were pushed through 3403586 and received by Lovable. Live-preview Service task navigation and Finance approval scoping passed. This resolves the earlier automatic-review push block. Production publishing and Android remote sync were not performed.
+
+### 9.2 Required Android parity checks (pending, not implemented by this plan)
+
+| Area | Required mobile behavior | Dependency / acceptance evidence |
+|---|---|---|
+| Trusted identity and department | Resolve organization, department and capabilities from authenticated protected membership. Cover SAL, EHW, ESW, MECH, PUR, QA, EMF, TST, FIN, SIT and HR/OPS. | Verified Auth/RLS contract; separate authorized identities. Preview roles are never operational authority. |
+| My Day / Tasks / deep links | Open the actual assigned queue and task; preserve project, due date and source fields on reassignment/update. Empty and denied states are explicit. | Verified task projection/mutation; device navigation and reload tests. |
+| Projects and team | Show authorized linked projects and relevant department roster. A general directory/filter must not widen access beyond server permissions. | Protected project/roster reads, cross-department denial and correct detail destinations. |
+| Approval / rework / notifications | Only designated signers act; pending gates block completion. Server rechecks current state, records rationale/audit, rejects duplicate or stale decisions, and notifies the requester. | Verified online transaction; web-to-mobile and mobile-to-web round trips on independent sessions. |
+| Documents and references | Use actual project sources, correct document type/revision/reference target, and explicit missing fields. Unissued local drafts remain drafts; client release needs recipient grant. | Verified controlled-document contract, private signed links, expiry and denial tests. No synthetic certification/signature accepted as evidence. |
+| Client boundary | Deny internal index, financial/HR detail and unreleased files unless explicitly authorized by the canonical backend. Filename/type matching is not an access grant. | Server projection/field stripping and negative access tests. |
+| Session/cache isolation | Sign-out removes session and account-scoped sensitive cache; never fall back to Admin. Another login must not inherit cached role data. | Logout, expiry, user-switch, offline-cache and deep-link tests. |
+| Lifecycle / floor work | Display authoritative predecessor gates and actual inspection/BOM/build/test/dispatch/service evidence. Keep simulation isolated and labeled. | Verified lifecycle contracts; stock/release actions remain ONLINE_REQUIRED and fail closed. |
+
+### 9.3 Execution order and release gate
+
+1. Web/backend owner confirms environment, organization/admin, authentication, canonical schema, RLS and private storage; supplies versioned verified contracts under docs/backend-handoff. Do not infer a migration was deployed from repository files.
+2. Android owner maps existing repositories/models to those contracts, preserving Stage 5A–5G order and the common SyncCoordinator. Do not create a competing backend or enable transactions from browser-local web behavior.
+3. Implement and test each affected operation only after its contract is verified. Keep unavailable operations disabled with a clear reason. Official numbering, stock, approvals and releases remain authoritative server operations.
+4. Run compile, unit tests and debug packaging after source changes; verify on device/emulator. Capture per-role results and negative tests under docs/evidence. Historical test counts are not evidence of this new run.
+5. Complete an authenticated web/mobile lifecycle round trip with actual persisted records and source-backed documents. Final acceptance remains pending until this evidence exists; neither a plan update nor a working web demo closes Android release gates.
+
+### 9.4 Standard task board parity — 19 October 2026
+
+Web now uses one shared task board for all eleven department roles in My Tasks and department workspaces: Today / In Progress left, Review middle, To Do right, Completed collapsed by default with an expand arrow/count. Mobile should adopt the same task grouping and action semantics when verified task contracts are available. A task must occupy only one lane; approved/released and review take precedence over due-today/progress. Preserve assignee, project and due-date fields on updates; retain guarded approval completion. Web browser-local workStatus is not a newly verified backend column or Android contract. No Android source/build/device work is included in this board update.
+
+### 9.5 Department project workspace parity — 19 October 2026
+
+Web consolidates department home/summary and project navigation into one page controlled by an All projects / department-linked project dropdown. Android parity should apply one trusted project selection to task queue, project details/progress, document/reference links, approvals, department records and recorded owners. Use explicit project IDs/codes/source links, clear empty states and preserved selection when opening/returning from details. Unlinked documents must not be attributed by filename/title. This is a mobile planning requirement pending verified backend contracts and device tests, not a Kotlin/APK change.
+
+### 9.6 Antigravity continuation plan
+
+Continue using the [detailed portal completion handoff](../../../ssm-new-web/docs/ANTIGRAVITY_PORTAL_COMPLETION_HANDOFF_2026-10-19.md), especially sections 6–8 for backend prerequisites and Android acceptance. Workspace browser verification of web `8fabb5f` has passed (evidenced in `ssm-new-web` commit `46b1ac3` / `docs/evidence/WORKSPACE_CONSOLIDATION_2026-10-19.md`). Android runtime/source/build work was not performed in this increment. Preserve existing planning/context edits and the separate Android execution queue.

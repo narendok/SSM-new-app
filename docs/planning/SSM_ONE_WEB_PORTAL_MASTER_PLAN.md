@@ -1,3 +1,5 @@
+> Historical reference snapshot. Current web/backend authority: [web master plan](../../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md), §28 (19 October 2026). Android execution authority: [Android plan](../planning/SSM_ONE_ANDROID_BUILD_PLAN.md), §9. Completion claims below must be read with those current evidence qualifications.
+
 # SSM One - Web Portal Master Plan
 
 ## Plan Boundary
