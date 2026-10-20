@@ -17,6 +17,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.R
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.FloatingActionButton
+import com.example.myapplication.ui.components.UnifiedSearchModal
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.AccountCircle
@@ -78,6 +82,7 @@ fun AppShell(viewModel: MainViewModel) {
     var showScannerModal by remember { mutableStateOf(false) }
     var showAiAssistantModal by remember { mutableStateOf(false) }
     var showApprovalsModal by remember { mutableStateOf(false) }
+    var showSearchPopupModal by remember { mutableStateOf(false) }
 
     if (showSharedWorkspace && authState is AuthState.Authenticated && (authState as AuthState.Authenticated).session.testMembership != null) {
         SharedTestScreen(viewModel, onBack = { showSharedWorkspace = false })
@@ -230,51 +235,52 @@ fun AppShell(viewModel: MainViewModel) {
                 )
             )
         },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showSearchPopupModal = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = CircleShape,
+                modifier = Modifier.size(52.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Unified Search & Voice Control",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { viewModel.selectTab(0) },
-                    icon = { Icon(Icons.Default.Dashboard, contentDescription = "Cockpit & Tasks") },
-                    label = { Text("Cockpit", style = MaterialTheme.typography.labelSmall) }
+                    icon = { Icon(Icons.Default.Dashboard, contentDescription = "Dashboard") },
+                    label = { Text("Cockpit", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { viewModel.selectTab(1) },
-                    icon = { Icon(Icons.Default.SupervisorAccount, contentDescription = "Team & Leads") },
-                    label = { Text("Team & Leads", style = MaterialTheme.typography.labelSmall) }
+                    icon = { Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = "Records") },
+                    label = { Text("Records", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { viewModel.selectTab(2) },
-                    icon = {
-                        Box(contentAlignment = Alignment.TopEnd) {
-                            Icon(Icons.Default.Gavel, contentDescription = "Approvals & Governance")
-                            if (pendingApprovalsCount > 0) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = Color(0xFFC62828),
-                                    modifier = Modifier.size(13.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = "$pendingApprovalsCount",
-                                            color = Color.White,
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    label = { Text("Approvals", style = MaterialTheme.typography.labelSmall) }
+                    icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    label = { Text("Search", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 3,
                     onClick = { viewModel.selectTab(3) },
-                    icon = { Icon(Icons.Default.PrecisionManufacturing, contentDescription = "Shopfloor Tools") },
-                    label = { Text("Tools", style = MaterialTheme.typography.labelSmall) }
+                    icon = { Icon(Icons.Default.Folder, contentDescription = "Documents") },
+                    label = { Text("Docs", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 4,
+                    onClick = { viewModel.selectTab(4) },
+                    icon = { Icon(Icons.Default.Forum, contentDescription = "Team & Chat") },
+                    label = { Text("Team", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
                 )
             }
         }
@@ -304,23 +310,26 @@ fun AppShell(viewModel: MainViewModel) {
                         }
                     }
                 )
-                1 -> DepartmentLeadsScreen(
+                1 -> DepartmentRecordsScreen(
                     scmsRepository = viewModel.scmsRepository,
                     onOpenRoleSwitcher = { showRoleSwitcherDialog = true }
                 )
-                2 -> ApprovalsScreen(
-                    scmsRepository = viewModel.scmsRepository,
-                    onBack = null
+                2 -> UnifiedSearchScreen(
+                    scmsRepository = viewModel.scmsRepository
                 )
-                3 -> ShopfloorToolsScreen(
+                3 -> ProjectDocumentsScreen(
                     scmsRepository = viewModel.scmsRepository,
-                    onLaunchScanner = { showScannerModal = true }
+                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true }
+                )
+                4 -> TeamAndChatScreen(
+                    scmsRepository = viewModel.scmsRepository,
+                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true },
+                    onOpenAuthDialog = { showAuthDialog = true }
                 )
             }
             }
         }
     }
-
     if (showRoleSwitcherDialog && authState is AuthState.Authenticated) {
         androidx.compose.material3.AlertDialog(onDismissRequest = { showRoleSwitcherDialog = false },
             title = { Text("Department view") },
@@ -362,9 +371,11 @@ fun AppShell(viewModel: MainViewModel) {
             onNavigateToRoute = { route ->
                 showScannerModal = false
                 when (route) {
-                    "approvals" -> viewModel.selectTab(2)
-                    "team", "leads", "hr" -> viewModel.selectTab(1)
-                    "inventory", "receiving", "assets", "bom", "qa", "quality", "documents", "docs", "security" -> viewModel.selectTab(3)
+                    "approvals" -> showApprovalsModal = true
+                    "inventory", "records", "receiving", "assets", "bom", "qa", "quality" -> viewModel.selectTab(1)
+                    "search" -> viewModel.selectTab(2)
+                    "documents", "docs", "security" -> viewModel.selectTab(3)
+                    "team", "leads", "hr", "chat" -> viewModel.selectTab(4)
                     else -> viewModel.selectTab(0)
                 }
             },
@@ -376,6 +387,13 @@ fun AppShell(viewModel: MainViewModel) {
         EnterpriseAiAssistantModal(
             scmsRepository = viewModel.scmsRepository,
             onDismiss = { showAiAssistantModal = false }
+        )
+    }
+
+    if (showSearchPopupModal) {
+        UnifiedSearchModal(
+            scmsRepository = viewModel.scmsRepository,
+            onDismiss = { showSearchPopupModal = false }
         )
     }
 

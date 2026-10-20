@@ -42,6 +42,7 @@ import com.example.myapplication.data.model.TravelPolicyRule
 import com.example.myapplication.data.model.TeamMemberItem
 import com.example.myapplication.data.model.DepartmentHandoffItem
 import com.example.myapplication.data.model.AppNotification
+import com.example.myapplication.data.model.TeamChatMessage
 import com.example.myapplication.data.security.SecureStorage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -165,6 +166,17 @@ interface ScmsRepository {
         recordId: String? = null
     ): Result<Unit>
     fun updateControlledDocStatus(docId: String, newStatus: String): Result<Unit>
+
+    // Team Discussion & Communication
+    val chatMessages: StateFlow<List<TeamChatMessage>>
+    fun sendChatMessage(channel: String, message: String, isUrgent: Boolean = false, referenceId: String? = null): Result<TeamChatMessage>
+
+    // Record Hub Creation
+    fun createPurchaseOrder(po: PurchaseOrder): Result<Unit>
+    fun createHarness(harness: WireHarness): Result<Unit>
+    fun createDvprTest(test: DvprTestItem): Result<Unit>
+    fun createAsset(asset: AssetEquipment): Result<Unit>
+    fun addControlledDoc(doc: ControlledDoc): Result<Unit>
 }
 
 data class WhatIfSimulationResult(
@@ -1978,6 +1990,83 @@ class ScmsRepositoryImpl(
         )
     )
     override val approvals: StateFlow<List<ApprovalDecisionRecord>> = _approvals.asStateFlow()
+    // 37. Team Chat & Channel Messages
+    private val _chatMessages = MutableStateFlow(
+        listOf(
+            TeamChatMessage(
+                id = "MSG-01",
+                channel = "hlpl-ai4t-01",
+                senderName = "Avery Vale",
+                senderDept = "EHW",
+                message = "Schematics netlist EHW-SCH-01 Rev B is locked. STM32G0B1VCT6 and Quectel EG915N footprints verified for SMT pilot.",
+                timestamp = "14:15",
+                isUrgent = false,
+                referenceId = "EHW-SCH-01"
+            ),
+            TeamChatMessage(
+                id = "MSG-02",
+                channel = "hlpl-ai4t-01",
+                senderName = "Casey Rowan",
+                senderDept = "EMF",
+                message = "SMT Line 2 reflow profiling with 10 thermal sensors scheduled for tomorrow morning. Solder paste stencil delivered.",
+                timestamp = "14:40",
+                isUrgent = false,
+                referenceId = "EMF-CP-01"
+            ),
+            TeamChatMessage(
+                id = "MSG-03",
+                channel = "hlpl-ai4t-01",
+                senderName = "Jordan Blake",
+                senderDept = "QA",
+                message = "ISO 7637-2 Transient Pulse 1 passed. Awaiting SMT pilot boards for CISPR 25 radiated emissions chamber test.",
+                timestamp = "15:10",
+                isUrgent = false,
+                referenceId = "QA-DVP-01"
+            ),
+            TeamChatMessage(
+                id = "MSG-04",
+                channel = "hlpl-ai4t-01",
+                senderName = "Morgan Reed",
+                senderDept = "PUR",
+                message = "Quectel 4G modems 500 pcs delivered to WH-02. TI Buck regulators expected by Friday afternoon.",
+                timestamp = "15:35",
+                isUrgent = false,
+                referenceId = "HLPL-PO-2026-042"
+            ),
+            TeamChatMessage(
+                id = "MSG-05",
+                channel = "cross-dept-sync",
+                senderName = "Priya Sharma",
+                senderDept = "SAL",
+                message = "Tata Motors fleet manager Rohan Verma requested update on ARAI AIS-140 TAC certificate delivery schedule.",
+                timestamp = "16:00",
+                isUrgent = true,
+                referenceId = "DELIV-TAC-01"
+            ),
+            TeamChatMessage(
+                id = "MSG-06",
+                channel = "cross-dept-sync",
+                senderName = "Devon Lane",
+                senderDept = "ESW",
+                message = "Firmware v2.4 CAN J1939 telemetry stack build is ready for EOL Chroma jig validation.",
+                timestamp = "16:20",
+                isUrgent = false,
+                referenceId = "TSK-06"
+            ),
+            TeamChatMessage(
+                id = "MSG-07",
+                channel = "governance-alerts",
+                senderName = "Marcus Vance",
+                senderDept = "ADMIN",
+                message = "All Stage 4 review handoffs require lead sign-off prior to Stage 5 SMT pilot build authorization.",
+                timestamp = "16:45",
+                isUrgent = true,
+                referenceId = "STAGE-5"
+            )
+        )
+    )
+    override val chatMessages: StateFlow<List<TeamChatMessage>> = _chatMessages.asStateFlow()
+
 
     override fun switchRole(role: DepartmentRole) {
         _currentRole.value = role
@@ -3313,5 +3402,96 @@ class ScmsRepositoryImpl(
     ): Result<Unit> = kotlinx.coroutines.runBlocking {
         verifyAndAdvanceStageGate(targetStage, comments, evidenceJson, recordId)
     }
+
+    override fun sendChatMessage(channel: String, message: String, isUrgent: Boolean, referenceId: String?): Result<TeamChatMessage> {
+        val newMsg = TeamChatMessage(
+            id = "MSG-${UUID.randomUUID().toString().take(6).uppercase()}",
+            channel = channel,
+            senderName = _currentRole.value.leadName,
+            senderDept = _currentRole.value.code,
+            message = message,
+            timestamp = SimpleDateFormat("HH:mm", Locale.US).format(Date()),
+            isUrgent = isUrgent,
+            referenceId = referenceId
+        )
+        _chatMessages.value = _chatMessages.value + newMsg
+        return Result.success(newMsg)
+    }
+
+    override fun createPurchaseOrder(po: PurchaseOrder): Result<Unit> {
+        _purchaseOrders.value = listOf(po) + _purchaseOrders.value
+        val auditEntry = AuditLogEntry(
+            id = "LOG-${UUID.randomUUID().toString().take(6).uppercase()}",
+            timestamp = currentTime(),
+            actor = _currentRole.value.leadName,
+            action = "PO_CREATED",
+            partMpn = po.poNumber,
+            quantityDelta = po.lineItemsCount,
+            reason = "Raised Purchase Order ${po.poNumber} with ${po.vendorName} for ${po.totalAmountUsd}"
+        )
+        _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+        return Result.success(Unit)
+    }
+
+    override fun createHarness(harness: WireHarness): Result<Unit> {
+        _harnesses.value = listOf(harness) + _harnesses.value
+        val auditEntry = AuditLogEntry(
+            id = "LOG-${UUID.randomUUID().toString().take(6).uppercase()}",
+            timestamp = currentTime(),
+            actor = _currentRole.value.leadName,
+            action = "HARNESS_REGISTERED",
+            partMpn = harness.assemblyId,
+            quantityDelta = harness.pinCount,
+            reason = "Registered harness assembly ${harness.assemblyId} - ${harness.name}"
+        )
+        _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+        return Result.success(Unit)
+    }
+
+    override fun createDvprTest(test: DvprTestItem): Result<Unit> {
+        _dvprTests.value = listOf(test) + _dvprTests.value
+        val auditEntry = AuditLogEntry(
+            id = "LOG-${UUID.randomUUID().toString().take(6).uppercase()}",
+            timestamp = currentTime(),
+            actor = _currentRole.value.leadName,
+            action = "DVPR_TEST_LOGGED",
+            partMpn = test.testId,
+            quantityDelta = 1,
+            reason = "Added DVP&R compliance test ${test.testId}: ${test.testTitle} (${test.standard})"
+        )
+        _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+        return Result.success(Unit)
+    }
+
+    override fun createAsset(asset: AssetEquipment): Result<Unit> {
+        _assets.value = listOf(asset) + _assets.value
+        val auditEntry = AuditLogEntry(
+            id = "LOG-${UUID.randomUUID().toString().take(6).uppercase()}",
+            timestamp = currentTime(),
+            actor = _currentRole.value.leadName,
+            action = "ASSET_REGISTERED",
+            partMpn = asset.assetTag,
+            quantityDelta = 1,
+            reason = "Registered capital asset ${asset.assetTag}: ${asset.name}"
+        )
+        _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+        return Result.success(Unit)
+    }
+
+    override fun addControlledDoc(doc: ControlledDoc): Result<Unit> {
+        _documents.value = listOf(doc) + _documents.value
+        val auditEntry = AuditLogEntry(
+            id = "LOG-${UUID.randomUUID().toString().take(6).uppercase()}",
+            timestamp = currentTime(),
+            actor = _currentRole.value.leadName,
+            action = "DOC_REGISTERED",
+            partMpn = doc.docId,
+            quantityDelta = 1,
+            reason = "Registered controlled document ${doc.docId}: ${doc.title}"
+        )
+        _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+        return Result.success(Unit)
+    }
+
 }
 

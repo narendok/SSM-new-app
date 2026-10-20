@@ -375,6 +375,21 @@ data class AppNotification(
     val referenceId: String? = null
 )
 
+/**
+ * Team Discussion and Project Collaboration Message.
+ */
+@Serializable
+data class TeamChatMessage(
+    val id: String,
+    val channel: String = "hlpl-ai4t-01",
+    val senderName: String,
+    val senderDept: String,
+    val message: String,
+    val timestamp: String,
+    val isUrgent: Boolean = false,
+    val referenceId: String? = null
+)
+
 // ==============================================================================
 // Additional Master Plan Modules: Feasibility, Sales CRM, AVL, and Client Portal
 // ==============================================================================
