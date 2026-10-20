@@ -308,11 +308,8 @@ fun AppShell(viewModel: MainViewModel) {
     if (showAuthDialog) {
         AuthDialog(
             authRepository = viewModel.authRepository,
+            onSignIn = viewModel::signInWithPassword,
             authState = authState,
-            currentRole = currentRole,
-            onRoleSelected = { role ->
-                viewModel.switchRole(role)
-            },
             onDismiss = { showAuthDialog = false }
         )
     }

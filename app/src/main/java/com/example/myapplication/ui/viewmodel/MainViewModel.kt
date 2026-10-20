@@ -65,6 +65,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun signInWithPassword(email: String, password: String) {
+        if (authState.value is AuthState.Authenticating) return
+        viewModelScope.launch {
+            authRepository.signInWithPassword(email, password).onSuccess { session ->
+                session.testMembership?.workspaceRole()?.let { scmsRepository.switchRole(it) }
+            }
+        }
+    }
+
     fun switchRole(role: DepartmentRole) {
         scmsRepository.switchRole(role)
     }

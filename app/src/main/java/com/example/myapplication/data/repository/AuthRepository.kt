@@ -3,7 +3,6 @@ package com.example.myapplication.data.repository
 import com.example.myapplication.BuildConfig
 import com.example.myapplication.data.model.AuthSession
 import com.example.myapplication.data.model.AuthState
-import com.example.myapplication.data.model.AuthUser
 import com.example.myapplication.data.model.DepartmentRole
 import com.example.myapplication.data.remote.PkceUtil
 import com.example.myapplication.data.remote.SupabaseClient
@@ -30,12 +29,16 @@ class AuthRepositoryImpl(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
     override val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
+    private val membershipJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+
     private var activeCodeVerifier: String? = null
 
     init {
         val existingSession = secureStorage.getSession()
-        if (existingSession != null) {
+        if (existingSession != null && !existingSession.accessToken.startsWith("demo_")) {
             _authState.value = AuthState.Authenticated(existingSession)
+        } else if (existingSession != null) {
+            secureStorage.clearSession()
         }
     }
 
@@ -68,40 +71,19 @@ class AuthRepositoryImpl(
 
     override suspend fun signInWithPassword(email: String, password: String): Result<AuthSession> {
         _authState.value = AuthState.Authenticating("Signing in as $email...")
-        val matchedRole = DepartmentRole.fromEmail(email)
-
-        val result = supabaseClient.signInWithPassword(email, password)
-        return if (result.isSuccess) {
-            val session = result.getOrThrow()
+        secureStorage.clearSession()
+        val result = supabaseClient.signInWithPassword(email, password).mapCatching { session ->
+            val raw = supabaseClient.invokeRpc("resolve_test_membership", "{}", session.accessToken).getOrThrow()
+            val membership = membershipJson.decodeFromString<List<com.example.myapplication.data.model.TestMembership>>(raw).singleOrNull()
+                ?: throw SecurityException("No active TEST workspace membership")
+            require(membership.organizationName == "TEST ONLY · SSM-new1 synthetic workspace" && membership.workspaceRole() != null) { "Unsupported TEST membership" }
+            session.copy(testMembership = membership)
+        }
+        return result.onSuccess { session ->
             secureStorage.saveSession(session)
             _authState.value = AuthState.Authenticated(session)
-            Result.success(session)
-        } else {
-            // Demo persona fallback when running in local demo / offline mode
-            if (matchedRole != null && (matchedRole.password == password || password.isNotBlank())) {
-                val demoSession = AuthSession(
-                    accessToken = "demo_jwt_token_${matchedRole.code.lowercase()}",
-                    refreshToken = "demo_refresh_token",
-                    expiresIn = 86400,
-                    expiresAt = System.currentTimeMillis() / 1000 + 86400,
-                    user = AuthUser(
-                        id = "user-${matchedRole.code.lowercase()}-demo",
-                        email = matchedRole.email,
-                        userMetadata = mapOf(
-                            "full_name" to matchedRole.leadName,
-                            "role" to matchedRole.code,
-                            "department" to matchedRole.title
-                        )
-                    )
-                )
-                secureStorage.saveSession(demoSession)
-                _authState.value = AuthState.Authenticated(demoSession)
-                Result.success(demoSession)
-            } else {
-                val err = result.exceptionOrNull()?.message ?: "Invalid email or password"
-                _authState.value = AuthState.Error(err)
-                Result.failure(result.exceptionOrNull() ?: IllegalStateException(err))
-            }
+        }.onFailure {
+            _authState.value = AuthState.Error("Server sign-in failed. Check credentials, network and TEST membership.")
         }
     }
 
