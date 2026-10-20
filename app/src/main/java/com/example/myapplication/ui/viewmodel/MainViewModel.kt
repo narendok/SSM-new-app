@@ -75,8 +75,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         else if (com.example.myapplication.data.model.SharedAccess.departments(snapshot).any { it["id"]?.jsonPrimitive?.content == id }) _viewDepartment.value = id
     }
     private var sharedEpoch = 0
-    private var retrySignature: String? = null
-    private var retryId: String? = null
 
     fun refreshSharedWorkspace() {
         val token = (authState.value as? AuthState.Authenticated)?.session?.accessToken ?: return
@@ -85,7 +83,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _sharedBusy.value = true
         viewModelScope.launch {
             try {
-                val snapshot = sharedRepository.load(token)
+                val snapshot = sharedRepository.load(authRepository.validAccessToken())
                 if (epoch == sharedEpoch) { _sharedSnapshot.value = snapshot; _sharedError.value = null }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
@@ -98,18 +96,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val token = (authState.value as? AuthState.Authenticated)?.session?.accessToken ?: return
         if (_sharedBusy.value) return
         val signature = action + payload.toString()
-        if (retrySignature != signature) { retrySignature = signature; retryId = java.util.UUID.randomUUID().toString() }
-        val requestId = retryId ?: return
+        val userId = (authState.value as? AuthState.Authenticated)?.session?.user?.id ?: return
+        val requestId = try { secureStorage.sharedRequestId(userId, signature) } catch (e: Exception) {
+            _sharedError.value = "Cannot save retry identity. Action was not sent."; return
+        }
         val epoch = sharedEpoch
         _sharedBusy.value = true
         viewModelScope.launch {
             try {
-                sharedRepository.mutate(token, action, payload, requestId)
+                sharedRepository.mutate(authRepository.validAccessToken(), action, payload, requestId)
                 if (epoch == sharedEpoch) {
-                    retryId = null; retrySignature = null
+                    secureStorage.completeSharedRequest(userId, signature)
                     _sharedSaved.value++
                     _sharedError.value = null
-                    _sharedSnapshot.value = sharedRepository.load(token)
+                    _sharedSnapshot.value = sharedRepository.load(authRepository.validAccessToken())
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
@@ -120,12 +120,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
+            var priorIdentity: String? = null
             authState.collect { state ->
+                val identity = (state as? AuthState.Authenticated)?.session?.user?.id
+                if (identity != null && identity == priorIdentity) return@collect
+                priorIdentity = identity
                 sharedEpoch++
                 _viewDepartment.value = null
                 _selectedTab.value = 0
                 _sharedSnapshot.value = null; _sharedError.value = null; _sharedBusy.value = false
-                retryId = null; retrySignature = null
                 if (state is AuthState.Authenticated) {
                     state.session.testMembership?.workspaceRole()?.let { scmsRepository.switchRole(it) }
                     refreshSharedWorkspace()
@@ -164,6 +167,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshActiveTab() {
+        if (authState.value is AuthState.Authenticated) { refreshSharedWorkspace(); return }
         _viewState.value = ViewUiState.Loading
         _lastSyncTimestamp.value = System.currentTimeMillis()
         viewModelScope.launch {

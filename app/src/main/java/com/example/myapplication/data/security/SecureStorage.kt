@@ -67,6 +67,25 @@ class SecureStorage(context: Context) {
         return uuid
     }
 
+    /** Identity-scoped retry IDs only, not an offline mutation queue. */
+    fun sharedRequestId(userId: String, signature: String): String {
+        val key = sharedRequestKey(userId, signature)
+        return prefs.getString(key, null) ?: UUID.randomUUID().toString().also { id ->
+            check(prefs.edit().putString(key, id).commit()) { "Unable to persist retry identity" }
+        }
+    }
+
+    fun completeSharedRequest(userId: String, signature: String) {
+        check(prefs.edit().remove(sharedRequestKey(userId, signature)).commit()) { "Unable to clear retry identity" }
+    }
+
+    private fun sharedRequestKey(userId: String, signature: String): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+            .digest((userId + "|" + signature).toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        return "shared_request_$digest"
+    }
+
     companion object {
         private const val KEY_SESSION = "auth_session"
         private const val KEY_ACCESS_TOKEN = "access_token"

@@ -12,6 +12,14 @@ import kotlinx.serialization.json.*
 
 @Composable
 fun AuthenticatedCommandCenter(vm: MainViewModel, onSwitchDepartment: () -> Unit, onOpenShared: () -> Unit) {
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) vm.refreshSharedWorkspace()
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
     val snapshot by vm.sharedSnapshot.collectAsState()
     val department by vm.viewDepartment.collectAsState()
     val error by vm.sharedError.collectAsState()

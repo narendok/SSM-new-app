@@ -45,3 +45,6 @@ data class TestMembership(
         else -> null
     }
 }
+
+/** Refresh early to avoid a token expiring during a checked transaction. */
+fun AuthSession.needsRefresh(nowSeconds: Long): Boolean = expiresAt <= nowSeconds + 60

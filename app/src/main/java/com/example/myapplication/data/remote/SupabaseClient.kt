@@ -137,6 +137,26 @@ class SupabaseClient {
         }
     }
 
+    suspend fun refreshSession(refreshToken: String): Result<AuthSession> = withContext(Dispatchers.IO) {
+        try {
+            val body = json.encodeToString(mapOf("refresh_token" to refreshToken))
+                .toRequestBody("application/json".toMediaType())
+            val request = Request.Builder().url("$baseUrl/auth/v1/token?grant_type=refresh_token")
+                .addHeader("apikey", anonKey).post(body).build()
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    if (response.code == 400 || response.code == 401 || response.code == 403)
+                        throw SecurityException("Session expired. Please sign in again.")
+                    throw IOException("Session refresh unavailable. Retry when online.")
+                }
+                Result.success(json.decodeFromString<AuthSession>(response.body?.string() ?: ""))
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Result.failure(e)
+        }
+    }
+
     suspend fun createSignedUrl(
         bucketName: String,
         filePath: String,

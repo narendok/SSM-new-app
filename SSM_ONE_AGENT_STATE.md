@@ -322,3 +322,7 @@ Dedicated authenticated shared screen and online RPC adapter implemented. Projec
 
 ## Department access correction
 Read planning commit a66eefc. Independent department navigation and TEST sign-in; server-scoped dashboard and action controls. 40 Android unit tests + debug build passed; 14 PostgreSQL contract tests passed. See docs/evidence/android-department-access-2026-10-20.md. Device acceptance and unconnected domain contracts remain open.
+
+
+## Session/retry reliability
+Shared RPCs renew expired sessions with identity verification; account-scoped encrypted retry IDs persist through process death; dashboard resume/manual refresh reads server. 41 tests + debug build passed. Device expiry/process-death acceptance and domain contracts remain open; see docs/evidence/android-session-reliability-2026-10-20.md.
