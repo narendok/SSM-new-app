@@ -263,32 +263,46 @@ fun AppShell(viewModel: MainViewModel) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { viewModel.selectTab(0) },
-                    icon = { Icon(Icons.Default.Dashboard, contentDescription = "Command Center") },
-                    label = { Text("Command", style = MaterialTheme.typography.labelSmall) }
+                    icon = { Icon(Icons.Default.Dashboard, contentDescription = "Cockpit & Tasks") },
+                    label = { Text("Cockpit", style = MaterialTheme.typography.labelSmall) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { viewModel.selectTab(1) },
-                    icon = { Icon(Icons.Default.Inventory, contentDescription = "Inventory") },
-                    label = { Text("Inventory", style = MaterialTheme.typography.labelSmall) }
+                    icon = { Icon(Icons.Default.SupervisorAccount, contentDescription = "Team & Leads") },
+                    label = { Text("Team & Leads", style = MaterialTheme.typography.labelSmall) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { viewModel.selectTab(2) },
-                    icon = { Icon(Icons.Default.PrecisionManufacturing, contentDescription = "Smart BOM") },
-                    label = { Text("Smart BOM", style = MaterialTheme.typography.labelSmall) }
+                    icon = {
+                        Box(contentAlignment = Alignment.TopEnd) {
+                            Icon(Icons.Default.Gavel, contentDescription = "Approvals & Governance")
+                            if (pendingApprovalsCount > 0) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color(0xFFC62828),
+                                    modifier = Modifier.size(13.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "$pendingApprovalsCount",
+                                            color = Color.White,
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Black
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    label = { Text("Approvals", style = MaterialTheme.typography.labelSmall) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 3,
                     onClick = { viewModel.selectTab(3) },
-                    icon = { Icon(Icons.Filled.FactCheck, contentDescription = "Ingestion & QA") },
-                    label = { Text("Ingest & QA", style = MaterialTheme.typography.labelSmall) }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 4,
-                    onClick = { viewModel.selectTab(4) },
-                    icon = { Icon(Icons.Default.Folder, contentDescription = "Docs & Vault") },
-                    label = { Text("Docs & Vault", style = MaterialTheme.typography.labelSmall) }
+                    icon = { Icon(Icons.Default.PrecisionManufacturing, contentDescription = "Shopfloor Tools") },
+                    label = { Text("Tools", style = MaterialTheme.typography.labelSmall) }
                 )
             }
         }
@@ -322,10 +336,18 @@ fun AppShell(viewModel: MainViewModel) {
                         }
                     }
                 )
-                1 -> GovernedInventoryScreen(scmsRepository = viewModel.scmsRepository)
-                2 -> SmartBomAndPurchasingScreen(scmsRepository = viewModel.scmsRepository)
-                3 -> AdaptiveIngestionAndQualityScreen(scmsRepository = viewModel.scmsRepository)
-                4 -> DocumentControlScreen(scmsRepository = viewModel.scmsRepository)
+                1 -> DepartmentLeadsScreen(
+                    scmsRepository = viewModel.scmsRepository,
+                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true }
+                )
+                2 -> ApprovalsScreen(
+                    scmsRepository = viewModel.scmsRepository,
+                    onBack = null
+                )
+                3 -> ShopfloorToolsScreen(
+                    scmsRepository = viewModel.scmsRepository,
+                    onLaunchScanner = { showScannerModal = true }
+                )
             }
             }
         }
@@ -372,10 +394,9 @@ fun AppShell(viewModel: MainViewModel) {
             onNavigateToRoute = { route ->
                 showScannerModal = false
                 when (route) {
-                    "inventory", "receiving", "assets" -> viewModel.selectTab(1)
-                    "bom" -> viewModel.selectTab(2)
-                    "qa", "quality" -> viewModel.selectTab(3)
-                    "documents", "docs" -> viewModel.selectTab(4)
+                    "approvals" -> viewModel.selectTab(2)
+                    "team", "leads", "hr" -> viewModel.selectTab(1)
+                    "inventory", "receiving", "assets", "bom", "qa", "quality", "documents", "docs", "security" -> viewModel.selectTab(3)
                     else -> viewModel.selectTab(0)
                 }
             },

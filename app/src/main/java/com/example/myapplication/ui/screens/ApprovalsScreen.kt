@@ -80,7 +80,7 @@ import java.util.Locale
 @Composable
 fun ApprovalsScreen(
     scmsRepository: ScmsRepository,
-    onBack: () -> Unit
+    onBack: (() -> Unit)? = null
 ) {
     val approvals by scmsRepository.approvals.collectAsState()
     val travelPolicyRules by scmsRepository.travelPolicyRules.collectAsState()
@@ -134,14 +134,16 @@ fun ApprovalsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onBack, modifier = Modifier.size(34.dp)) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                        if (onBack != null) {
+                            IconButton(onClick = onBack, modifier = Modifier.size(34.dp)) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
                         }
-                        Spacer(modifier = Modifier.width(4.dp))
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(

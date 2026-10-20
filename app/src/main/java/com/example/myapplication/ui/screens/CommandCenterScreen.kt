@@ -22,6 +22,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
@@ -30,11 +32,15 @@ import androidx.compose.material.icons.filled.Engineering
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Warning
+import com.example.myapplication.data.model.DailyTaskItem
+import com.example.myapplication.data.model.TeamMemberItem
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
@@ -89,6 +95,7 @@ fun CommandCenterScreen(
     val clientDeliverables by scmsRepository.clientDeliverables.collectAsState()
     val approvals by scmsRepository.approvals.collectAsState()
     val pendingApprovalsCount = approvals.count { it.outcome == "Pending" }
+    val teamMembers by scmsRepository.teamMembers.collectAsState()
 
     var selectedStageForDetail by remember { mutableStateOf<ApqpStage?>(null) }
     var showRaciMatrix by remember { mutableStateOf(false) }
@@ -100,6 +107,17 @@ fun CommandCenterScreen(
     var ticketTitle by remember { mutableStateOf("") }
     var ticketDesc by remember { mutableStateOf("") }
     var ticketConfirmationMsg by remember { mutableStateOf<String?>(null) }
+
+    // 3-Lane Task Management State
+    var selectedTaskLane by remember { mutableStateOf("Today") }
+    var showCompletedTasks by remember { mutableStateOf(false) }
+    var showCreateTaskModal by remember { mutableStateOf(false) }
+    var taskToReassign by remember { mutableStateOf<DailyTaskItem?>(null) }
+    var newTaskTitle by remember { mutableStateOf("") }
+    var newTaskPriority by remember { mutableStateOf("High") }
+    var newTaskLane by remember { mutableStateOf("Today") }
+    var newTaskAssignee by remember { mutableStateOf("") }
+    var reassignNotes by remember { mutableStateOf("") }
 
     LazyColumn(
         modifier = Modifier
@@ -745,32 +763,275 @@ fun CommandCenterScreen(
             }
         }
 
-        // 6. Daily Tasks & Action Items
+        // 6. Daily Tasks & Action Items (3-Lane Operational Checklist)
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Daily Action Items & Checklist",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "${tasks.count { it.isCompleted }}/${tasks.size} Completed",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
+            val todayTasks = tasks.filter { !it.isCompleted && it.lane.equals("Today", ignoreCase = true) }
+            val tomorrowTasks = tasks.filter { !it.isCompleted && it.lane.equals("Tomorrow", ignoreCase = true) }
+            val reviewTasks = tasks.filter { !it.isCompleted && it.lane.equals("Review", ignoreCase = true) }
+            val completedTasks = tasks.filter { it.isCompleted || it.lane.equals("Completed", ignoreCase = true) }
+            val overdueTasksCount = todayTasks.count { it.isOverdue }
 
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                tasks.forEach { task ->
-                    TaskCard(
-                        task = task,
-                        onToggle = { if (sharedTasks != null) onSharedTaskToggle?.invoke(task.id) else scmsRepository.toggleTask(task.id) }
-                    )
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    // Header Row with Title and + Add Task button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Daily Action Checklist",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (overdueTasksCount > 0) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = Color(0xFFFFEBEE),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF9A9A))
+                                    ) {
+                                        Text(
+                                            text = "$overdueTasksCount OVERDUE",
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFFC62828),
+                                            fontSize = 9.sp
+                                        )
+                                    }
+                                }
+                            }
+                            Text(
+                                text = "3-lane operational pipeline: Today, Planned, and Review.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                newTaskTitle = ""
+                                newTaskAssignee = currentRole.leadName
+                                newTaskLane = selectedTaskLane
+                                newTaskPriority = "High"
+                                showCreateTaskModal = true
+                            },
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.height(30.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Add Task", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 3 Segmented Lane Selector Pills
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(8.dp))
+                            .padding(3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        listOf(
+                            Triple("Today", "Today", todayTasks.size),
+                            Triple("Tomorrow", "Tomorrow", tomorrowTasks.size),
+                            Triple("Review", "Review", reviewTasks.size)
+                        ).forEach { (laneKey, laneLabel, count) ->
+                            val isSelected = selectedTaskLane == laneKey
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { selectedTaskLane = laneKey },
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
+                                shadowElevation = if (isSelected) 1.dp else 0.dp
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = laneLabel,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
+                                    ) {
+                                        Text(
+                                            text = "$count",
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Active Lane Task List
+                    val activeLaneTasks = when (selectedTaskLane) {
+                        "Tomorrow" -> tomorrowTasks
+                        "Review" -> reviewTasks
+                        else -> todayTasks
+                    }
+
+                    if (activeLaneTasks.isEmpty()) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.AssignmentTurnedIn, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("No tasks in $selectedTaskLane lane", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            activeLaneTasks.forEach { task ->
+                                OperationalTaskCard(
+                                    task = task,
+                                    currentLane = selectedTaskLane,
+                                    onToggleComplete = {
+                                        if (sharedTasks != null) onSharedTaskToggle?.invoke(task.id) else scmsRepository.toggleTask(task.id)
+                                    },
+                                    onMoveLane = { targetLane ->
+                                        scmsRepository.moveTaskLane(task.id, targetLane)
+                                    },
+                                    onDelegate = {
+                                        taskToReassign = task
+                                        reassignNotes = ""
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Collapsed Completed Banner
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showCompletedTasks = !showCompletedTasks },
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Color(0xFF2E7D32),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "${completedTasks.size} Tasks Completed",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Text(
+                                text = if (showCompletedTasks) "Hide ▲" else "View ▼",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(visible = showCompletedTasks) {
+                        Column(
+                            modifier = Modifier.padding(top = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            if (completedTasks.isEmpty()) {
+                                Text(
+                                    text = "No completed tasks yet today.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                )
+                            } else {
+                                completedTasks.forEach { task ->
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f),
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = Color(0xFF2E7D32),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = task.title,
+                                                    style = MaterialTheme.typography.bodySmall.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Text(
+                                                    text = "${task.dept} | ${task.assignee} | Completed",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                                    fontSize = 10.sp
+                                                )
+                                            }
+                                            TextButton(
+                                                onClick = { scmsRepository.moveTaskLane(task.id, "Today") },
+                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                                                modifier = Modifier.height(24.dp)
+                                            ) {
+                                                Text("Restore", fontSize = 10.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1174,6 +1435,264 @@ fun CommandCenterScreen(
             )
         }
     }
+
+    // Modal: Quick Task Creation
+    if (showCreateTaskModal) {
+        AlertDialog(
+            onDismissRequest = { showCreateTaskModal = false },
+            title = {
+                Text(
+                    text = "Add Operational Task",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = newTaskTitle,
+                        onValueChange = { newTaskTitle = it },
+                        label = { Text("Task Description / Deliverable") },
+                        placeholder = { Text("e.g. Bring-up CAN J1939 telemetry") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = false,
+                        maxLines = 3
+                    )
+
+                    // Lane Selector
+                    Column {
+                        Text("Operational Lane:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("Today", "Tomorrow", "Review").forEach { lane ->
+                                val isSel = newTaskLane == lane
+                                Surface(
+                                    modifier = Modifier.clickable { newTaskLane = lane },
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isSel) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isSel) MaterialTheme.colorScheme.primary else Color.Transparent
+                                    )
+                                ) {
+                                    Text(
+                                        text = lane,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Priority Selector
+                    Column {
+                        Text("Priority Level:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("Critical", "High", "Normal", "Low").forEach { prio ->
+                                val isSel = newTaskPriority == prio
+                                Surface(
+                                    modifier = Modifier.clickable { newTaskPriority = prio },
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isSel) when (prio) {
+                                        "Critical" -> Color(0xFFFFEBEE)
+                                        "High" -> Color(0xFFFFF3E0)
+                                        else -> Color(0xFFE8F5E9)
+                                    } else MaterialTheme.colorScheme.surfaceContainer,
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isSel) when (prio) {
+                                            "Critical" -> Color(0xFFC62828)
+                                            "High" -> Color(0xFFE65100)
+                                            else -> Color(0xFF2E7D32)
+                                        } else Color.Transparent
+                                    )
+                                ) {
+                                    Text(
+                                        text = prio,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSel) when (prio) {
+                                            "Critical" -> Color(0xFFC62828)
+                                            "High" -> Color(0xFFE65100)
+                                            else -> Color(0xFF2E7D32)
+                                        } else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = newTaskAssignee,
+                        onValueChange = { newTaskAssignee = it },
+                        label = { Text("Assignee Name") },
+                        placeholder = { Text(currentRole.leadName) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Linked to active project: HLPL-AI4T-01 (${currentRole.code} Dept)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newTaskTitle.isNotBlank()) {
+                            val task = DailyTaskItem(
+                                id = "",
+                                title = newTaskTitle.trim(),
+                                dept = currentRole.code,
+                                priority = newTaskPriority,
+                                assignee = newTaskAssignee.ifBlank { currentRole.leadName },
+                                dueDate = if (newTaskLane == "Today") "Today" else if (newTaskLane == "Tomorrow") "Tomorrow" else "Next 48h",
+                                isCompleted = false,
+                                lane = newTaskLane,
+                                projectId = "HLPL-AI4T-01"
+                            )
+                            scmsRepository.createDailyTask(task)
+                            showCreateTaskModal = false
+                        }
+                    },
+                    enabled = newTaskTitle.isNotBlank()
+                ) {
+                    Text("Create Task")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateTaskModal = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Modal: Task Delegation / Reassignment
+    taskToReassign?.let { task ->
+        AlertDialog(
+            onDismissRequest = { taskToReassign = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Delegate Task", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(task.title, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                            Text("Current Assignee: ${task.assignee} (${task.dept})", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+
+                    Text("Select Team Member to Delegate to:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+
+                    val candidateMembers = teamMembers.filter {
+                        currentRole == DepartmentRole.ADMIN || it.deptCode.equals(task.dept, ignoreCase = true) || it.deptCode.equals(currentRole.code, ignoreCase = true)
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        candidateMembers.take(4).forEach { member ->
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        scmsRepository.reassignTask(task.id, member.name, reassignNotes)
+                                        taskToReassign = null
+                                    },
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            modifier = Modifier.size(26.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text(member.avatarInitials.ifBlank { member.name.take(2).uppercase() }, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(member.name, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                            Text(member.roleTitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                                        }
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = when (member.capacityStatus) {
+                                            "Available" -> Color(0xFFE8F5E9)
+                                            "At Capacity" -> Color(0xFFFFEBEE)
+                                            else -> Color(0xFFE3F2FD)
+                                        }
+                                    ) {
+                                        Text(
+                                            text = "${member.openTasksCount} tasks (${member.capacityStatus})",
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = when (member.capacityStatus) {
+                                                "Available" -> Color(0xFF2E7D32)
+                                                "At Capacity" -> Color(0xFFC62828)
+                                                else -> Color(0xFF1565C0)
+                                            },
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = reassignNotes,
+                        onValueChange = { reassignNotes = it },
+                        label = { Text("Handover / Rework Instructions") },
+                        placeholder = { Text("e.g. Please run thermal test before tomorrow 2 PM") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 2
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { taskToReassign = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -1318,63 +1837,205 @@ fun ApqpStageCard(
 }
 
 @Composable
+fun OperationalTaskCard(
+    task: com.example.myapplication.data.model.DailyTaskItem,
+    currentLane: String,
+    onToggleComplete: () -> Unit,
+    onMoveLane: (String) -> Unit,
+    onDelegate: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (task.isOverdue && !task.isCompleted) Color(0xFFFFF8F8) else MaterialTheme.colorScheme.surfaceContainer
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (task.isOverdue && !task.isCompleted) Color(0xFFFFCDD2) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+        ),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                Checkbox(
+                    checked = task.isCompleted,
+                    onCheckedChange = { onToggleComplete() },
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (task.isCompleted) FontWeight.Normal else FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Text(
+                                text = task.dept,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.5.sp,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+
+                        Text(
+                            text = "Assignee: ${task.assignee}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 10.5.sp
+                        )
+
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Text(
+                            text = "Due: ${task.dueDate}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (task.isOverdue) Color(0xFFC62828) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = if (task.isOverdue) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = 10.5.sp
+                        )
+                    }
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Surface(
+                        color = when (task.priority) {
+                            "Critical" -> Color(0xFFFFEBEE)
+                            "High" -> Color(0xFFFFF3E0)
+                            else -> Color(0xFFE8F5E9)
+                        },
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = task.priority,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = when (task.priority) {
+                                "Critical" -> Color(0xFFC62828)
+                                "High" -> Color(0xFFE65100)
+                                else -> Color(0xFF2E7D32)
+                            },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 9.sp
+                        )
+                    }
+
+                    if (task.isOverdue && !task.isCompleted) {
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Surface(
+                            shape = RoundedCornerShape(3.dp),
+                            color = Color(0xFFD32F2F)
+                        ) {
+                            Text(
+                                text = "OVERDUE",
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 8.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Quick Action Buttons Row
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (currentLane == "Today") {
+                        FilledTonalButton(
+                            onClick = { onMoveLane("Tomorrow") },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier.height(26.dp)
+                        ) {
+                            Text("→ Tomorrow", fontSize = 10.sp)
+                        }
+                        FilledTonalButton(
+                            onClick = { onMoveLane("Review") },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier.height(26.dp)
+                        ) {
+                            Text("→ Review", fontSize = 10.sp)
+                        }
+                    } else if (currentLane == "Tomorrow") {
+                        FilledTonalButton(
+                            onClick = { onMoveLane("Today") },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier.height(26.dp)
+                        ) {
+                            Text("← Move to Today", fontSize = 10.sp)
+                        }
+                    } else if (currentLane == "Review") {
+                        Button(
+                            onClick = { onToggleComplete() },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(6.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                            modifier = Modifier.height(26.dp)
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(12.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("Sign-off & Complete", fontSize = 10.sp)
+                        }
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onDelegate,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.height(26.dp)
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text("Delegate", fontSize = 10.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun TaskCard(
     task: com.example.myapplication.data.model.DailyTaskItem,
     onToggle: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onToggle() },
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = task.isCompleted,
-                onCheckedChange = { onToggle() }
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = if (task.isCompleted) FontWeight.Normal else FontWeight.Medium
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${task.dept} | Assignee: ${task.assignee} | Due: ${task.dueDate}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            Surface(
-                color = when (task.priority) {
-                    "Critical" -> Color(0xFFFFEBEE)
-                    "High" -> Color(0xFFFFF3E0)
-                    else -> Color(0xFFE8F5E9)
-                },
-                shape = RoundedCornerShape(4.dp)
-            ) {
-                Text(
-                    text = task.priority,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = when (task.priority) {
-                        "Critical" -> Color(0xFFC62828)
-                        "High" -> Color(0xFFE65100)
-                        else -> Color(0xFF2E7D32)
-                    },
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
+    OperationalTaskCard(
+        task = task,
+        currentLane = task.lane,
+        onToggleComplete = onToggle,
+        onMoveLane = {},
+        onDelegate = {}
+    )
 }
 
 @androidx.compose.ui.tooling.preview.Preview(showBackground = true, widthDp = 390, heightDp = 844)

@@ -39,6 +39,9 @@ import com.example.myapplication.data.model.AiProceduralQuery
 import com.example.myapplication.data.model.ApprovalDecisionRecord
 import com.example.myapplication.data.model.ApprovalCategory
 import com.example.myapplication.data.model.TravelPolicyRule
+import com.example.myapplication.data.model.TeamMemberItem
+import com.example.myapplication.data.model.DepartmentHandoffItem
+import com.example.myapplication.data.model.AppNotification
 import com.example.myapplication.data.security.SecureStorage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,6 +56,9 @@ interface ScmsRepository {
     val apqpStages: StateFlow<List<ApqpStage>>
     val parts: StateFlow<List<PartComponent>>
     val harnesses: StateFlow<List<WireHarness>>
+    val teamMembers: StateFlow<List<TeamMemberItem>>
+    val handoffs: StateFlow<List<DepartmentHandoffItem>>
+    val notifications: StateFlow<List<AppNotification>>
     val allocations: StateFlow<List<MaterialAllocation>>
     val grnRecords: StateFlow<List<GrnRecord>>
     val assets: StateFlow<List<AssetEquipment>>
@@ -136,6 +142,14 @@ interface ScmsRepository {
     fun approveGate(approvalId: String, notes: String): Result<Unit>
     fun rejectGate(approvalId: String, reason: String): Result<Unit>
     fun returnGate(approvalId: String, reworkNotes: String): Result<Unit>
+
+    // Mobile Operational Tasks & Handoffs
+    fun reassignTask(taskId: String, newAssigneeName: String, notes: String = ""): Result<Unit>
+    fun createDailyTask(task: DailyTaskItem): Result<String>
+    fun moveTaskLane(taskId: String, newLane: String): Result<Unit>
+    fun dispatchHandoff(handoff: DepartmentHandoffItem): Result<String>
+    fun acceptHandoff(handoffId: String, acceptorName: String): Result<Unit>
+    fun markNotificationRead(notificationId: String)
 
     // Operational APQP Stage Gate Advancement Contract (Batch 3/4 parity)
     suspend fun verifyAndAdvanceStageGate(
@@ -887,17 +901,146 @@ class ScmsRepositoryImpl(
     )
     override val raciMatrix: StateFlow<List<RaciRow>> = _raciMatrix.asStateFlow()
 
-    // 16. Daily Tasks & Action Items
+    // 16. Daily Tasks & Action Items with 3-lane structure
     private val _tasks = MutableStateFlow(
         listOf(
-            DailyTaskItem("TSK-01", "Complete ISO 7637-2 Transient Pulse 1 verification sign-off", "QA", "Critical", "Jordan Blake", "Today", isCompleted = true),
-            DailyTaskItem("TSK-02", "Reconcile Mouser Order LOT-2026-MOU-0881 against PO-2026-042", "PUR", "High", "Morgan Reed", "Today", isCompleted = true),
-            DailyTaskItem("TSK-03", "Review EHW-SCH-01 Schematics netlist for SMT Pilot Gate unlock", "EHW", "Critical", "Avery Vale", "Today", isCompleted = false),
-            DailyTaskItem("TSK-04", "Calibrate Chroma 8000 EOL test jig before Stage 5 pilot batch", "TST", "High", "Mina Cross", "Today", isCompleted = false),
-            DailyTaskItem("TSK-05", "Inspect 16-Pin Wire Harness crimp pull force (USCAR-2 spec)", "MECH", "Normal", "Samira Holt", "Tomorrow", isCompleted = false)
+            DailyTaskItem("TSK-01", "Complete ISO 7637-2 Transient Pulse 1 verification sign-off", "QA", "Critical", "Jordan Blake", "2026-03-20", isCompleted = true, lane = "Completed"),
+            DailyTaskItem("TSK-02", "Reconcile Mouser Order LOT-2026-MOU-0881 against PO-2026-042", "PUR", "High", "Morgan Reed", "2026-03-20", isCompleted = true, lane = "Completed"),
+            DailyTaskItem("TSK-03", "Review EHW-SCH-01 Schematics netlist for SMT Pilot Gate unlock", "EHW", "Critical", "Avery Vale", "Today", isCompleted = false, isOverdue = false, lane = "Today"),
+            DailyTaskItem("TSK-04", "Calibrate Chroma 8000 EOL test jig before Stage 5 pilot batch", "TST", "High", "Mina Cross", "Yesterday", isCompleted = false, isOverdue = true, lane = "Today"),
+            DailyTaskItem("TSK-05", "Inspect 16-Pin Wire Harness crimp pull force (USCAR-2 spec)", "MECH", "Normal", "Samira Holt", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow"),
+            DailyTaskItem("TSK-06", "CAN J1939 Telemetry bootloader bring-up & security token test", "FW", "Critical", "Devon Lane", "Today", isCompleted = false, isOverdue = false, lane = "Today"),
+            DailyTaskItem("TSK-07", "SMT Line 2 10-zone reflow profile validation with thermocouples", "EMF", "High", "Casey Rowan", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow"),
+            DailyTaskItem("TSK-08", "Review PPAP Level 3 documentation package for ARAI audit", "QA", "High", "Jordan Blake", "Friday", isCompleted = false, isOverdue = false, lane = "Review"),
+            DailyTaskItem("TSK-09", "Finance milestone advance sign-off for EV Fleet delivery batch", "FIN", "Critical", "Priya Voss", "Thursday", isCompleted = false, isOverdue = false, lane = "Review"),
+            DailyTaskItem("TSK-10", "Issue component allocation for BMS prototype harness to Avery Vale", "PUR", "Normal", "Morgan Reed", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow")
         )
     )
     override val tasks: StateFlow<List<DailyTaskItem>> = _tasks.asStateFlow()
+
+    // 16b. Department Team Workload & Roster
+    private val _teamMembers = MutableStateFlow(
+        listOf(
+            TeamMemberItem("MEM-EHW-01", "Avery Vale", "Lead HW Architect", "EHW", openTasksCount = 3, overdueCount = 0, capacityStatus = "Optimal", email = "avery.vale@example.com", avatarInitials = "AV"),
+            TeamMemberItem("MEM-EHW-02", "Rahul Sen", "Senior PCB Layout Engineer", "EHW", openTasksCount = 3, overdueCount = 1, capacityStatus = "Optimal", email = "rahul.sen@example.com", avatarInitials = "RS"),
+            TeamMemberItem("MEM-EHW-03", "Neha Gupta", "RF & Signal Integrity Engineer", "EHW", openTasksCount = 2, overdueCount = 0, capacityStatus = "Available", email = "neha.gupta@example.com", avatarInitials = "NG"),
+            TeamMemberItem("MEM-FW-01", "Devon Lane", "Firmware & RTOS Lead", "FW", openTasksCount = 3, overdueCount = 0, capacityStatus = "Optimal", email = "devon.lane@example.com", avatarInitials = "DL"),
+            TeamMemberItem("MEM-FW-02", "Arjun Patel", "Embedded Linux & Bootloader Dev", "FW", openTasksCount = 5, overdueCount = 1, capacityStatus = "At Capacity", email = "arjun.patel@example.com", avatarInitials = "AP"),
+            TeamMemberItem("MEM-FW-03", "Priya Nair", "CAN/CAN-FD Protocol Engineer", "FW", openTasksCount = 2, overdueCount = 0, capacityStatus = "Available", email = "priya.nair@example.com", avatarInitials = "PN"),
+            TeamMemberItem("MEM-SW-01", "Siddharth Roy", "Cloud & Telematics SW Lead", "SW", openTasksCount = 3, overdueCount = 0, capacityStatus = "Optimal", email = "siddharth.roy@example.com", avatarInitials = "SR"),
+            TeamMemberItem("MEM-SW-02", "Pooja Verma", "Backend IoT & MQTT Engineer", "SW", openTasksCount = 2, overdueCount = 0, capacityStatus = "Available", email = "pooja.verma@example.com", avatarInitials = "PV"),
+            TeamMemberItem("MEM-MECH-01", "Samira Holt", "Mechanical Engineering Lead", "MECH", openTasksCount = 3, overdueCount = 0, capacityStatus = "Optimal", email = "samira.holt@example.com", avatarInitials = "SH"),
+            TeamMemberItem("MEM-MECH-02", "Vikram Chawla", "IP67 Enclosure & Thermal Specialist", "MECH", openTasksCount = 4, overdueCount = 0, capacityStatus = "Optimal", email = "vikram.chawla@example.com", avatarInitials = "VC"),
+            TeamMemberItem("MEM-PUR-01", "Morgan Reed", "Purchasing & SCM Lead", "PUR", openTasksCount = 3, overdueCount = 0, capacityStatus = "Optimal", email = "morgan.reed@example.com", avatarInitials = "MR"),
+            TeamMemberItem("MEM-PUR-02", "Ananya Joshi", "Vendor ASL & Procurement Executive", "PUR", openTasksCount = 2, overdueCount = 0, capacityStatus = "Available", email = "ananya.joshi@example.com", avatarInitials = "AJ"),
+            TeamMemberItem("MEM-QA-01", "Jordan Blake", "Quality Assurance & APQP Lead", "QA", openTasksCount = 4, overdueCount = 1, capacityStatus = "At Capacity", email = "jordan.blake@example.com", avatarInitials = "JB"),
+            TeamMemberItem("MEM-QA-02", "Rohit Kulkarni", "Automotive DVP&R Lab Lead", "QA", openTasksCount = 3, overdueCount = 0, capacityStatus = "Optimal", email = "rohit.kulkarni@example.com", avatarInitials = "RK"),
+            TeamMemberItem("MEM-EMF-01", "Casey Rowan", "SMT & Electronics Manufacturing Lead", "EMF", openTasksCount = 3, overdueCount = 0, capacityStatus = "Optimal", email = "casey.rowan@example.com", avatarInitials = "CR"),
+            TeamMemberItem("MEM-EMF-02", "Suresh Menon", "SMT Pick-and-Place Supervisor", "EMF", openTasksCount = 2, overdueCount = 0, capacityStatus = "Available", email = "suresh.menon@example.com", avatarInitials = "SM"),
+            TeamMemberItem("MEM-FIN-01", "Priya Voss", "Accounts & Finance Lead", "FIN", openTasksCount = 2, overdueCount = 0, capacityStatus = "Available", email = "priya.voss@example.com", avatarInitials = "PV"),
+            TeamMemberItem("MEM-FIN-02", "Deepa Shah", "Cost Accounting & Milestone Auditor", "FIN", openTasksCount = 1, overdueCount = 0, capacityStatus = "Available", email = "deepa.shah@example.com", avatarInitials = "DS")
+        )
+    )
+    override val teamMembers: StateFlow<List<TeamMemberItem>> = _teamMembers.asStateFlow()
+
+    // 16c. Cross-Department Handoff Protocol
+    private val _handoffs = MutableStateFlow(
+        listOf(
+            DepartmentHandoffItem(
+                id = "HND-01",
+                fromDept = "EHW",
+                toDept = "FW",
+                projectId = "HLPL-AI4T-01",
+                deliverableTitle = "EHW-SCH-01 Schematics & Pinout Definition for CAN-FD BSP Bring-up",
+                status = "Pending Acceptance",
+                initiatedBy = "Avery Vale (EHW Lead)",
+                targetLead = "Devon Lane (FW Lead)",
+                timestamp = "2026-03-20 09:30",
+                priority = "Critical",
+                notes = "GPIO assignments locked in Altium Designer Rev B. Pin 42 is CAN1_STBY."
+            ),
+            DepartmentHandoffItem(
+                id = "HND-02",
+                fromDept = "PUR",
+                toDept = "EMF",
+                projectId = "HLPL-AI4T-01",
+                deliverableTitle = "Quectel LTE Modem & STM32 Tape-and-Reel Batch Kit",
+                status = "Accepted",
+                initiatedBy = "Morgan Reed (PUR Lead)",
+                targetLead = "Casey Rowan (EMF Lead)",
+                timestamp = "2026-03-19 14:15",
+                priority = "High",
+                notes = "Allocated in Bin WH-04-A, MSL-3 baking verified before loading feeder carts."
+            ),
+            DepartmentHandoffItem(
+                id = "HND-03",
+                fromDept = "EMF",
+                toDept = "QA",
+                projectId = "HLPL-AI4T-01",
+                deliverableTitle = "SMT Pilot Batch 50 Pcs for Environmental Thermal Cycle Test",
+                status = "Under Review",
+                initiatedBy = "Casey Rowan (EMF Lead)",
+                targetLead = "Jordan Blake (QA Lead)",
+                timestamp = "2026-03-20 11:00",
+                priority = "Critical",
+                notes = "SPI 3D solder paste inspection reports attached. 0 bridging observed."
+            ),
+            DepartmentHandoffItem(
+                id = "HND-04",
+                fromDept = "QA",
+                toDept = "SAL",
+                projectId = "HLPL-AI4T-01",
+                deliverableTitle = "AIS-140 Annexure 3 & TAC ARAI Test Summary Report",
+                status = "Completed",
+                initiatedBy = "Jordan Blake (QA Lead)",
+                targetLead = "Priya Sharma (SAL Lead)",
+                timestamp = "2026-03-18 16:45",
+                priority = "Normal",
+                notes = "Ready for OEM client milestone submission and billing release."
+            )
+        )
+    )
+    override val handoffs: StateFlow<List<DepartmentHandoffItem>> = _handoffs.asStateFlow()
+
+    // 16d. Actionable Notifications Feed
+    private val _notifications = MutableStateFlow(
+        listOf(
+            AppNotification(
+                id = "NOTIF-01",
+                title = "Stage 4 Schematics Review Assigned",
+                message = "Avery Vale requested review on EHW-SCH-01 netlist before Stage 5 unlock.",
+                targetDept = "EHW",
+                targetRecipient = "Avery Vale",
+                type = "Task",
+                timestamp = "2026-03-20 10:15",
+                isRead = false,
+                referenceId = "TSK-03"
+            ),
+            AppNotification(
+                id = "NOTIF-02",
+                title = "Cross-Dept Handoff: EHW -> FW",
+                message = "Devon Lane, Avery Vale has dispatched CAN-FD pinout freeze for HLPL-AI4T-01.",
+                targetDept = "FW",
+                targetRecipient = "Devon Lane",
+                type = "Handoff",
+                timestamp = "2026-03-20 09:30",
+                isRead = false,
+                referenceId = "HND-01"
+            ),
+            AppNotification(
+                id = "NOTIF-03",
+                title = "Purchase Order Deviation Approved",
+                message = "Executive Admin approved PO-2026-042 Quectel long-lead buffer order (₹1,45,000).",
+                targetDept = "PUR",
+                targetRecipient = "Morgan Reed",
+                type = "Approval",
+                timestamp = "2026-03-19 16:00",
+                isRead = true,
+                referenceId = "APPR-01"
+            )
+        )
+    )
+    override val notifications: StateFlow<List<AppNotification>> = _notifications.asStateFlow()
 
     // 17. 6 HOD Feasibility & Contract Review (Master Plan Â§4 & Â§5, Stage 2 Gate)
     private val _feasibilityReviews = MutableStateFlow(
@@ -2168,8 +2311,160 @@ class ScmsRepositoryImpl(
         val index = current.indexOfFirst { it.id == taskId }
         if (index >= 0) {
             val item = current[index]
-            current[index] = item.copy(isCompleted = !item.isCompleted)
+            val nextCompleted = !item.isCompleted
+            current[index] = item.copy(
+                isCompleted = nextCompleted,
+                lane = if (nextCompleted) "Completed" else "Today"
+            )
             _tasks.value = current
+        }
+    }
+
+    override fun moveTaskLane(taskId: String, newLane: String): Result<Unit> {
+        val current = _tasks.value.toMutableList()
+        val index = current.indexOfFirst { it.id == taskId }
+        if (index >= 0) {
+            val item = current[index]
+            current[index] = item.copy(
+                lane = newLane,
+                isCompleted = newLane == "Completed"
+            )
+            _tasks.value = current
+            return Result.success(Unit)
+        }
+        return Result.failure(Exception("Task $taskId not found"))
+    }
+
+    override fun createDailyTask(task: DailyTaskItem): Result<String> {
+        val generatedId = if (task.id.isBlank()) "TSK-${UUID.randomUUID().toString().take(6).uppercase()}" else task.id
+        val newTask = task.copy(id = generatedId)
+        _tasks.value = listOf(newTask) + _tasks.value
+
+        val notif = AppNotification(
+            id = "NOTIF-${UUID.randomUUID().toString().take(6).uppercase()}",
+            title = "New Task: ${task.title}",
+            message = "${_currentRole.value.leadName} created task '${task.title}' assigned to ${task.assignee} (${task.dept}). Due: ${task.dueDate}",
+            targetDept = task.dept,
+            targetRecipient = task.assignee,
+            type = "Task",
+            timestamp = currentTime(),
+            referenceId = generatedId
+        )
+        _notifications.value = listOf(notif) + _notifications.value
+
+        val auditEntry = AuditLogEntry(
+            id = "LOG-${UUID.randomUUID().toString().take(6).uppercase()}",
+            timestamp = currentTime(),
+            actor = _currentRole.value.leadName,
+            action = "TASK_CREATED",
+            partMpn = generatedId,
+            quantityDelta = 1,
+            reason = "Created task '${task.title}' in lane '${task.lane}' for ${task.assignee}"
+        )
+        _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+
+        return Result.success(generatedId)
+    }
+
+    override fun reassignTask(taskId: String, newAssigneeName: String, notes: String): Result<Unit> {
+        val current = _tasks.value.toMutableList()
+        val index = current.indexOfFirst { it.id == taskId }
+        if (index >= 0) {
+            val item = current[index]
+            val oldAssignee = item.assignee
+            current[index] = item.copy(assignee = newAssigneeName)
+            _tasks.value = current
+
+            val notif = AppNotification(
+                id = "NOTIF-${UUID.randomUUID().toString().take(6).uppercase()}",
+                title = "Task Delegated to You",
+                message = "${_currentRole.value.leadName} delegated task '${item.title}' to you. Notes: ${notes.ifBlank { "Reassigned by department lead." }}",
+                targetDept = item.dept,
+                targetRecipient = newAssigneeName,
+                type = "Task",
+                timestamp = currentTime(),
+                referenceId = item.id
+            )
+            _notifications.value = listOf(notif) + _notifications.value
+
+            val auditEntry = AuditLogEntry(
+                id = "LOG-${UUID.randomUUID().toString().take(6).uppercase()}",
+                timestamp = currentTime(),
+                actor = _currentRole.value.leadName,
+                action = "TASK_DELEGATED",
+                partMpn = item.id,
+                quantityDelta = 0,
+                reason = "Reassigned task '${item.title}' from $oldAssignee to $newAssigneeName. Notes: $notes"
+            )
+            _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+
+            return Result.success(Unit)
+        }
+        return Result.failure(Exception("Task $taskId not found"))
+    }
+
+    override fun dispatchHandoff(handoff: DepartmentHandoffItem): Result<String> {
+        val generatedId = if (handoff.id.isBlank()) "HND-${UUID.randomUUID().toString().take(6).uppercase()}" else handoff.id
+        val newHandoff = handoff.copy(id = generatedId, timestamp = currentTime())
+        _handoffs.value = listOf(newHandoff) + _handoffs.value
+
+        val notif = AppNotification(
+            id = "NOTIF-${UUID.randomUUID().toString().take(6).uppercase()}",
+            title = "Cross-Dept Handoff: ${handoff.fromDept} -> ${handoff.toDept}",
+            message = "${handoff.initiatedBy} dispatched handoff '${handoff.deliverableTitle}' to ${handoff.targetLead.ifBlank { handoff.toDept }}. Priority: ${handoff.priority}",
+            targetDept = handoff.toDept,
+            targetRecipient = handoff.targetLead,
+            type = "Handoff",
+            timestamp = currentTime(),
+            referenceId = generatedId
+        )
+        _notifications.value = listOf(notif) + _notifications.value
+
+        val auditEntry = AuditLogEntry(
+            id = "LOG-${UUID.randomUUID().toString().take(6).uppercase()}",
+            timestamp = currentTime(),
+            actor = _currentRole.value.leadName,
+            action = "HANDOFF_DISPATCHED",
+            partMpn = generatedId,
+            quantityDelta = 0,
+            reason = "Dispatched handoff '${handoff.deliverableTitle}' from ${handoff.fromDept} to ${handoff.toDept}"
+        )
+        _auditLogs.value = listOf(auditEntry) + _auditLogs.value
+
+        return Result.success(generatedId)
+    }
+
+    override fun acceptHandoff(handoffId: String, acceptorName: String): Result<Unit> {
+        val current = _handoffs.value.toMutableList()
+        val index = current.indexOfFirst { it.id == handoffId }
+        if (index >= 0) {
+            val item = current[index]
+            current[index] = item.copy(status = "Accepted")
+            _handoffs.value = current
+
+            val notif = AppNotification(
+                id = "NOTIF-${UUID.randomUUID().toString().take(6).uppercase()}",
+                title = "Handoff Accepted by ${item.toDept}",
+                message = "$acceptorName accepted your handoff '${item.deliverableTitle}'. Work package is now active in ${item.toDept}.",
+                targetDept = item.fromDept,
+                targetRecipient = item.initiatedBy,
+                type = "Handoff",
+                timestamp = currentTime(),
+                referenceId = item.id
+            )
+            _notifications.value = listOf(notif) + _notifications.value
+
+            return Result.success(Unit)
+        }
+        return Result.failure(Exception("Handoff $handoffId not found"))
+    }
+
+    override fun markNotificationRead(notificationId: String) {
+        val current = _notifications.value.toMutableList()
+        val index = current.indexOfFirst { it.id == notificationId }
+        if (index >= 0) {
+            current[index] = current[index].copy(isRead = true)
+            _notifications.value = current
         }
     }
 
@@ -2721,6 +3016,19 @@ class ScmsRepositoryImpl(
         }
         _approvals.value = updatedList
 
+        // Actionable Notification Dispatch to Requester & Dept
+        val notif = AppNotification(
+            id = "NOTIF-${UUID.randomUUID().toString().take(6).uppercase()}",
+            title = "Approval Granted: ${target.title}",
+            message = "Your request '${target.title}' (${target.recordId}) was approved by $signer. Notes: ${notes.ifBlank { "Approved under ISO/IATF compliance." }}",
+            targetDept = target.department,
+            targetRecipient = target.requester,
+            type = "Approval",
+            timestamp = timestamp,
+            referenceId = target.id
+        )
+        _notifications.value = listOf(notif) + _notifications.value
+
         // Immutable Audit Log Attribution
         val auditEntry = AuditLogEntry(
             id = "AUDIT-APPR-${UUID.randomUUID().toString().take(6).uppercase()}",
@@ -2758,6 +3066,19 @@ class ScmsRepositoryImpl(
         }
         _approvals.value = updatedList
 
+        // Actionable Notification Dispatch to Requester & Dept
+        val notif = AppNotification(
+            id = "NOTIF-${UUID.randomUUID().toString().take(6).uppercase()}",
+            title = "Request Rejected: ${target.title}",
+            message = "Your request '${target.title}' (${target.recordId}) was rejected by $signer. Rationale: $reason",
+            targetDept = target.department,
+            targetRecipient = target.requester,
+            type = "Rejection",
+            timestamp = timestamp,
+            referenceId = target.id
+        )
+        _notifications.value = listOf(notif) + _notifications.value
+
         // Immutable Audit Log Attribution
         val auditEntry = AuditLogEntry(
             id = "AUDIT-REJ-${UUID.randomUUID().toString().take(6).uppercase()}",
@@ -2794,6 +3115,19 @@ class ScmsRepositoryImpl(
             }
         }
         _approvals.value = updatedList
+
+        // Actionable Notification Dispatch to Requester & Dept
+        val notif = AppNotification(
+            id = "NOTIF-${UUID.randomUUID().toString().take(6).uppercase()}",
+            title = "Returned for Revision: ${target.title}",
+            message = "Your request '${target.title}' (${target.recordId}) requires rework. Notes: $reworkNotes",
+            targetDept = target.department,
+            targetRecipient = target.requester,
+            type = "Rework",
+            timestamp = timestamp,
+            referenceId = target.id
+        )
+        _notifications.value = listOf(notif) + _notifications.value
 
         // Immutable Audit Log Attribution
         val auditEntry = AuditLogEntry(

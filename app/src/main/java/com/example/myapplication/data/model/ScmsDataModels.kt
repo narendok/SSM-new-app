@@ -308,7 +308,8 @@ data class RaciRow(
 )
 
 /**
- * Daily Task & Action Item.
+ * Daily Task & Action Item per Mobile Operations Plan.
+ * Features 3 operational lanes: "Today", "Tomorrow", "Review", and terminal "Completed".
  */
 @Serializable
 data class DailyTaskItem(
@@ -319,7 +320,59 @@ data class DailyTaskItem(
     val assignee: String,
     val dueDate: String,
     val isCompleted: Boolean,
-    val isOverdue: Boolean = false
+    val isOverdue: Boolean = false,
+    val lane: String = "Today", // "Today", "Tomorrow", "Review", "Completed"
+    val projectId: String = "HLPL-AI4T-01"
+)
+
+/**
+ * Department Team Member for Workload Visibility and Task Delegation.
+ */
+@Serializable
+data class TeamMemberItem(
+    val id: String,
+    val name: String,
+    val roleTitle: String,
+    val deptCode: String,
+    val openTasksCount: Int,
+    val overdueCount: Int = 0,
+    val capacityStatus: String = "Available", // "Available", "Optimal", "At Capacity"
+    val email: String = "",
+    val avatarInitials: String = ""
+)
+
+/**
+ * Cross-Department Handoff Protocol for Engineering and Production Milestones.
+ */
+@Serializable
+data class DepartmentHandoffItem(
+    val id: String,
+    val fromDept: String,
+    val toDept: String,
+    val projectId: String,
+    val deliverableTitle: String,
+    val status: String, // "Pending Acceptance", "Accepted", "Under Review", "Completed"
+    val initiatedBy: String,
+    val targetLead: String = "",
+    val timestamp: String,
+    val priority: String = "High",
+    val notes: String = ""
+)
+
+/**
+ * Real-time Actionable Mobile Notification for Department Sync and Approvals.
+ */
+@Serializable
+data class AppNotification(
+    val id: String,
+    val title: String,
+    val message: String,
+    val targetDept: String,
+    val targetRecipient: String,
+    val type: String, // "Approval", "Rework", "Rejection", "Handoff", "Task"
+    val timestamp: String,
+    val isRead: Boolean = false,
+    val referenceId: String? = null
 )
 
 // ==============================================================================
