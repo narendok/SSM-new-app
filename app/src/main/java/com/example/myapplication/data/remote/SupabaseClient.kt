@@ -102,6 +102,41 @@ class SupabaseClient {
         }
     }
 
+    suspend fun signInWithPassword(
+        email: String,
+        password: String
+    ): Result<AuthSession> = withContext(Dispatchers.IO) {
+        try {
+            val url = "$baseUrl/auth/v1/token?grant_type=password"
+            val payload = mapOf(
+                "email" to email.trim(),
+                "password" to password
+            )
+            val jsonBody = json.encodeToString(payload)
+                .toRequestBody("application/json".toMediaType())
+
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("apikey", anonKey)
+                .post(jsonBody)
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(
+                    IOException("Sign-in failed: HTTP ${response.code} - $responseBody")
+                )
+            }
+
+            val session = json.decodeFromString<AuthSession>(responseBody)
+            Result.success(session)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun createSignedUrl(
         bucketName: String,
         filePath: String,

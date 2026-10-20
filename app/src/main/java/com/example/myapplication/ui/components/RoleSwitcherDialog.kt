@@ -103,7 +103,7 @@ fun RoleSwitcherDialog(
                                         )
                                     }
                                     Text(
-                                        text = role.leadName,
+                                        text = "${role.leadName} • ${role.email}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

@@ -9,25 +9,27 @@ enum class DepartmentRole(
     val code: String,
     val title: String,
     val leadName: String,
+    val email: String,
+    val password: String = "Demo@2026",
     val isClient: Boolean = false,
     val isLegacy: Boolean = false
 ) {
-    ADMIN("ADMIN", "Executive Admin / MD", "Executive Command Center"),
-    SAL("SAL", "Sales & Business Development", "Priya Sharma"),
-    EHW("EHW", "Embedded Hardware Engineering", "Avery Vale"),
-    FW("FW", "Firmware Engineering (RTOS & Bootloader)", "Devon Lane"),
-    SW("SW", "Software Engineering (Cloud & BLE)", "Alex Chen"),
-    ESW("ESW", "Firmware & Software Engineering (Legacy/Transitional)", "Devon Lane", isLegacy = true),
-    MECH("MECH", "Mechanical Engineering", "Samira Holt"),
-    PUR("PUR", "Purchasing & SCM", "Morgan Reed"),
-    QA("QA", "Quality Assurance & APQP", "Jordan Blake"),
-    EMF("EMF", "Electronics Manufacturing & SMT", "Casey Rowan"),
-    MMF("MMF", "Mechanical Manufacturing & Tooling", "Marcus Vance"),
-    TST("TST", "EOL Testing & Jigs (Legacy/Transitional)", "Mina Cross", isLegacy = true),
-    FIN("FIN", "Accounts & Finance", "Priya Voss"),
-    SIT("SIT", "Service & IT Infrastructure", "Kai Morgan"),
-    HROPS("HROPS", "HR & Operations", "Taylor Quinn"),
-    CLIENT("CLIENT", "Client OEM Portal (Tata Motors)", "Rohan Verma", isClient = true);
+    ADMIN("ADMIN", "Executive Admin / MD", "Executive Command Center", "admin@example.com", "Admin@Demo2026"),
+    SAL("SAL", "Sales & Business Development", "Priya Sharma", "priya.sharma@example.com", "Demo@SAL2026"),
+    EHW("EHW", "Embedded Hardware Engineering", "Avery Vale", "avery.vale@example.com", "Demo@EHW2026"),
+    FW("FW", "Firmware Engineering (RTOS & Bootloader)", "Devon Lane", "devon.lane@example.com", "Demo@EFW2026"),
+    SW("SW", "Software Engineering (Cloud & BLE)", "Siddharth Roy", "siddharth.roy@example.com", "Demo@CSW2026"),
+    ESW("ESW", "Firmware & Software Engineering (Legacy/Transitional)", "Devon Lane", "devon.lane@example.com", "Demo@EFW2026", isLegacy = true),
+    MECH("MECH", "Mechanical Engineering", "Samira Holt", "samira.holt@example.com", "Demo@MECH2026"),
+    PUR("PUR", "Purchasing & SCM", "Morgan Reed", "morgan.reed@example.com", "Demo@PUR2026"),
+    QA("QA", "Quality Assurance & APQP", "Jordan Blake", "jordan.blake@example.com", "Demo@QA2026"),
+    EMF("EMF", "Electronics Manufacturing & SMT", "Casey Rowan", "casey.rowan@example.com", "Demo@EMF2026"),
+    MMF("MMF", "Mechanical Manufacturing & Tooling", "Marcus Vance", "mmf.lead@example.com", "Demo@MMF2026"),
+    TST("TST", "EOL Testing & Jigs (Legacy/Transitional)", "Mina Cross", "mina.cross@example.com", "Demo@TST2026", isLegacy = true),
+    FIN("FIN", "Accounts & Finance", "Priya Voss", "priya.voss@example.com", "Demo@FIN2026"),
+    SIT("SIT", "Service & IT Infrastructure", "Kai Morgan", "kai.morgan@example.com", "Demo@SIT2026"),
+    HROPS("HROPS", "HR & Operations", "Taylor Quinn", "taylor.quinn@example.com", "Demo@HR2026"),
+    CLIENT("CLIENT", "Client OEM Portal (Tata Motors)", "Rohan Verma", "rohan.verma@example.com", "Tata@Client2026", isClient = true);
 
     companion object {
         fun fromCode(code: String): DepartmentRole {
@@ -37,8 +39,14 @@ enum class DepartmentRole(
                     "EFW" -> FW
                     "CSW" -> SW
                     "HR", "OPS", "HR/OPS" -> HROPS
+                    "OEM" -> CLIENT
                     else -> ADMIN
                 }
+        }
+
+        fun fromEmail(email: String): DepartmentRole? {
+            val normalized = email.trim().lowercase()
+            return entries.firstOrNull { it.email.lowercase() == normalized }
         }
     }
 }

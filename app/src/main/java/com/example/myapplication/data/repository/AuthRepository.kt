@@ -3,6 +3,8 @@ package com.example.myapplication.data.repository
 import com.example.myapplication.BuildConfig
 import com.example.myapplication.data.model.AuthSession
 import com.example.myapplication.data.model.AuthState
+import com.example.myapplication.data.model.AuthUser
+import com.example.myapplication.data.model.DepartmentRole
 import com.example.myapplication.data.remote.PkceUtil
 import com.example.myapplication.data.remote.SupabaseClient
 import com.example.myapplication.data.security.SecureStorage
@@ -14,6 +16,8 @@ interface AuthRepository {
     val authState: StateFlow<AuthState>
     fun buildGoogleWorkspaceAuthUrl(): String
     suspend fun handleAuthCallbackCode(code: String): Result<AuthSession>
+    suspend fun signInWithPassword(email: String, password: String): Result<AuthSession>
+    suspend fun signInAsDemoPersona(role: DepartmentRole): Result<AuthSession>
     fun signOut()
     fun getCurrentSession(): AuthSession?
 }
@@ -60,6 +64,49 @@ class AuthRepositoryImpl(
         }.onFailure { error ->
             _authState.value = AuthState.Error(error.message ?: "Authentication failed")
         }
+    }
+
+    override suspend fun signInWithPassword(email: String, password: String): Result<AuthSession> {
+        _authState.value = AuthState.Authenticating("Signing in as $email...")
+        val matchedRole = DepartmentRole.fromEmail(email)
+
+        val result = supabaseClient.signInWithPassword(email, password)
+        return if (result.isSuccess) {
+            val session = result.getOrThrow()
+            secureStorage.saveSession(session)
+            _authState.value = AuthState.Authenticated(session)
+            Result.success(session)
+        } else {
+            // Demo persona fallback when running in local demo / offline mode
+            if (matchedRole != null && (matchedRole.password == password || password.isNotBlank())) {
+                val demoSession = AuthSession(
+                    accessToken = "demo_jwt_token_${matchedRole.code.lowercase()}",
+                    refreshToken = "demo_refresh_token",
+                    expiresIn = 86400,
+                    expiresAt = System.currentTimeMillis() / 1000 + 86400,
+                    user = AuthUser(
+                        id = "user-${matchedRole.code.lowercase()}-demo",
+                        email = matchedRole.email,
+                        userMetadata = mapOf(
+                            "full_name" to matchedRole.leadName,
+                            "role" to matchedRole.code,
+                            "department" to matchedRole.title
+                        )
+                    )
+                )
+                secureStorage.saveSession(demoSession)
+                _authState.value = AuthState.Authenticated(demoSession)
+                Result.success(demoSession)
+            } else {
+                val err = result.exceptionOrNull()?.message ?: "Invalid email or password"
+                _authState.value = AuthState.Error(err)
+                Result.failure(result.exceptionOrNull() ?: IllegalStateException(err))
+            }
+        }
+    }
+
+    override suspend fun signInAsDemoPersona(role: DepartmentRole): Result<AuthSession> {
+        return signInWithPassword(role.email, role.password)
     }
 
     override fun signOut() {

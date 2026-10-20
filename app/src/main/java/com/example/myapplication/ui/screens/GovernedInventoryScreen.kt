@@ -376,12 +376,53 @@ fun PartsRegisterTab(
     onPresetChange: (InventoryPreset) -> Unit,
     onPartClick: (PartComponent) -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredParts = remember(parts, searchQuery) {
+        if (searchQuery.isBlank()) parts
+        else {
+            val q = searchQuery.trim().lowercase()
+            parts.filter { part ->
+                part.mpn.lowercase().contains(q) ||
+                part.description.lowercase().contains(q) ||
+                part.manufacturer.lowercase().contains(q) ||
+                part.category.lowercase().contains(q) ||
+                part.storageLocation.lowercase().contains(q) ||
+                part.binCoordinate.lowercase().contains(q) ||
+                part.packageFootprint.lowercase().contains(q)
+            }
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 14.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                placeholder = {
+                    Text("Search MPN, description, manufacturer, bin...", style = MaterialTheme.typography.bodyMedium)
+                },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.Search, contentDescription = "Search Parts")
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Clear Search")
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp)
+            )
+        }
         item {
             LazyRow(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
@@ -404,7 +445,69 @@ fun PartsRegisterTab(
                 }
             }
         }
-        items(parts) { part ->
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 2.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${filteredParts.size} parts found",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (searchQuery.isNotBlank()) {
+                    Text(
+                        text = "Clear search",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable { searchQuery = "" }
+                    )
+                }
+            }
+        }
+        if (filteredParts.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Text(
+                            text = "No components found",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (searchQuery.isNotBlank()) "No parts match '$searchQuery' in ${preset.label}" else "No parts registered in this category",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        } else {
+            items(filteredParts) { part ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -521,6 +624,7 @@ fun PartsRegisterTab(
                     }
                 }
             }
+        }
         }
     }
 }
