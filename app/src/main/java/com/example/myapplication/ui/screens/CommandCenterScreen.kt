@@ -87,7 +87,7 @@ fun CommandCenterScreen(
     val currentRole by scmsRepository.currentRole.collectAsState()
     val stages by scmsRepository.apqpStages.collectAsState()
     val demoTasks by scmsRepository.tasks.collectAsState()
-    val tasks = sharedTasks ?: demoTasks
+    val tasks = if (!sharedTasks.isNullOrEmpty()) sharedTasks else demoTasks
     val raciMatrix by scmsRepository.raciMatrix.collectAsState()
     val feasibilityReviews by scmsRepository.feasibilityReviews.collectAsState()
     val hardwarePath by scmsRepository.hardwarePath.collectAsState()
@@ -410,6 +410,279 @@ fun CommandCenterScreen(
                                             fontWeight = FontWeight.Bold,
                                             color = if (deliv.status.contains("Signed") || deliv.status.contains("Executed") || deliv.status.contains("Ready")) Color(0xFF2E7D32) else Color(0xFFE65100)
                                         )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. Daily Tasks & Action Items (3-Lane Operational Checklist)
+        item {
+            val todayTasks = tasks.filter { !it.isCompleted && it.lane.equals("Today", ignoreCase = true) }
+            val tomorrowTasks = tasks.filter { !it.isCompleted && it.lane.equals("Tomorrow", ignoreCase = true) }
+            val reviewTasks = tasks.filter { !it.isCompleted && it.lane.equals("Review", ignoreCase = true) }
+            val completedTasks = tasks.filter { it.isCompleted || it.lane.equals("Completed", ignoreCase = true) }
+            val overdueTasksCount = todayTasks.count { it.isOverdue }
+
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    // Header Row with Title and + Add Task button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Daily Action Checklist",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (overdueTasksCount > 0) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = Color(0xFFFFEBEE),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF9A9A))
+                                    ) {
+                                        Text(
+                                            text = "$overdueTasksCount OVERDUE",
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFFC62828),
+                                            fontSize = 9.sp
+                                        )
+                                    }
+                                }
+                            }
+                            Text(
+                                text = "3-lane operational pipeline: Today, Planned, and Review.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        }
+
+                        FilledTonalButton(
+                            onClick = {
+                                newTaskTitle = ""
+                                newTaskAssignee = currentRole.leadName
+                                newTaskLane = selectedTaskLane
+                                newTaskPriority = "High"
+                                showCreateTaskModal = true
+                            },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.height(28.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("New Task", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 3 Segmented Lane Selector Pills
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(8.dp))
+                            .padding(3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        listOf(
+                            Triple("Today", "Today", todayTasks.size),
+                            Triple("Tomorrow", "Tomorrow", tomorrowTasks.size),
+                            Triple("Review", "Review", reviewTasks.size)
+                        ).forEach { (laneKey, laneLabel, count) ->
+                            val isSelected = selectedTaskLane == laneKey
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { selectedTaskLane = laneKey },
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
+                                shadowElevation = if (isSelected) 1.dp else 0.dp
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = laneLabel,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
+                                    ) {
+                                        Text(
+                                            text = "$count",
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Active Lane Task List
+                    val activeLaneTasks = when (selectedTaskLane) {
+                        "Tomorrow" -> tomorrowTasks
+                        "Review" -> reviewTasks
+                        else -> todayTasks
+                    }
+
+                    if (activeLaneTasks.isEmpty()) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.AssignmentTurnedIn, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("No tasks in $selectedTaskLane lane", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            activeLaneTasks.forEach { task ->
+                                OperationalTaskCard(
+                                    task = task,
+                                    currentLane = selectedTaskLane,
+                                    onToggleComplete = {
+                                        if (sharedTasks != null) onSharedTaskToggle?.invoke(task.id) else scmsRepository.toggleTask(task.id)
+                                    },
+                                    onMoveLane = { targetLane ->
+                                        scmsRepository.moveTaskLane(task.id, targetLane)
+                                    },
+                                    onDelegate = {
+                                        taskToReassign = task
+                                        reassignNotes = ""
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Collapsed Completed Banner
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showCompletedTasks = !showCompletedTasks },
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Color(0xFF2E7D32),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "${completedTasks.size} Tasks Completed",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Text(
+                                text = if (showCompletedTasks) "Hide ▲" else "View ▼",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(visible = showCompletedTasks) {
+                        Column(
+                            modifier = Modifier.padding(top = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            if (completedTasks.isEmpty()) {
+                                Text(
+                                    text = "No completed tasks yet today.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                )
+                            } else {
+                                completedTasks.forEach { task ->
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f),
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = Color(0xFF2E7D32),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = task.title,
+                                                    style = MaterialTheme.typography.bodySmall.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Text(
+                                                    text = "${task.dept} | ${task.assignee} | Completed",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                                    fontSize = 10.sp
+                                                )
+                                            }
+                                            TextButton(
+                                                onClick = { scmsRepository.moveTaskLane(task.id, "Today") },
+                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                                                modifier = Modifier.height(24.dp)
+                                            ) {
+                                                Text("Restore", fontSize = 10.sp)
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -756,279 +1029,6 @@ fun CommandCenterScreen(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelSmall
                                 )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 6. Daily Tasks & Action Items (3-Lane Operational Checklist)
-        item {
-            val todayTasks = tasks.filter { !it.isCompleted && it.lane.equals("Today", ignoreCase = true) }
-            val tomorrowTasks = tasks.filter { !it.isCompleted && it.lane.equals("Tomorrow", ignoreCase = true) }
-            val reviewTasks = tasks.filter { !it.isCompleted && it.lane.equals("Review", ignoreCase = true) }
-            val completedTasks = tasks.filter { it.isCompleted || it.lane.equals("Completed", ignoreCase = true) }
-            val overdueTasksCount = todayTasks.count { it.isOverdue }
-
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    // Header Row with Title and + Add Task button
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Daily Action Checklist",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                if (overdueTasksCount > 0) {
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = Color(0xFFFFEBEE),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF9A9A))
-                                    ) {
-                                        Text(
-                                            text = "$overdueTasksCount OVERDUE",
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Black,
-                                            color = Color(0xFFC62828),
-                                            fontSize = 9.sp
-                                        )
-                                    }
-                                }
-                            }
-                            Text(
-                                text = "3-lane operational pipeline: Today, Planned, and Review.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 11.sp
-                            )
-                        }
-
-                        Button(
-                            onClick = {
-                                newTaskTitle = ""
-                                newTaskAssignee = currentRole.leadName
-                                newTaskLane = selectedTaskLane
-                                newTaskPriority = "High"
-                                showCreateTaskModal = true
-                            },
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.height(30.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Add Task", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // 3 Segmented Lane Selector Pills
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(8.dp))
-                            .padding(3.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        listOf(
-                            Triple("Today", "Today", todayTasks.size),
-                            Triple("Tomorrow", "Tomorrow", tomorrowTasks.size),
-                            Triple("Review", "Review", reviewTasks.size)
-                        ).forEach { (laneKey, laneLabel, count) ->
-                            val isSelected = selectedTaskLane == laneKey
-                            Surface(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { selectedTaskLane = laneKey },
-                                shape = RoundedCornerShape(6.dp),
-                                color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
-                                shadowElevation = if (isSelected) 1.dp else 0.dp
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = laneLabel,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
-                                    ) {
-                                        Text(
-                                            text = "$count",
-                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 9.sp,
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Active Lane Task List
-                    val activeLaneTasks = when (selectedTaskLane) {
-                        "Tomorrow" -> tomorrowTasks
-                        "Review" -> reviewTasks
-                        else -> todayTasks
-                    }
-
-                    if (activeLaneTasks.isEmpty()) {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(vertical = 16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(Icons.Default.AssignmentTurnedIn, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("No tasks in $selectedTaskLane lane", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            activeLaneTasks.forEach { task ->
-                                OperationalTaskCard(
-                                    task = task,
-                                    currentLane = selectedTaskLane,
-                                    onToggleComplete = {
-                                        if (sharedTasks != null) onSharedTaskToggle?.invoke(task.id) else scmsRepository.toggleTask(task.id)
-                                    },
-                                    onMoveLane = { targetLane ->
-                                        scmsRepository.moveTaskLane(task.id, targetLane)
-                                    },
-                                    onDelegate = {
-                                        taskToReassign = task
-                                        reassignNotes = ""
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Collapsed Completed Banner
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showCompletedTasks = !showCompletedTasks },
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = Color(0xFF2E7D32),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "${completedTasks.size} Tasks Completed",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            Text(
-                                text = if (showCompletedTasks) "Hide ▲" else "View ▼",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-
-                    AnimatedVisibility(visible = showCompletedTasks) {
-                        Column(
-                            modifier = Modifier.padding(top = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            if (completedTasks.isEmpty()) {
-                                Text(
-                                    text = "No completed tasks yet today.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
-                                )
-                            } else {
-                                completedTasks.forEach { task ->
-                                    Surface(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f),
-                                        shape = RoundedCornerShape(6.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = Color(0xFF2E7D32),
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = task.title,
-                                                    style = MaterialTheme.typography.bodySmall.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough),
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                                Text(
-                                                    text = "${task.dept} | ${task.assignee} | Completed",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                                    fontSize = 10.sp
-                                                )
-                                            }
-                                            TextButton(
-                                                onClick = { scmsRepository.moveTaskLane(task.id, "Today") },
-                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                                                modifier = Modifier.height(24.dp)
-                                            ) {
-                                                Text("Restore", fontSize = 10.sp)
-                                            }
-                                        }
-                                    }
-                                }
                             }
                         }
                     }

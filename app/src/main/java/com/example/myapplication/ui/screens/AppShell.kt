@@ -99,7 +99,7 @@ fun AppShell(viewModel: MainViewModel) {
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
-                                    text = "S",
+                                    text = "SS",
                                     color = MaterialTheme.colorScheme.onPrimary,
                                     fontWeight = FontWeight.Black,
                                     fontSize = 15.sp
@@ -109,10 +109,11 @@ fun AppShell(viewModel: MainViewModel) {
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = stringResource(id = R.string.app_name),
-                                    style = MaterialTheme.typography.titleSmall,
+                                    text = "SSM Mobile",
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = 0.5.sp
+                                    letterSpacing = 0.3.sp,
+                                    maxLines = 1
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Surface(
@@ -169,35 +170,6 @@ fun AppShell(viewModel: MainViewModel) {
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp
                             )
-                        }
-                    }
-                    IconButton(
-                        onClick = { showApprovalsModal = true },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.TopEnd) {
-                            Icon(
-                                imageVector = Icons.Default.Gavel,
-                                contentDescription = "Approvals & Governance Center",
-                                tint = if (pendingApprovalsCount > 0) Color(0xFFE65100) else MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(19.dp)
-                            )
-                            if (pendingApprovalsCount > 0) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = Color(0xFFC62828),
-                                    modifier = Modifier.size(13.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = "$pendingApprovalsCount",
-                                            color = Color.White,
-                                            fontSize = 8.5.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                    }
-                                }
-                            }
                         }
                     }
                     IconButton(
@@ -308,10 +280,6 @@ fun AppShell(viewModel: MainViewModel) {
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            if (authState is AuthState.Authenticated) {
-                Text("TEST preview layout | checklist uses shared data; other sample modules remain local demo.",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
-            }
             Box(Modifier.weight(1f)) {
             when (selectedTab) {
                 0 -> CommandCenterScreen(
