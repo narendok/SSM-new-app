@@ -74,6 +74,7 @@ fun AppShell(viewModel: MainViewModel) {
     val viewDepartment by viewModel.viewDepartment.collectAsState()
     val currentRole by viewModel.scmsRepository.currentRole.collectAsState()
     val approvals by viewModel.scmsRepository.approvals.collectAsState()
+    val selectedProject by viewModel.scmsRepository.selectedProject.collectAsState()
     val pendingApprovalsCount = approvals.count { it.outcome == "Pending" }
 
     var showAuthDialog by remember { mutableStateOf(false) }
@@ -286,6 +287,11 @@ fun AppShell(viewModel: MainViewModel) {
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
+            // Prominent Project Filter Dropdown Bar matching web DepartmentProjectWorkspace
+            com.example.myapplication.ui.components.ProjectFilterDropdown(
+                selectedProjectId = selectedProject,
+                onProjectSelected = { viewModel.scmsRepository.selectProject(it) }
+            )
             Box(Modifier.weight(1f)) {
             when (selectedTab) {
                 0 -> CommandCenterScreen(

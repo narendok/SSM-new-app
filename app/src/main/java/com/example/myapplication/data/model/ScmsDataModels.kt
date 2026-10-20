@@ -52,6 +52,75 @@ enum class DepartmentRole(
 }
 
 /**
+ * Automotive Project Workspace Item matching web DepartmentProjectWorkspace.
+ */
+@Serializable
+data class ProjectMetadata(
+    val id: String,
+    val reference: String,
+    val title: String,
+    val client: String,
+    val volume: String,
+    val totalValue: String,
+    val stage: String,
+    val status: String,
+    val deliverable: String
+)
+
+object AutomotiveProjects {
+    val all = listOf(
+        ProjectMetadata(
+            id = "HLPL-AI4T-01",
+            reference = "HLPL-AI4T-01",
+            title = "Tata Ace EV 4G Telematics Gateway",
+            client = "Tata Motors Limited \u00b7 EV Fleet Division, Pune",
+            volume = "50,000 units / year",
+            totalValue = "\u20b920.33 Cr (.45M)",
+            stage = "Stage 4: Design & Development PoC",
+            status = "Active",
+            deliverable = "AIS-140 Cat-1 Gateway \u00b7 Dual-CAN J1939 \u00b7 IP67"
+        ),
+        ProjectMetadata(
+            id = "HLPL-SLCT-01",
+            reference = "HLPL-SLCT-01",
+            title = "Select Motors AIS-140 GPS Gateway",
+            client = "Select Motors India Private Limited",
+            volume = "10,000 units / year",
+            totalValue = "\u20b94.12 Cr",
+            stage = "Stage 3: Requirement Freeze & Commercial Lock",
+            status = "Active",
+            deliverable = "AIS-140 Annexure 3 GPS Tracker \u00b7 SOS Beacon"
+        ),
+        ProjectMetadata(
+            id = "HLPL-XLINK-03",
+            reference = "HLPL-XLINK-03",
+            title = "Commercial Vehicle Dual-CAN Gateway",
+            client = "Ashok Leyland & Commercial Fleets",
+            volume = "25,000 units / year",
+            totalValue = "\u20b914.50 Cr",
+            stage = "Stage 2: Feasibility & Contract Review",
+            status = "In Review",
+            deliverable = "Dual-CAN J1939 + OBD-II High-Speed Telematics Unit"
+        ),
+        ProjectMetadata(
+            id = "ALL",
+            reference = "ALL",
+            title = "All Projects (Enterprise Department Rollup)",
+            client = "Hexense Labs Multi-Program Portfolio",
+            volume = "85,000 total units",
+            totalValue = "\u20b938.95 Cr",
+            stage = "All Stages (1 to 9)",
+            status = "Enterprise",
+            deliverable = "Cross-Platform Department Intelligence Rollup"
+        )
+    )
+
+    fun findById(id: String): ProjectMetadata {
+        return all.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: all[0]
+    }
+}
+
+/**
  * 9-Stage Automotive APQP / Stage-Gate Lifecycle Stepper per Master Plan §5.
  */
 @Serializable

@@ -38,6 +38,8 @@ import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Warning
 import com.example.myapplication.data.model.DailyTaskItem
 import com.example.myapplication.data.model.TeamMemberItem
@@ -86,8 +88,10 @@ fun CommandCenterScreen(
 ) {
     val currentRole by scmsRepository.currentRole.collectAsState()
     val stages by scmsRepository.apqpStages.collectAsState()
+    val selectedProject by scmsRepository.selectedProject.collectAsState()
     val demoTasks by scmsRepository.tasks.collectAsState()
-    val tasks = if (!sharedTasks.isNullOrEmpty()) sharedTasks else demoTasks
+    val allTasks = if (!sharedTasks.isNullOrEmpty()) sharedTasks else demoTasks
+    val tasks = allTasks.filter { selectedProject == "ALL" || it.projectId == selectedProject }
     val raciMatrix by scmsRepository.raciMatrix.collectAsState()
     val feasibilityReviews by scmsRepository.feasibilityReviews.collectAsState()
     val hardwarePath by scmsRepository.hardwarePath.collectAsState()
@@ -104,6 +108,7 @@ fun CommandCenterScreen(
     var showClientTicketModal by remember { mutableStateOf(false) }
     var showTravelerModal by remember { mutableStateOf(false) }
     var showApprovalsScreen by remember { mutableStateOf(false) }
+    var showCrossDeptSyncModal by remember { mutableStateOf(false) }
     var ticketTitle by remember { mutableStateOf("") }
     var ticketDesc by remember { mutableStateOf("") }
     var ticketConfirmationMsg by remember { mutableStateOf<String?>(null) }
@@ -125,59 +130,11 @@ fun CommandCenterScreen(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 1. Sleek Role Context Bar
+        // 1. Dynamic Project Overview Intelligence Banner
         item {
-            Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(10.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 7.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF2E7D32))
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = currentRole.title,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "Signed in as ${authenticatedName ?: currentRole.leadName}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f),
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                    FilledTonalButton(
-                        onClick = onOpenRoleSwitcher,
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 3.dp),
-                        shape = RoundedCornerShape(6.dp),
-                        modifier = Modifier.height(28.dp)
-                    ) {
-                        Text("Switch", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
+            com.example.myapplication.ui.components.ProjectOverviewBanner(
+                projectId = selectedProject
+            )
         }
 
         // 1b. Human Approvals & Governance Decision Center Banner (Master Plan §26.3)
@@ -266,76 +223,88 @@ fun CommandCenterScreen(
             }
         }
 
-        // 2. Active Automotive Project Header
+        // 2. Executive Cross-Dept Sync & RACI Order Hub Action Card
         item {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                shape = RoundedCornerShape(12.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(10.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(28.dp)
                         ) {
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.DirectionsCar,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(15.dp)
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Sync,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Cross-Dept Sync & RACI Hub",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(3.dp),
+                                    color = Color(0xFFE8F5E9)
+                                ) {
+                                    Text(
+                                        text = "IATF 16949",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF2E7D32),
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                     )
                                 }
                             }
                             Text(
-                                text = "HLPL-AI4T-01",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Surface(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(6.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-                        ) {
-                            Text(
-                                text = "Stage 4: Schematics",
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                                text = "Order signals, APQP handoffs & 9-stage RACI grid",
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 11.sp
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 10.sp
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Tata Ace EV 4G Telematics Gateway",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "50,000 units · ₹20.33 Cr · Tata Motors EV Fleet · Lead: Avery Vale (EHW)",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
+
+                    Button(
+                        onClick = { showCrossDeptSyncModal = true },
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 3.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.height(30.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bolt,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Open Hub", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -1578,6 +1547,7 @@ fun CommandCenterScreen(
                 TextButton(onClick = { showCreateTaskModal = false }) {
                     Text("Cancel")
                 }
+
             }
         )
     }
@@ -1691,6 +1661,13 @@ fun CommandCenterScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+
+    if (showCrossDeptSyncModal) {
+        com.example.myapplication.ui.components.CrossDeptSyncRaciModal(
+            scmsRepository = scmsRepository,
+            onDismiss = { showCrossDeptSyncModal = false }
         )
     }
 }
@@ -2022,6 +1999,7 @@ fun OperationalTaskCard(
             }
         }
     }
+
 }
 
 @Composable

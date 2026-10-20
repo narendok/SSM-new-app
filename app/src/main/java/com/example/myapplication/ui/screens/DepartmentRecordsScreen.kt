@@ -109,7 +109,7 @@ fun DepartmentRecordsScreen(
     val workOrders by scmsRepository.workOrders.collectAsState()
     val receivingDrafts by scmsRepository.receivingDrafts.collectAsState()
 
-    var selectedProject by remember { mutableStateOf("HLPL-AI4T-01") }
+    val selectedProject by scmsRepository.selectedProject.collectAsState()
     var selectedSubTab by remember { mutableIntStateOf(0) }
     var showCreateRecordModal by remember { mutableStateOf(false) }
     var selectedRecordForInspect by remember { mutableStateOf<Any?>(null) }
@@ -219,7 +219,7 @@ fun DepartmentRecordsScreen(
                             shape = RoundedCornerShape(6.dp),
                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                             border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)) else null,
-                            modifier = Modifier.clickable { selectedProject = id }
+                            modifier = Modifier.clickable { scmsRepository.selectProject(id) }
                         ) {
                             Text(
                                 text = label,

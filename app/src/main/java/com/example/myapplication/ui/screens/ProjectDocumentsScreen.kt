@@ -87,7 +87,7 @@ fun ProjectDocumentsScreen(
     val currentRole by scmsRepository.currentRole.collectAsState()
 
     var selectedTopTab by remember { mutableIntStateOf(0) } // 0: 9-Stage APQP Dossier, 1: Controlled Docs, 2: Client Deliverables, 3: ISO/IATF Policy
-    var selectedProject by remember { mutableStateOf("HLPL-AI4T-01") }
+    val selectedProject by scmsRepository.selectedProject.collectAsState()
     var selectedDeptFilter by remember { mutableStateOf("All") }
     var selectedDocForPreview by remember { mutableStateOf<ControlledDoc?>(null) }
     var showDraftModal by remember { mutableStateOf(false) }
@@ -179,6 +179,7 @@ fun ProjectDocumentsScreen(
                     listOf(
                         "HLPL-AI4T-01" to "Tata Ace EV",
                         "HLPL-SLCT-01" to "Select AIS-140",
+                        "HLPL-XLINK-03" to "Commercial CV",
                         "ALL" to "All Projects"
                     ).forEach { (id, label) ->
                         val isSelected = selectedProject == id
@@ -186,7 +187,7 @@ fun ProjectDocumentsScreen(
                             shape = RoundedCornerShape(6.dp),
                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                             border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)) else null,
-                            modifier = Modifier.clickable { selectedProject = id }
+                            modifier = Modifier.clickable { scmsRepository.selectProject(id) }
                         ) {
                             Text(
                                 text = label,

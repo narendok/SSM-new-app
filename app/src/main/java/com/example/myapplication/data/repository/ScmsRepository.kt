@@ -177,6 +177,9 @@ interface ScmsRepository {
     fun createDvprTest(test: DvprTestItem): Result<Unit>
     fun createAsset(asset: AssetEquipment): Result<Unit>
     fun addControlledDoc(doc: ControlledDoc): Result<Unit>
+    val selectedProject: StateFlow<String>
+    fun selectProject(projectId: String)
+    fun executeCrossDeptSync(): Result<String>
 }
 
 data class WhatIfSimulationResult(
@@ -205,6 +208,44 @@ class ScmsRepositoryImpl(
 
     private fun currentTime(): String =
         SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date())
+
+    // 0. Selected Automotive Project
+    private val _selectedProject = MutableStateFlow("HLPL-AI4T-01")
+    override val selectedProject: StateFlow<String> = _selectedProject.asStateFlow()
+
+    override fun selectProject(projectId: String) {
+        _selectedProject.value = projectId
+    }
+
+    override fun executeCrossDeptSync(): Result<String> {
+        val proj = com.example.myapplication.data.model.AutomotiveProjects.findById(_selectedProject.value)
+        val timestamp = currentTime()
+
+        val log = AuditLogEntry(
+            id = "LOG-SYNC-" + UUID.randomUUID().toString().take(6).uppercase(),
+            timestamp = timestamp,
+            actor = _currentRole.value.leadName,
+            action = "CROSS_DEPT_SYNC_EXECUTED",
+            partMpn = proj.reference,
+            quantityDelta = 1,
+            reason = "Executed cross-department stage synchronization for " + proj.reference + " across all 11 departments"
+        )
+        _auditLogs.value = listOf(log) + _auditLogs.value
+
+        val notif = AppNotification(
+            id = "NOTIF-SYNC-" + UUID.randomUUID().toString().take(6).uppercase(),
+            title = "Cross-Dept Sync: " + proj.reference,
+            message = "Cross-department RACI synchronization verified for " + proj.title + ". All 11 department channels aligned.",
+            targetDept = "ALL",
+            targetRecipient = "All Leads",
+            type = "Sync",
+            timestamp = timestamp,
+            referenceId = proj.reference
+        )
+        _notifications.value = listOf(notif) + _notifications.value
+
+        return Result.success("Cross-Department Handoff Sync Completed for " + proj.reference + " \u00b7 11 Department Channels Synchronized")
+    }
 
     // 1. Current Active Role
     private val _currentRole = MutableStateFlow(DepartmentRole.ADMIN)
@@ -920,12 +961,16 @@ class ScmsRepositoryImpl(
             DailyTaskItem("TSK-02", "Reconcile Mouser Order LOT-2026-MOU-0881 against PO-2026-042", "PUR", "High", "Morgan Reed", "2026-03-20", isCompleted = true, lane = "Completed"),
             DailyTaskItem("TSK-03", "Review EHW-SCH-01 Schematics netlist for SMT Pilot Gate unlock", "EHW", "Critical", "Avery Vale", "Today", isCompleted = false, isOverdue = false, lane = "Today"),
             DailyTaskItem("TSK-04", "Calibrate Chroma 8000 EOL test jig before Stage 5 pilot batch", "TST", "High", "Mina Cross", "Yesterday", isCompleted = false, isOverdue = true, lane = "Today"),
-            DailyTaskItem("TSK-05", "Inspect 16-Pin Wire Harness crimp pull force (USCAR-2 spec)", "MECH", "Normal", "Samira Holt", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow"),
+            DailyTaskItem("TSK-05", "Inspect 16-Pin Wire Harness crimp pull force (USCAR-2 spec)", "MECH", "Normal", "Samira Holt", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-SLCT-01"),
             DailyTaskItem("TSK-06", "CAN J1939 Telemetry bootloader bring-up & security token test", "FW", "Critical", "Devon Lane", "Today", isCompleted = false, isOverdue = false, lane = "Today"),
             DailyTaskItem("TSK-07", "SMT Line 2 10-zone reflow profile validation with thermocouples", "EMF", "High", "Casey Rowan", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow"),
-            DailyTaskItem("TSK-08", "Review PPAP Level 3 documentation package for ARAI audit", "QA", "High", "Jordan Blake", "Friday", isCompleted = false, isOverdue = false, lane = "Review"),
+            DailyTaskItem("TSK-08", "Review PPAP Level 3 documentation package for ARAI audit", "QA", "High", "Jordan Blake", "Friday", isCompleted = false, isOverdue = false, lane = "Review", projectId = "HLPL-SLCT-01"),
             DailyTaskItem("TSK-09", "Finance milestone advance sign-off for EV Fleet delivery batch", "FIN", "Critical", "Priya Voss", "Thursday", isCompleted = false, isOverdue = false, lane = "Review"),
-            DailyTaskItem("TSK-10", "Issue component allocation for BMS prototype harness to Avery Vale", "PUR", "Normal", "Morgan Reed", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow")
+            DailyTaskItem("TSK-10", "Issue component allocation for BMS prototype harness to Avery Vale", "PUR", "Normal", "Morgan Reed", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-XLINK-03"),
+            DailyTaskItem("TSK-11", "AIS-140 Annexure 3 GPS tracking firmware lock", "FW", "Critical", "Devon Lane", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "HLPL-SLCT-01"),
+            DailyTaskItem("TSK-12", "Select Motors vendor quote review for SOS button & buzzer", "PUR", "High", "Morgan Reed", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-SLCT-01"),
+            DailyTaskItem("TSK-13", "Dual-CAN transceiver thermal simulation report for Commercial Fleet", "MECH", "High", "Samira Holt", "Friday", isCompleted = false, isOverdue = false, lane = "Review", projectId = "HLPL-XLINK-03"),
+            DailyTaskItem("TSK-14", "OBD-II J1939 diagnostic protocol stack feasibility sign-off", "SW", "Critical", "Siddharth Roy", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "HLPL-XLINK-03")
         )
     )
     override val tasks: StateFlow<List<DailyTaskItem>> = _tasks.asStateFlow()
