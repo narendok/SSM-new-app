@@ -73,11 +73,15 @@ import com.example.myapplication.data.repository.ScmsRepository
 @Composable
 fun CommandCenterScreen(
     scmsRepository: ScmsRepository,
-    onOpenRoleSwitcher: () -> Unit
+    onOpenRoleSwitcher: () -> Unit,
+    authenticatedName: String? = null,
+    sharedTasks: List<com.example.myapplication.data.model.DailyTaskItem>? = null,
+    onSharedTaskToggle: ((String) -> Unit)? = null
 ) {
     val currentRole by scmsRepository.currentRole.collectAsState()
     val stages by scmsRepository.apqpStages.collectAsState()
-    val tasks by scmsRepository.tasks.collectAsState()
+    val demoTasks by scmsRepository.tasks.collectAsState()
+    val tasks = sharedTasks ?: demoTasks
     val raciMatrix by scmsRepository.raciMatrix.collectAsState()
     val feasibilityReviews by scmsRepository.feasibilityReviews.collectAsState()
     val hardwarePath by scmsRepository.hardwarePath.collectAsState()
@@ -138,7 +142,7 @@ fun CommandCenterScreen(
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                             Text(
-                                text = "Signed in as ${currentRole.leadName}",
+                                text = "Signed in as ${authenticatedName ?: currentRole.leadName}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f),
                                 maxLines = 1,
@@ -765,7 +769,7 @@ fun CommandCenterScreen(
                 tasks.forEach { task ->
                     TaskCard(
                         task = task,
-                        onToggle = { scmsRepository.toggleTask(task.id) }
+                        onToggle = { if (sharedTasks != null) onSharedTaskToggle?.invoke(task.id) else scmsRepository.toggleTask(task.id) }
                     )
                 }
             }

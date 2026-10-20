@@ -293,25 +293,40 @@ fun AppShell(viewModel: MainViewModel) {
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
+        Column(modifier = Modifier.padding(innerPadding)) {
             if (authState is AuthState.Authenticated) {
-                when (selectedTab) {
-                    0 -> AuthenticatedCommandCenter(viewModel, onSwitchDepartment = { showRoleSwitcherDialog = true }, onOpenShared = { showSharedWorkspace = true })
-                    else -> Column(Modifier.padding(20.dp)) {
-                        Text("${listOf("Command", "Inventory", "Smart BOM", "Ingest & QA", "Docs & Vault")[selectedTab]}", style = MaterialTheme.typography.titleLarge)
-                        Text("This domain is not connected to an approved live mobile contract yet. Local prototype data is not your account's operational data.")
-                        androidx.compose.material3.OutlinedButton(onClick = { showSharedWorkspace = true }) { Text("Open permitted shared records") }
-                    }
-                }
-            } else when (selectedTab) {
+                Text("TEST preview layout | checklist uses shared data; other sample modules remain local demo.",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
+            }
+            Box(Modifier.weight(1f)) {
+            when (selectedTab) {
                 0 -> CommandCenterScreen(
                     scmsRepository = viewModel.scmsRepository,
-                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true }
+                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true },
+                    authenticatedName = (authState as? AuthState.Authenticated)?.session?.testMembership?.displayName,
+                    sharedTasks = if (authState is AuthState.Authenticated) com.example.myapplication.data.model.SharedAccess.rows(sharedSnapshot, "tasks")
+                        .filter { viewDepartment == null || com.example.myapplication.data.model.SharedAccess.text(it, "department_id") == viewDepartment }
+                        .map { task ->
+                            fun t(key: String) = com.example.myapplication.data.model.SharedAccess.text(task, key)
+                            com.example.myapplication.data.model.DailyTaskItem(t("id"), t("title"), "", t("priority"), "", t("due_at"), t("status") == "Complete")
+                        } else null,
+                    onSharedTaskToggle = { id ->
+                        com.example.myapplication.data.model.SharedAccess.rows(sharedSnapshot, "tasks").find { com.example.myapplication.data.model.SharedAccess.text(it, "id") == id }?.let { task ->
+                            if (com.example.myapplication.data.model.SharedAccess.canUpdateTask(sharedSnapshot, task)) {
+                                viewModel.mutateSharedWorkspace("update_task", kotlinx.serialization.json.buildJsonObject {
+                                    put("id", kotlinx.serialization.json.JsonPrimitive(id))
+                                    put("status", kotlinx.serialization.json.JsonPrimitive(if (com.example.myapplication.data.model.SharedAccess.text(task, "status") == "Complete") "Open" else "Complete"))
+                                    put("expected_updated_at", kotlinx.serialization.json.JsonPrimitive(com.example.myapplication.data.model.SharedAccess.text(task, "updated_at")))
+                                })
+                            }
+                        }
+                    }
                 )
                 1 -> GovernedInventoryScreen(scmsRepository = viewModel.scmsRepository)
                 2 -> SmartBomAndPurchasingScreen(scmsRepository = viewModel.scmsRepository)
                 3 -> AdaptiveIngestionAndQualityScreen(scmsRepository = viewModel.scmsRepository)
                 4 -> DocumentControlScreen(scmsRepository = viewModel.scmsRepository)
+            }
             }
         }
     }
