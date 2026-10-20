@@ -314,3 +314,7 @@ Current source already includes project/lifecycle readers and completed historic
 
 ## 2026-10-20 TEST login checkpoint
 See docs/evidence/test-account-login-2026-10-20.md. Real server sign-in with existing TEST accounts; fake JWT fallback removed. 35 unit tests and debug APK passed. Device acceptance and shared domain-screen integration remain pending.
+
+
+## 2026-10-20 shared TEST Android increment
+Dedicated authenticated shared screen and online RPC adapter implemented. Project/task creation, task status and approval decisions connected; records/documents/audit read connected. 37 tests and assembleDebug passed. See docs/evidence/android-shared-test-2026-10-20.md for remaining integration boundaries.

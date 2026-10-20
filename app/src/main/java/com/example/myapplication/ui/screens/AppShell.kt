@@ -76,6 +76,11 @@ fun AppShell(viewModel: MainViewModel) {
     var showAiAssistantModal by remember { mutableStateOf(false) }
     var showApprovalsModal by remember { mutableStateOf(false) }
 
+    if (authState is AuthState.Authenticated && (authState as AuthState.Authenticated).session.testMembership != null) {
+        SharedTestScreen(viewModel)
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

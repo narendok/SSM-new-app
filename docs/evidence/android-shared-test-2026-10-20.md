@@ -1,0 +1,9 @@
+# Shared Android TEST workspace - 20 October 2026
+
+Authenticated TEST membership now opens a dedicated server-backed screen instead of the local prototype command center. Projects, department evidence records, tasks, approvals, document metadata and audit rows are read through get_shared_test_workspace on the existing Lovable backend. Reads refresh on app resume, explicit refresh, sign-in and after successful mutations.
+
+Supported actions: admin/Sales project creation, self-assigned project task creation, task status changes, and pending approval decisions through mutate_shared_test_workspace. The backend determines actual permissions, department scope, revision binding and audit writes. Updates send expected_updated_at. Uncertain retries retain the same UUID and payload while the ViewModel lives. No offline queue or fabricated save is used. Account changes clear the snapshot and use an identity epoch so late prior-account responses cannot populate another session. Forms clear after confirmed mutation success, even if the following read fails.
+
+Validation: testDebugUnitTest and assembleDebug passed; 37 tests, no failures. Adapter tests verify account-specific tokens, failed reads without local fallback, server mutation payload and retry identity. Existing independent live backend employee-task and HW-to-QA approval acceptance remains applicable to these same deployed RPCs; Android device/UI acceptance is user-owned and has not been claimed.
+
+Remaining: full record authoring/revision and approval-request forms, task reassignment, stage-gate editor, private-file upload/download UI, background refresh while continuously foregrounded, durable uncertain-request recovery across process death, session refresh, and domain inventory/BOM/production integration. Document tab currently lists metadata only. No local prototype records or attachments were imported. No schema/auth policy changes or backend deployment required.

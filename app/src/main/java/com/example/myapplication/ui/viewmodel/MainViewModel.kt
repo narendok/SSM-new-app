@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.*
+import com.example.myapplication.data.repository.SharedTestRepository
 
 sealed class ViewUiState {
     object Idle : ViewUiState()
@@ -55,11 +57,68 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _lastSyncTimestamp = MutableStateFlow(System.currentTimeMillis())
     val lastSyncTimestamp: StateFlow<Long> = _lastSyncTimestamp.asStateFlow()
 
+    private val sharedRepository = SharedTestRepository(supabaseClient)
+    private val _sharedSnapshot = MutableStateFlow<JsonObject?>(null)
+    val sharedSnapshot: StateFlow<JsonObject?> = _sharedSnapshot.asStateFlow()
+    private val _sharedError = MutableStateFlow<String?>(null)
+    val sharedError: StateFlow<String?> = _sharedError.asStateFlow()
+    private val _sharedBusy = MutableStateFlow(false)
+    val sharedBusy: StateFlow<Boolean> = _sharedBusy.asStateFlow()
+    private val _sharedSaved = MutableStateFlow(0)
+    val sharedSaved: StateFlow<Int> = _sharedSaved.asStateFlow()
+    private var sharedEpoch = 0
+    private var retrySignature: String? = null
+    private var retryId: String? = null
+
+    fun refreshSharedWorkspace() {
+        val token = (authState.value as? AuthState.Authenticated)?.session?.accessToken ?: return
+        if (_sharedBusy.value) return
+        val epoch = sharedEpoch
+        _sharedBusy.value = true
+        viewModelScope.launch {
+            try {
+                val snapshot = sharedRepository.load(token)
+                if (epoch == sharedEpoch) { _sharedSnapshot.value = snapshot; _sharedError.value = null }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (epoch == sharedEpoch) _sharedError.value = e.message ?: "Shared read failed"
+            } finally { if (epoch == sharedEpoch) _sharedBusy.value = false }
+        }
+    }
+
+    fun mutateSharedWorkspace(action: String, payload: JsonObject) {
+        val token = (authState.value as? AuthState.Authenticated)?.session?.accessToken ?: return
+        if (_sharedBusy.value) return
+        val signature = action + payload.toString()
+        if (retrySignature != signature) { retrySignature = signature; retryId = java.util.UUID.randomUUID().toString() }
+        val requestId = retryId ?: return
+        val epoch = sharedEpoch
+        _sharedBusy.value = true
+        viewModelScope.launch {
+            try {
+                sharedRepository.mutate(token, action, payload, requestId)
+                if (epoch == sharedEpoch) {
+                    retryId = null; retrySignature = null
+                    _sharedSaved.value++
+                    _sharedError.value = null
+                    _sharedSnapshot.value = sharedRepository.load(token)
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (epoch == sharedEpoch) _sharedError.value = e.message ?: "Shared action failed; retry the same action"
+            } finally { if (epoch == sharedEpoch) _sharedBusy.value = false }
+        }
+    }
+
     init {
         viewModelScope.launch {
             authState.collect { state ->
+                sharedEpoch++
+                _sharedSnapshot.value = null; _sharedError.value = null; _sharedBusy.value = false
+                retryId = null; retrySignature = null
                 if (state is AuthState.Authenticated) {
                     state.session.testMembership?.workspaceRole()?.let { scmsRepository.switchRole(it) }
+                    refreshSharedWorkspace()
                 }
             }
         }
