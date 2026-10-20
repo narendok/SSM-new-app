@@ -76,7 +76,7 @@ class AuthRepositoryImpl(
             val raw = supabaseClient.invokeRpc("resolve_test_membership", "{}", session.accessToken).getOrThrow()
             val membership = membershipJson.decodeFromString<List<com.example.myapplication.data.model.TestMembership>>(raw).singleOrNull()
                 ?: throw SecurityException("No active TEST workspace membership")
-            require(membership.organizationName == "TEST ONLY · SSM-new1 synthetic workspace" && membership.workspaceRole() != null) { "Unsupported TEST membership" }
+            require(membership.organizationName == "TEST ONLY \u00b7 SSM-new1 synthetic workspace" && membership.workspaceRole() != null) { "Unsupported TEST membership" }
             session.copy(testMembership = membership)
         }
         return result.onSuccess { session ->

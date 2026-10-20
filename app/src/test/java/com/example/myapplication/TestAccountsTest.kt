@@ -12,7 +12,7 @@ class TestAccountsTest {
         assertFalse(TestAccounts.all.any { it.label.startsWith("ESW") || it.label.startsWith("TST") })
     }
     @Test fun workspaceUsesServerRoleRatherThanEmailOrDefaultAdmin() {
-        fun member(role: String, dept: String?) = TestMembership("TEST ONLY · SSM-new1 synthetic workspace", role, dept, "Test")
+        fun member(role: String, dept: String?) = TestMembership("TEST ONLY \u00b7 SSM-new1 synthetic workspace", role, dept, "Test")
         assertEquals(DepartmentRole.HROPS, member("member", "HR").workspaceRole())
         assertEquals(DepartmentRole.QA, member("department_lead", "QA").workspaceRole())
         assertEquals(DepartmentRole.CLIENT, member("viewer", null).workspaceRole())

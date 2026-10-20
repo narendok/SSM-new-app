@@ -55,6 +55,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _lastSyncTimestamp = MutableStateFlow(System.currentTimeMillis())
     val lastSyncTimestamp: StateFlow<Long> = _lastSyncTimestamp.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            authState.collect { state ->
+                if (state is AuthState.Authenticated) {
+                    state.session.testMembership?.workspaceRole()?.let { scmsRepository.switchRole(it) }
+                }
+            }
+        }
+    }
+
+    private var signingIn = false
+
     fun selectTab(index: Int) {
         _selectedTab.value = index
     }
@@ -66,15 +78,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun signInWithPassword(email: String, password: String) {
-        if (authState.value is AuthState.Authenticating) return
+        if (signingIn || authState.value is AuthState.Authenticating) return
+        signingIn = true
         viewModelScope.launch {
-            authRepository.signInWithPassword(email, password).onSuccess { session ->
-                session.testMembership?.workspaceRole()?.let { scmsRepository.switchRole(it) }
+            try {
+                authRepository.signInWithPassword(email, password)
+            } finally {
+                signingIn = false
             }
         }
     }
 
     fun switchRole(role: DepartmentRole) {
+        if (authState.value !is AuthState.Unauthenticated) return
         scmsRepository.switchRole(role)
     }
 

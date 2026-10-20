@@ -108,7 +108,7 @@ fun AppShell(viewModel: MainViewModel) {
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Surface(
-                                    modifier = Modifier.clickable { showRoleSwitcherDialog = true },
+                                    modifier = Modifier.clickable { if (authState is AuthState.Unauthenticated) showRoleSwitcherDialog = true else showAuthDialog = true },
                                     shape = RoundedCornerShape(6.dp),
                                     color = MaterialTheme.colorScheme.secondaryContainer,
                                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
@@ -284,7 +284,7 @@ fun AppShell(viewModel: MainViewModel) {
             when (selectedTab) {
                 0 -> CommandCenterScreen(
                     scmsRepository = viewModel.scmsRepository,
-                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true }
+                    onOpenRoleSwitcher = { if (authState is AuthState.Unauthenticated) showRoleSwitcherDialog = true else showAuthDialog = true }
                 )
                 1 -> GovernedInventoryScreen(scmsRepository = viewModel.scmsRepository)
                 2 -> SmartBomAndPurchasingScreen(scmsRepository = viewModel.scmsRepository)
