@@ -42,7 +42,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val safeViewsRepository: SafeViewsRepository = SafeViewsRepositoryImpl()
     val privateStorageRepository: PrivateStorageRepository = PrivateStorageRepositoryImpl(supabaseClient, secureStorage)
     val stockMutationRepository: StockMutationRepository = StockMutationRepositoryImpl(secureStorage)
-    val scmsRepository: ScmsRepository = ScmsRepositoryImpl(secureStorage)
+    val scmsRepository: ScmsRepository = ScmsRepositoryImpl(secureStorage, supabaseClient)
 
     val authState: StateFlow<AuthState> = authRepository.authState
 

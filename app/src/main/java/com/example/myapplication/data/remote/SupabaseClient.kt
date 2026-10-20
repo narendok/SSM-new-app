@@ -149,4 +149,44 @@ class SupabaseClient {
             Result.failure(e)
         }
     }
+
+    suspend fun invokeRpc(
+        rpcName: String,
+        payloadJson: String,
+        accessToken: String?
+    ): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val url = "$baseUrl/rest/v1/rpc/$rpcName"
+            val jsonBody = payloadJson.toRequestBody("application/json".toMediaType())
+
+            val requestBuilder = Request.Builder()
+                .url(url)
+                .addHeader("apikey", anonKey)
+                .post(jsonBody)
+
+            if (!accessToken.isNullOrBlank()) {
+                requestBuilder.addHeader("Authorization", "Bearer $accessToken")
+            }
+
+            val request = requestBuilder.build()
+            val response = httpClient.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+
+            if (!response.isSuccessful) {
+                if (response.code == 401 || response.code == 403) {
+                    return@withContext Result.failure(
+                        SecurityException("RPC Access Denied (HTTP ${response.code}): $responseBody")
+                    )
+                } else {
+                    return@withContext Result.failure(
+                        IOException("RPC Error (HTTP ${response.code}): $responseBody")
+                    )
+                }
+            }
+
+            Result.success(responseBody)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

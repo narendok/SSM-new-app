@@ -1,5 +1,6 @@
 package com.example.myapplication.data.repository
 
+import com.example.myapplication.data.remote.SupabaseClient
 import com.example.myapplication.data.model.ApqpStage
 import com.example.myapplication.data.model.AssetEquipment
 import com.example.myapplication.data.model.AuditLogEntry
@@ -97,7 +98,7 @@ interface ScmsRepository {
     // Stage 10: AI Procedural Queries
     val aiQueries: StateFlow<List<AiProceduralQuery>>
 
-    // Human Approvals & Governance Center (Master Plan §26.3)
+    // Human Approvals & Governance Center (Master Plan Â§26.3)
     val approvals: StateFlow<List<ApprovalDecisionRecord>>
     val travelPolicyRules: StateFlow<List<TravelPolicyRule>>
 
@@ -137,7 +138,18 @@ interface ScmsRepository {
     fun returnGate(approvalId: String, reworkNotes: String): Result<Unit>
 
     // Operational APQP Stage Gate Advancement Contract (Batch 3/4 parity)
-    fun verifyAndAdvanceStageGate(targetStage: Int, comments: String = "", evidenceJson: String? = null): Result<Unit>
+    suspend fun verifyAndAdvanceStageGate(
+        targetStage: Int,
+        comments: String = "",
+        evidenceJson: String? = null,
+        recordId: String? = null
+    ): Result<Unit>
+    fun verifyAndAdvanceStageGateBlocking(
+        targetStage: Int,
+        comments: String = "",
+        evidenceJson: String? = null,
+        recordId: String? = null
+    ): Result<Unit>
     fun updateControlledDocStatus(docId: String, newStatus: String): Result<Unit>
 }
 
@@ -161,7 +173,8 @@ data class ShortageStatusLine(
 )
 
 class ScmsRepositoryImpl(
-    private val secureStorage: SecureStorage? = null
+    private val secureStorage: SecureStorage? = null,
+    private val supabaseClient: SupabaseClient? = null
 ) : ScmsRepository {
 
     private fun currentTime(): String =
@@ -225,7 +238,7 @@ class ScmsRepositoryImpl(
             current = "8.4 mA active",
             aecRating = "AEC-Q100 Grade 1",
             clockSpeed = "64 MHz",
-            tempRange = "-40°C to +125°C",
+            tempRange = "-40Â°C to +125Â°C",
             dimensions = "14.0 x 14.0 x 1.4 mm",
             massGrams = 0.65,
             ipRating = "N/A (Board Mounted)",
@@ -256,7 +269,7 @@ class ScmsRepositoryImpl(
             current = "580 mA peak Tx",
             aecRating = "AIS-140 / TAC Certified",
             clockSpeed = "Baseband Processor",
-            tempRange = "-40°C to +85°C",
+            tempRange = "-40Â°C to +85Â°C",
             dimensions = "29.0 x 32.0 x 2.4 mm",
             massGrams = 4.2,
             ipRating = "N/A (Board Mounted)",
@@ -287,7 +300,7 @@ class ScmsRepositoryImpl(
             current = "45 mA Dominant",
             aecRating = "AEC-Q100 Grade 1",
             clockSpeed = "5 Mbps CAN-FD",
-            tempRange = "-55°C to +125°C",
+            tempRange = "-55Â°C to +125Â°C",
             dimensions = "4.9 x 3.91 x 1.75 mm",
             massGrams = 0.08,
             ipRating = "N/A",
@@ -318,7 +331,7 @@ class ScmsRepositoryImpl(
             current = "5A Continuous Output",
             aecRating = "AEC-Q100 Grade 1",
             clockSpeed = "200 kHz - 2.5 MHz",
-            tempRange = "-40°C to +125°C",
+            tempRange = "-40Â°C to +125Â°C",
             dimensions = "5.0 x 4.0 x 1.7 mm",
             massGrams = 0.12,
             ipRating = "N/A",
@@ -349,7 +362,7 @@ class ScmsRepositoryImpl(
             current = "93A Peak Pulse",
             aecRating = "AEC-Q101 Qualified",
             clockSpeed = "ISO 16750-2 Clamping",
-            tempRange = "-55°C to +175°C",
+            tempRange = "-55Â°C to +175Â°C",
             dimensions = "15.5 x 10.0 x 5.0 mm",
             massGrams = 2.6,
             ipRating = "N/A",
@@ -382,7 +395,7 @@ class ScmsRepositoryImpl(
             dimensions = "42.5 x 31.2 x 26.8 mm",
             massGrams = 14.8,
             ipRating = "IP67 / IP6K9K",
-            wireGauge = "FLRY-B 0.50mm² to 1.50mm²",
+            wireGauge = "FLRY-B 0.50mmÂ² to 1.50mmÂ²",
             matingForce = "75 N max engagement",
             leadTimeWeeks = 8,
             mouserStock = 12000,
@@ -404,7 +417,7 @@ class ScmsRepositoryImpl(
                 assemblyId = "HLPL-HARN-AI4T-PWR-01",
                 name = "Main Power & CAN Interface Harness (16-Pin Sealed)",
                 projectId = "HLPL-AI4T-01",
-                wireGauge = "FLRY-B 0.75mm² (Red/Black) + 0.50mm² (Twisted Pair)",
+                wireGauge = "FLRY-B 0.75mmÂ² (Red/Black) + 0.50mmÂ² (Twisted Pair)",
                 connectors = "Molex MX150 16-Pin <-> TE Mate-N-Lok",
                 pinCount = 16,
                 matingRetentionForce = "85 N with CPA lock",
@@ -415,7 +428,7 @@ class ScmsRepositoryImpl(
                 assemblyId = "HLPL-HARN-OBD-02",
                 name = "OBD-II Diagnostic Extension Harness with Molded Strain Relief",
                 projectId = "HLPL-AI4T-01",
-                wireGauge = "FLRY-A 0.35mm² / ISO 6722 compliant",
+                wireGauge = "FLRY-A 0.35mmÂ² / ISO 6722 compliant",
                 connectors = "J1962 Male Plug <-> Micro-Fit 3.0",
                 pinCount = 16,
                 matingRetentionForce = "60 N",
@@ -433,7 +446,7 @@ class ScmsRepositoryImpl(
                 id = "ALLOC-2026-001",
                 partMpn = "STM32G0B1VCT6",
                 recipient = "Avery Vale",
-                department = "EHW · Hardware Lead",
+                department = "EHW Â· Hardware Lead",
                 projectId = "HLPL-AI4T-01",
                 issuedQuantity = 50,
                 returnedQuantity = 0,
@@ -444,7 +457,7 @@ class ScmsRepositoryImpl(
                 id = "ALLOC-2026-002",
                 partMpn = "EG915N-EU",
                 recipient = "Elena Rostova",
-                department = "EHW · RF Engineer",
+                department = "EHW Â· RF Engineer",
                 projectId = "HLPL-AI4T-01",
                 issuedQuantity = 20,
                 returnedQuantity = 0,
@@ -455,7 +468,7 @@ class ScmsRepositoryImpl(
                 id = "ALLOC-2026-003",
                 partMpn = "HLPL-HARN-AI4T-PWR-01",
                 recipient = "Devon Lane",
-                department = "ESW · Firmware Lead",
+                department = "ESW Â· Firmware Lead",
                 projectId = "HLPL-AI4T-01",
                 issuedQuantity = 5,
                 returnedQuantity = 0,
@@ -691,7 +704,7 @@ class ScmsRepositoryImpl(
                 testId = "DVP-01",
                 standard = "ISO 7637-2",
                 testTitle = "Conducted Electrical Transient Immunity (Pulse 1, 2a, 3a/b)",
-                condition = "Pulse 1: -100V, Pulse 2a: +37V, Pulse 3a/b: ±150V",
+                condition = "Pulse 1: -100V, Pulse 2a: +37V, Pulse 3a/b: Â±150V",
                 acceptanceCriteria = "Status II (No malfunction, auto recovery)",
                 lab = "Internal Lab (XYZ Pvt Ltd)",
                 status = "Passed",
@@ -724,7 +737,7 @@ class ScmsRepositoryImpl(
                 testId = "DVP-04",
                 standard = "ISO 10605",
                 testTitle = "Electrostatic Discharge (ESD) Immunity",
-                condition = "±8 kV contact discharge, ±15 kV air discharge",
+                condition = "Â±8 kV contact discharge, Â±15 kV air discharge",
                 acceptanceCriteria = "Class A performance; zero memory corruption",
                 lab = "Internal Lab (XYZ Pvt Ltd)",
                 status = "Passed",
@@ -735,7 +748,7 @@ class ScmsRepositoryImpl(
                 testId = "DVP-05",
                 standard = "ISO 16750-4",
                 testTitle = "Rapid Thermal Shock & Temperature Cycling",
-                condition = "-40°C to +85°C, 250 cycles, 30 min dwell",
+                condition = "-40Â°C to +85Â°C, 250 cycles, 30 min dwell",
                 acceptanceCriteria = "Solder joint integrity under 3D X-ray; no cracks",
                 lab = "Outsourced Lab (ICAT Manesar)",
                 status = "In Progress",
@@ -886,7 +899,7 @@ class ScmsRepositoryImpl(
     )
     override val tasks: StateFlow<List<DailyTaskItem>> = _tasks.asStateFlow()
 
-    // 17. 6 HOD Feasibility & Contract Review (Master Plan §4 & §5, Stage 2 Gate)
+    // 17. 6 HOD Feasibility & Contract Review (Master Plan Â§4 & Â§5, Stage 2 Gate)
     private val _feasibilityReviews = MutableStateFlow(
         listOf(
             FeasibilityReview(
@@ -897,7 +910,7 @@ class ScmsRepositoryImpl(
                 scopeSummary = "Automotive Telematics Gateway schematic with STM32H753 MCU, Quectel EG915N-EU LTE Cat-1, dual CAN-FD, and ISO 7637-2 power protection.",
                 internalRemarks = "Custom 4-layer FR4 stackup satisfies thermal & EMC targets. Quectel module requires early PO due to 14-week lead time. ATECC608B hardware secure element locked for TLS client cert storage.",
                 clientHighlights = "Architecture complies with Tata Motors SOR v1.4 telematics specifications. 100% AEC-Q100 Grade 2 active silicon selected.",
-                keyParameters = mapOf("MCU Clock" to "480 MHz", "Operating Temp" to "-40°C to +85°C", "Deep Sleep Current" to "< 1.8 mA", "CAN Channels" to "2x CAN-FD with Wake-up"),
+                keyParameters = mapOf("MCU Clock" to "480 MHz", "Operating Temp" to "-40Â°C to +85Â°C", "Deep Sleep Current" to "< 1.8 mA", "CAN Channels" to "2x CAN-FD with Wake-up"),
                 signedAt = "2026-03-12 14:30",
                 signatureHash = "SHA256:8f9a2b1c4e7d0f3e8291a0c4f1e5"
             ),
@@ -919,9 +932,9 @@ class ScmsRepositoryImpl(
                 leadName = "Elena Rostova",
                 verdict = "FEASIBLE",
                 scopeSummary = "IP67 Die-cast ADC12 aluminum housing, dual silicone compression gasket, and Molex MX150 automotive interface.",
-                internalRemarks = "Thermal FEA simulation shows junction temp stays < 72°C at 50°C ambient engine-bay conditions. Tooling quote approved for ₹8.5 Lakhs with 4-week T0 sample turnaround.",
+                internalRemarks = "Thermal FEA simulation shows junction temp stays < 72Â°C at 50Â°C ambient engine-bay conditions. Tooling quote approved for â‚¹8.5 Lakhs with 4-week T0 sample turnaround.",
                 clientHighlights = "Rigid IP67 water/dust proof enclosure designed for Tata Ace EV chassis mounting, vibration certified to ISO 16750-3 (10G RMS).",
-                keyParameters = mapOf("Ingress Protection" to "IP67 Immersion Rated", "Housing Material" to "ADC12 Die-Cast Aluminum", "Vibration Rating" to "ISO 16750-3 (10G RMS)", "Operating Temp" to "-40°C to +105°C"),
+                keyParameters = mapOf("Ingress Protection" to "IP67 Immersion Rated", "Housing Material" to "ADC12 Die-Cast Aluminum", "Vibration Rating" to "ISO 16750-3 (10G RMS)", "Operating Temp" to "-40Â°C to +105Â°C"),
                 signedAt = "2026-03-12 16:00",
                 signatureHash = "SHA256:112233445566778899aabbccddee"
             ),
@@ -932,7 +945,7 @@ class ScmsRepositoryImpl(
                 verdict = "FEASIBLE_WITH_CONDITIONS",
                 scopeSummary = "Dual-source supply chain verification, Mouser/Digi-Key inventory locking, and volume vendor allocation.",
                 internalRemarks = "Long lead-time on TI TCAN1042 transceivers mitigated by locking 10,000 pcs reel stock with Mouser. Alternate NXP TJA1051T qualified as secondary source. Target BOM locked at $42.80.",
-                clientHighlights = "94% of active BOM lines validated with Tier-1 franchised distributors. Committed piece price ₹4,066/unit ($48.80) within client commercial ceiling.",
+                clientHighlights = "94% of active BOM lines validated with Tier-1 franchised distributors. Committed piece price â‚¹4,066/unit ($48.80) within client commercial ceiling.",
                 keyParameters = mapOf("Locked Unit BOM" to "$42.80", "AVL Coverage" to "94%", "Long-Lead Lines" to "2 Lines (Reel Reserved)", "Payment Terms" to "Net 30 franchised"),
                 signedAt = "2026-03-13 10:00",
                 signatureHash = "SHA256:99aabbccddeeff00112233445566"
@@ -954,10 +967,10 @@ class ScmsRepositoryImpl(
                 deptName = "Finance & Commercial Contracts",
                 leadName = "Rajesh Sharma",
                 verdict = "FEASIBLE",
-                scopeSummary = "Commercial evaluation of ₹20.33 Cr multi-year contract, volume price commitments, and milestone cash flows.",
-                internalRemarks = "NRE budget ₹45.00 Lakhs covers tooling, ARAI testing, and prototype runs with 35% advance milestone. Project gross margin modeled at 34.2%.",
+                scopeSummary = "Commercial evaluation of â‚¹20.33 Cr multi-year contract, volume price commitments, and milestone cash flows.",
+                internalRemarks = "NRE budget â‚¹45.00 Lakhs covers tooling, ARAI testing, and prototype runs with 35% advance milestone. Project gross margin modeled at 34.2%.",
                 clientHighlights = "Contract volume locked for 50,000 units with progressive delivery schedules and milestone-linked payment terms.",
-                keyParameters = mapOf("Total Contract" to "₹20.33 Cr", "Order Volume" to "50,000 Units", "NRE Milestone" to "₹45.00 Lakhs", "Gross Margin Target" to "34.2%"),
+                keyParameters = mapOf("Total Contract" to "â‚¹20.33 Cr", "Order Volume" to "50,000 Units", "NRE Milestone" to "â‚¹45.00 Lakhs", "Gross Margin Target" to "34.2%"),
                 signedAt = "2026-03-13 14:00",
                 signatureHash = "SHA256:abcdef0123456789abcdef012345"
             )
@@ -981,7 +994,7 @@ class ScmsRepositoryImpl(
     )
     override val engineeringSquad: StateFlow<List<String>> = _engineeringSquad.asStateFlow()
 
-    // 20. Customer Register & Accounts (Master Plan §4 & §6)
+    // 20. Customer Register & Accounts (Master Plan Â§4 & Â§6)
     private val _customers = MutableStateFlow(
         listOf(
             CustomerAccount(
@@ -1044,7 +1057,7 @@ class ScmsRepositoryImpl(
                 title = "Tata Ace EV 4G Telematics Gateway",
                 clientName = "Tata Motors Limited",
                 volume = 50000,
-                projectedValueInr = "₹20.33 Cr",
+                projectedValueInr = "â‚¹20.33 Cr",
                 status = "Contract Locked",
                 sorDocId = "HLPL-AI4T-01-MKT-SOR-01",
                 isOpportunity = true
@@ -1054,7 +1067,7 @@ class ScmsRepositoryImpl(
                 title = "Ashok Leyland 5G V2X Fleet Gateway",
                 clientName = "Ashok Leyland Limited",
                 volume = 15000,
-                projectedValueInr = "₹8.75 Cr",
+                projectedValueInr = "â‚¹8.75 Cr",
                 status = "Feasibility Review",
                 sorDocId = "HLPL-AL-RFQ-2026-08",
                 isOpportunity = true
@@ -1064,7 +1077,7 @@ class ScmsRepositoryImpl(
                 title = "Mahindra Treo 3W Telematics Retrofit",
                 clientName = "Mahindra Electric Mobility Ltd",
                 volume = 25000,
-                projectedValueInr = "₹6.50 Cr",
+                projectedValueInr = "â‚¹6.50 Cr",
                 status = "Enquiry Intake",
                 sorDocId = "HLPL-ME-ENQ-2026-09",
                 isOpportunity = false
@@ -1174,7 +1187,7 @@ class ScmsRepositoryImpl(
     )
     override val purchaseOrders: StateFlow<List<PurchaseOrder>> = _purchaseOrders.asStateFlow()
 
-    // 24. Client OEM Deliverables & Document Vault (Master Plan §3)
+    // 24. Client OEM Deliverables & Document Vault (Master Plan Â§3)
     private val _clientDeliverables = MutableStateFlow(
         listOf(
             ClientDeliverable(
@@ -1208,7 +1221,7 @@ class ScmsRepositoryImpl(
                 status = "Locked",
                 date = "2026-03-01",
                 owner = "Rajesh Sharma (CFO)",
-                description = "Piece price ₹4,066/unit ($48.80) + NRE ₹45.00 Lakhs locked across 50,000 units."
+                description = "Piece price â‚¹4,066/unit ($48.80) + NRE â‚¹45.00 Lakhs locked across 50,000 units."
             ),
             ClientDeliverable(
                 id = "DELIV-TAC-01",
@@ -1226,7 +1239,7 @@ class ScmsRepositoryImpl(
                 code = "HLPL-AI4T-01-MFG-PDI-01",
                 title = "Pre-Delivery Inspection Checklist",
                 category = "Manufacturing",
-                standard = "IATF 16949 §8.6",
+                standard = "IATF 16949 Â§8.6",
                 status = "Ready",
                 date = "2026-03-15",
                 owner = "Production Quality Lead",
@@ -1422,7 +1435,7 @@ class ScmsRepositoryImpl(
                 priority = "Normal",
                 scheduledDate = "2026-10-25",
                 stoppageHours = 0.0,
-                remarks = "Routine 30-day preventive maintenance per IATF 16949 §8.5.1.5"
+                remarks = "Routine 30-day preventive maintenance per IATF 16949 Â§8.5.1.5"
             ),
             MaintenanceLogRecord(
                 logId = "MNT-2026-002",
@@ -1464,7 +1477,7 @@ class ScmsRepositoryImpl(
                 standardAgency = "NABL Accredited Calibration Lab #1042",
                 calibrationDate = "2026-05-10",
                 validUntil = "2026-11-10",
-                uncertaintySpec = "±0.5% DC Gain Accuracy",
+                uncertaintySpec = "Â±0.5% DC Gain Accuracy",
                 status = "Valid / Certified",
                 certificateUrl = "https://example.invalid/certs/CAL-2026-089.pdf"
             ),
@@ -1475,7 +1488,7 @@ class ScmsRepositoryImpl(
                 standardAgency = "Fluke Metrology Services",
                 calibrationDate = "2025-11-20",
                 validUntil = "2026-11-20",
-                uncertaintySpec = "±0.02 N (CPK > 1.67)",
+                uncertaintySpec = "Â±0.02 N (CPK > 1.67)",
                 status = "Expiring (< 30d)",
                 certificateUrl = "https://example.invalid/certs/CAL-2026-091.pdf"
             )
@@ -1635,7 +1648,7 @@ class ScmsRepositoryImpl(
                 queryId = "AI-Q-001",
                 queryText = "What is the mandatory quarantine procedure for ICs received on reel packaging?",
                 detectedTopic = "Receiving IQC & MSL Governance",
-                answerText = "Per SOP-IQC-004 §3.2, all semiconductors arriving on tape & reel must undergo 100% ESD inspection, desiccant verification, and MSL floor life calculation before transfer out of IQC-HOLD-STAGE-01.",
+                answerText = "Per SOP-IQC-004 Â§3.2, all semiconductors arriving on tape & reel must undergo 100% ESD inspection, desiccant verification, and MSL floor life calculation before transfer out of IQC-HOLD-STAGE-01.",
                 referencedSop = "SOP-IQC-004 (Electronic Component Receiving & IQC)",
                 confidencePct = 98
             ),
@@ -1643,15 +1656,15 @@ class ScmsRepositoryImpl(
                 queryId = "AI-Q-002",
                 queryText = "Can an operator sign off Stage 5 SMT Pilot Build without Stage 4 Schematics approval?",
                 detectedTopic = "APQP Stage-Gate Interlock Rules",
-                answerText = "Strictly prohibited. Per IATF 16949 §6.1, Stage Gate 5 is hard-interlocked and remains cryptographically locked in Room/Supabase until Controlled Document EHW-SCH-01 receives Lead sign-off.",
-                referencedSop = "IATF 16949 §6.1 Automotive Stage-Gate Interlock Governance",
+                answerText = "Strictly prohibited. Per IATF 16949 Â§6.1, Stage Gate 5 is hard-interlocked and remains cryptographically locked in Room/Supabase until Controlled Document EHW-SCH-01 receives Lead sign-off.",
+                referencedSop = "IATF 16949 Â§6.1 Automotive Stage-Gate Interlock Governance",
                 confidencePct = 100
             )
         )
     )
     override val aiQueries: StateFlow<List<AiProceduralQuery>> = _aiQueries.asStateFlow()
 
-    // 35. Web-Configured Travel Policy Rules (Customizable on Web Portal per Master Plan §26.3)
+    // 35. Web-Configured Travel Policy Rules (Customizable on Web Portal per Master Plan Â§26.3)
     private val _travelPolicyRules = MutableStateFlow(
         listOf(
             TravelPolicyRule(
@@ -1676,7 +1689,7 @@ class ScmsRepositoryImpl(
     )
     override val travelPolicyRules: StateFlow<List<TravelPolicyRule>> = _travelPolicyRules.asStateFlow()
 
-    // 36. Approvals & Governance Decision Queue (Master Plan §26.3 & Enterprise Categories)
+    // 36. Approvals & Governance Decision Queue (Master Plan Â§26.3 & Enterprise Categories)
     private val _approvals = MutableStateFlow(
         listOf(
             // 1. Expense Request
@@ -1692,7 +1705,7 @@ class ScmsRepositoryImpl(
                 project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
                 description = "Procurement of specialized Henkel Loctite 3880 thermal adhesive and high-temperature lead-free SAC305 solder paste for SMT pilot line testing.",
                 riskLevel = "Medium",
-                iatfClause = "IATF 16949 §8.5.1 (Tooling & Consumables Release)",
+                iatfClause = "IATF 16949 Â§8.5.1 (Tooling & Consumables Release)",
                 amountInr = 42500.0,
                 expenseReasonDetails = "Urgent consumable replenishment for SMT Line 2 pilot run. Standard lead time via bulk vendor was 4 weeks; local supplier expedited for trial.",
                 vendorOrBeneficiary = "Sumitron Exports Pvt Ltd",
@@ -1712,9 +1725,9 @@ class ScmsRepositoryImpl(
                 project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
                 description = "On-site engineering calibration and CAN J1939 telemetry logging at Tata Motors Pune Chakan Plant over 3 days.",
                 riskLevel = "Medium",
-                iatfClause = "ISO 9001 §8.4 (Travel & Field Engineering Authorization)",
+                iatfClause = "ISO 9001 Â§8.4 (Travel & Field Engineering Authorization)",
                 amountInr = 28400.0,
-                expenseReasonDetails = "Flight: BLR-PNQ round trip (₹14,200), Hotel: 2 nights at Lemon Tree Chakan (₹9,200), Local taxi & per diem food (₹5,000). Total claimed ₹28,400.",
+                expenseReasonDetails = "Flight: BLR-PNQ round trip (â‚¹14,200), Hotel: 2 nights at Lemon Tree Chakan (â‚¹9,200), Local taxi & per diem food (â‚¹5,000). Total claimed â‚¹28,400.",
                 vendorOrBeneficiary = "Devon Lane (Employee Reimbursement)",
                 travelPolicyCompliant = true,
                 travelPolicyNotes = "Complies with Web Travel Policy POL-TRV-01: Hotel tier verified, corporate discount applied, advance booking within window."
@@ -1732,7 +1745,7 @@ class ScmsRepositoryImpl(
                 project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
                 description = "Formal sign-off of Stage 4 Schematics after addressing TI Buck regulator thermal relief and transient suppression diode footprint.",
                 riskLevel = "Critical",
-                iatfClause = "IATF 16949 §8.3.4 (Design Review & Verification Gate)",
+                iatfClause = "IATF 16949 Â§8.3.4 (Design Review & Verification Gate)",
                 amountInr = 0.0,
                 expenseReasonDetails = "Non-monetary engineering gateway task. Approving this gate unlocks Stage 5 SMT Pilot Build in the APQP Stepper.",
                 vendorOrBeneficiary = "XYZ Pvt Ltd Internal Engineering",
@@ -1752,9 +1765,9 @@ class ScmsRepositoryImpl(
                 project = "HLPL-SLCT-01 (AIS-140 Gateway)",
                 description = "Deviation to permit Vishay SM6T36CA (AEC-Q101) as drop-in alternative for Littelfuse TPSMAJ36A due to global 16-week allocation delay.",
                 riskLevel = "High",
-                iatfClause = "IATF 16949 §8.7.1.1 (Customer / Engineering Concession & Deviation)",
+                iatfClause = "IATF 16949 Â§8.7.1.1 (Customer / Engineering Concession & Deviation)",
                 amountInr = 185000.0,
-                expenseReasonDetails = "Price variance: +₹1.20 per unit for 15,000 pcs lot. EHW team reviewed clamping voltage and confirmed 100% pin-to-pin and electrical compatibility.",
+                expenseReasonDetails = "Price variance: +â‚¹1.20 per unit for 15,000 pcs lot. EHW team reviewed clamping voltage and confirmed 100% pin-to-pin and electrical compatibility.",
                 vendorOrBeneficiary = "Arrow Electronics India Pvt Ltd",
                 travelPolicyCompliant = true,
                 travelPolicyNotes = "Procurement SCM Concession"
@@ -1772,9 +1785,9 @@ class ScmsRepositoryImpl(
                 project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
                 description = "Commercial PO release for 5,000 pcs EG915N-EU cellular modules under contracted Master Pricing Agreement.",
                 riskLevel = "Critical",
-                iatfClause = "ISO 9001 §8.4 (Purchasing Authorization & Supplier Control)",
+                iatfClause = "ISO 9001 Â§8.4 (Purchasing Authorization & Supplier Control)",
                 amountInr = 5177000.0,
-                expenseReasonDetails = "Batch procurement for Pilot SMT Build and ARAI Type Approval testing batch. Rate locked at ₹1,035.40/unit with 30-day net credit terms.",
+                expenseReasonDetails = "Batch procurement for Pilot SMT Build and ARAI Type Approval testing batch. Rate locked at â‚¹1,035.40/unit with 30-day net credit terms.",
                 vendorOrBeneficiary = "Quectel Wireless Solutions Co., Ltd.",
                 travelPolicyCompliant = true,
                 travelPolicyNotes = "Standard PO Disbursement"
@@ -1792,7 +1805,7 @@ class ScmsRepositoryImpl(
                 project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
                 description = "40% advance release for precision steel tooling molds for automotive IP67 sealed multi-pin connectors.",
                 riskLevel = "High",
-                iatfClause = "ISO 9001 §8.4.3 (Financial Release & Milestone Settlement)",
+                iatfClause = "ISO 9001 Â§8.4.3 (Financial Release & Milestone Settlement)",
                 amountInr = 1450000.0,
                 expenseReasonDetails = "Contractual Phase 1 Tooling Advance against Proforma Invoice PI-MOL-9921 with bank guarantee validated by Accounts.",
                 vendorOrBeneficiary = "Molex India Tooling Division",
@@ -1812,7 +1825,7 @@ class ScmsRepositoryImpl(
                 project = "Plant Facility Expansion (XYZ Pvt Ltd Line 2)",
                 description = "Procurement and installation of 4x dual-fan overhead ionizing blowers (Desco/Simco-Ion) for manual inspection and repair benches.",
                 riskLevel = "Medium",
-                iatfClause = "IATF 16949 §7.1.3.1 (Plant, Facility & Equipment Planning)",
+                iatfClause = "IATF 16949 Â§7.1.3.1 (Plant, Facility & Equipment Planning)",
                 amountInr = 85000.0,
                 expenseReasonDetails = "Required to meet ANSI/ESD S20.20 and IATF 16949 zero-ESD audit findings prior to customer plant audit next month.",
                 vendorOrBeneficiary = "Static Control Solutions India",
@@ -1967,7 +1980,7 @@ class ScmsRepositoryImpl(
         }
 
         if (ecoNumber.isBlank()) {
-            return Result.failure(IllegalArgumentException("Engineering Change Order (ECO) Number is mandatory under IATF 16949 §8.3.6."))
+            return Result.failure(IllegalArgumentException("Engineering Change Order (ECO) Number is mandatory under IATF 16949 Â§8.3.6."))
         }
 
         val promoted = tentative.copy(
@@ -2447,12 +2460,12 @@ class ScmsRepositoryImpl(
         val (topic, ans, sop) = when {
             pLower.contains("esd") || pLower.contains("msl") || pLower.contains("moisture") -> Triple(
                 "ESD & Moisture Sensitivity (J-STD-033)",
-                "Components rated MSL-3 have 168 hours floor life at ≤30°C/60% RH. If unsealed > 168 hours, bake at 125°C for 24 hours prior to SMT reflow per J-STD-033C.",
+                "Components rated MSL-3 have 168 hours floor life at â‰¤30Â°C/60% RH. If unsealed > 168 hours, bake at 125Â°C for 24 hours prior to SMT reflow per J-STD-033C.",
                 "SOP-ESD-002 Electronic Static Discharge & Baking Control"
             )
             pLower.contains("calibration") || pLower.contains("imte") -> Triple(
                 "IMTE Instrument Calibration Frequency",
-                "Per IATF 16949 §7.1.5.2, all measuring instruments (oscilloscopes, LCR meters, calipers) require annual NABL/ISO 17025 accredited calibration. Calibration certificates must be uploaded to the private vault before status can change to Certified.",
+                "Per IATF 16949 Â§7.1.5.2, all measuring instruments (oscilloscopes, LCR meters, calipers) require annual NABL/ISO 17025 accredited calibration. Calibration certificates must be uploaded to the private vault before status can change to Certified.",
                 "SOP-QA-008 Calibration Management System"
             )
             pLower.contains("visitor") || pLower.contains("gate") || pLower.contains("security") -> Triple(
@@ -2502,7 +2515,7 @@ class ScmsRepositoryImpl(
                     "Released" to "${matchingPart.released} pcs",
                     "IQC Hold" to "${matchingPart.iqcHold} pcs",
                     "Manufacturer" to matchingPart.manufacturer,
-                    "Unit Cost" to "$${matchingPart.unitCostUsd} (₹${matchingPart.unitCostInr})"
+                    "Unit Cost" to "$${matchingPart.unitCostUsd} (â‚¹${matchingPart.unitCostInr})"
                 ),
                 actionLabel = "View in Governed Inventory",
                 actionRoute = "inventory"
@@ -2556,7 +2569,7 @@ class ScmsRepositoryImpl(
                 rawCode = q,
                 entityType = ScannedEntityType.PLANT_ASSET,
                 primaryTitle = asset.name,
-                secondarySubtitle = "${asset.assetTag} · ${asset.category}",
+                secondarySubtitle = "${asset.assetTag} Â· ${asset.category}",
                 details = mapOf(
                     "Serial Number" to asset.serialNumber,
                     "Location" to asset.location,
@@ -2577,7 +2590,7 @@ class ScmsRepositoryImpl(
                 rawCode = q,
                 entityType = ScannedEntityType.GATE_PASS,
                 primaryTitle = "${gp.passNumber} (${gp.passType})",
-                secondarySubtitle = "${gp.vehicleNumber} · ${gp.transporterName}",
+                secondarySubtitle = "${gp.vehicleNumber} Â· ${gp.transporterName}",
                 details = mapOf(
                     "Driver" to gp.driverName,
                     "Reference Doc" to gp.referenceDoc,
@@ -2598,7 +2611,7 @@ class ScmsRepositoryImpl(
                 rawCode = q,
                 entityType = ScannedEntityType.EMPLOYEE_BADGE,
                 primaryTitle = "${emp.name} (${emp.employeeId})",
-                secondarySubtitle = "${emp.roleTitle} · ${emp.deptName}",
+                secondarySubtitle = "${emp.roleTitle} Â· ${emp.deptName}",
                 details = mapOf(
                     "Department" to emp.deptCode,
                     "Competency Level" to emp.skillMatrixLevel,
@@ -2614,18 +2627,18 @@ class ScmsRepositoryImpl(
         // 7. Check Calibration Certificate (Stage 7)
         val matchingCert = _calibrationCerts.value.find { it.certId.equals(qUpper, ignoreCase = true) }
         if (matchingCert != null || qUpper.startsWith("CAL-")) {
-            val cert = matchingCert ?: CalibrationCertificate(qUpper, "EQ-IMTE-004", "Keysight InfiniiVision Oscilloscope", "NABL Lab", "2026-01-01", "2027-01-01", "±0.5% DC Gain", "Valid / Certified")
+            val cert = matchingCert ?: CalibrationCertificate(qUpper, "EQ-IMTE-004", "Keysight InfiniiVision Oscilloscope", "NABL Lab", "2026-01-01", "2027-01-01", "Â±0.5% DC Gain", "Valid / Certified")
             return ResolvedScanResult(
                 rawCode = q,
                 entityType = ScannedEntityType.CALIBRATION_CERT,
-                primaryTitle = "${cert.certId} · ${cert.status}",
+                primaryTitle = "${cert.certId} Â· ${cert.status}",
                 secondarySubtitle = "${cert.instrumentName} (${cert.assetTag})",
                 details = mapOf(
                     "Accredited Agency" to cert.standardAgency,
                     "Calibrated On" to cert.calibrationDate,
                     "Valid Until" to cert.validUntil,
                     "Uncertainty" to cert.uncertaintySpec,
-                    "Compliance" to "IATF 16949 §7.1.5.2 Certified"
+                    "Compliance" to "IATF 16949 Â§7.1.5.2 Certified"
                 ),
                 actionLabel = "View Signed Certificate",
                 actionRoute = "assets"
@@ -2659,7 +2672,7 @@ class ScmsRepositoryImpl(
                 rawCode = q,
                 entityType = ScannedEntityType.LOT_GRN,
                 primaryTitle = grn.grnNumber,
-                secondarySubtitle = "Lot ${grn.lotNumber} · ${grn.vendorName}",
+                secondarySubtitle = "Lot ${grn.lotNumber} Â· ${grn.vendorName}",
                 details = mapOf(
                     "Billed Qty" to "${grn.totalBilledQty} pcs",
                     "IQC Hold" to "${grn.quantityHeld} pcs",
@@ -2716,7 +2729,7 @@ class ScmsRepositoryImpl(
             action = "APPROVE_GOVERNANCE_GATE",
             partMpn = "${target.id} (${target.recordId})",
             quantityDelta = if (target.amountInr > 0) target.amountInr.toInt() else 1,
-            reason = "Approved gate '${target.title}' [${target.category.label}]. Notes: $notes. Clause: ${target.iatfClause}. Amount: ₹${target.amountInr}",
+            reason = "Approved gate '${target.title}' [${target.category.label}]. Notes: $notes. Clause: ${target.iatfClause}. Amount: â‚¹${target.amountInr}",
             lotNumber = target.recordId
         )
         _auditLogs.value = listOf(auditEntry) + _auditLogs.value
@@ -2823,10 +2836,11 @@ class ScmsRepositoryImpl(
         return Result.success(Unit)
     }
 
-    override fun verifyAndAdvanceStageGate(
+    override suspend fun verifyAndAdvanceStageGate(
         targetStage: Int,
         comments: String,
-        evidenceJson: String?
+        evidenceJson: String?,
+        recordId: String?
     ): Result<Unit> {
         if (targetStage < 1 || targetStage > 9) {
             return Result.failure(IllegalArgumentException("Invalid target stage $targetStage. APQP stages range from 1 to 9."))
@@ -2838,6 +2852,73 @@ class ScmsRepositoryImpl(
 
         if (targetStage == currentStage) {
             return Result.success(Unit)
+        }
+
+        // Authoritative Backend Check: If supabaseClient is configured, dispatch authoritative RPC call
+        if (supabaseClient != null) {
+            val accessToken = secureStorage?.getAccessToken()?.takeIf { it.isNotBlank() }
+                ?: return Result.failure(SecurityException("AUTH_REQUIRED: Authenticated session required for operational stage gate advancement"))
+
+            val targetRecordId = recordId?.takeIf { it.isNotBlank() } ?: "00000000-0000-0000-0000-000000000001"
+            val targetStageStr = "Stage $targetStage"
+
+            // Construct RPC payload matching verify_and_advance_stage_gate signature:
+            // p_record_id: uuid, p_target_stage: text, p_evidence_manifest: jsonb
+            val manifestJson = evidenceJson?.takeIf { it.isNotBlank() } ?: "{}"
+            val payloadJson = buildString {
+                append("{")
+                append("\"p_record_id\":\"").append(targetRecordId).append("\",")
+                append("\"p_target_stage\":\"").append(targetStageStr).append("\",")
+                append("\"p_evidence_manifest\":").append(manifestJson)
+                append("}")
+            }
+
+            val rpcResult = supabaseClient.invokeRpc(
+                rpcName = "verify_and_advance_stage_gate",
+                payloadJson = payloadJson,
+                accessToken = accessToken
+            )
+
+            if (rpcResult.isFailure) {
+                return Result.failure(rpcResult.exceptionOrNull() ?: Exception("Stage gate advance failed"))
+            }
+        } else {
+            // Local fallback / invariant checks when operating offline or in unit tests:
+            if (targetStage > currentStage + 1) {
+                return Result.failure(IllegalStateException("Cannot skip stages: currently at Stage $currentStage, requested Stage $targetStage."))
+            }
+
+            when (targetStage) {
+                2 -> {
+                    // Advancing to Stage 2 requires SOR intake
+                }
+                3 -> {
+                    val contractReviewApproved = _feasibilityReviews.value.any { review ->
+                        review.verdict.startsWith("FEASIBLE")
+                    } || _documents.value.any { doc ->
+                        (doc.docId.contains("MKT-01") || doc.docId.contains("CTR-01") || doc.title.contains("Contract Review", ignoreCase = true)) && doc.status == "Approved"
+                    }
+                    if (!contractReviewApproved) {
+                        return Result.failure(IllegalStateException("Stage 2 Feasibility Freeze: Approved Contract Review Record (HLPL/F/MKT/01) is required before advancing to Stage 3."))
+                    }
+                }
+                4 -> {
+                    val docs = _documents.value
+                    val hasEhwPrs = docs.any { it.docId.contains("EHW-PRS") && it.status == "Approved" }
+                    val hasSalQuo = docs.any { it.docId.contains("SAL-QUO") && it.status == "Approved" }
+                    if (!hasEhwPrs || !hasSalQuo) {
+                        return Result.failure(IllegalStateException("Stage 3 Requirements Baseline Freeze: All domain requirements must be approved before advancing to Stage 4."))
+                    }
+                }
+                5 -> {
+                    val schematicsApproved = _documents.value.any { doc ->
+                        doc.docId.contains("EHW-SCH-01") && doc.status == "Approved"
+                    }
+                    if (!schematicsApproved) {
+                        return Result.failure(IllegalStateException("Stage 4 Hardware Schematics Prerequisite: Approved EHW-SCH-01 is required before advancing to Stage 5+."))
+                    }
+                }
+            }
         }
 
         if (targetStage < currentStage) {
@@ -2863,42 +2944,6 @@ class ScmsRepositoryImpl(
             return Result.success(Unit)
         }
 
-        if (targetStage > currentStage + 1) {
-            return Result.failure(IllegalStateException("Cannot skip stages: currently at Stage $currentStage, requested Stage $targetStage."))
-        }
-
-        when (targetStage) {
-            2 -> {
-                // Advancing to Stage 2 requires SOR intake
-            }
-            3 -> {
-                val contractReviewApproved = _feasibilityReviews.value.any { review ->
-                    review.verdict.startsWith("FEASIBLE")
-                } || _documents.value.any { doc ->
-                    (doc.docId.contains("MKT-01") || doc.docId.contains("CTR-01") || doc.title.contains("Contract Review", ignoreCase = true)) && doc.status == "Approved"
-                }
-                if (!contractReviewApproved) {
-                    return Result.failure(IllegalStateException("Stage 2 Feasibility Freeze: Approved Contract Review Record (HLPL/F/MKT/01) is required before advancing to Stage 3."))
-                }
-            }
-            4 -> {
-                val docs = _documents.value
-                val hasEhwPrs = docs.any { it.docId.contains("EHW-PRS") && it.status == "Approved" }
-                val hasSalQuo = docs.any { it.docId.contains("SAL-QUO") && it.status == "Approved" }
-                if (!hasEhwPrs || !hasSalQuo) {
-                    return Result.failure(IllegalStateException("Stage 3 Requirements Baseline Freeze: All domain requirements must be approved before advancing to Stage 4."))
-                }
-            }
-            5 -> {
-                val schematicsApproved = _documents.value.any { doc ->
-                    doc.docId.contains("EHW-SCH-01") && doc.status == "Approved"
-                }
-                if (!schematicsApproved) {
-                    return Result.failure(IllegalStateException("Stage 4 Hardware Schematics Prerequisite: Approved EHW-SCH-01 is required before advancing to Stage 5+."))
-                }
-            }
-        }
-
         val updated = stages.map { stage ->
             when {
                 stage.stageNumber < targetStage -> stage.copy(status = "Approved", isLocked = false, isBlockedByPrerequisite = false)
@@ -2919,6 +2964,15 @@ class ScmsRepositoryImpl(
         )
         _auditLogs.value = listOf(auditEntry) + _auditLogs.value
         return Result.success(Unit)
+    }
+
+    override fun verifyAndAdvanceStageGateBlocking(
+        targetStage: Int,
+        comments: String,
+        evidenceJson: String?,
+        recordId: String?
+    ): Result<Unit> = kotlinx.coroutines.runBlocking {
+        verifyAndAdvanceStageGate(targetStage, comments, evidenceJson, recordId)
     }
 }
 

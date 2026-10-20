@@ -126,7 +126,7 @@ class ScmsRepositoryTest {
             ecoNumber = "ECO-2026-005",
             rationale = "Testing baseline promotion"
         )
-        // Must be blocked per IATF §8.3.6
+        // Must be blocked per IATF Â§8.3.6
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull()?.message?.contains("ECO Promotion Blocked") == true)
     }
@@ -257,7 +257,7 @@ class ScmsRepositoryTest {
             title = "Hero Electric Smart Fleet 4G Module",
             clientName = "Hero Electric Vehicles",
             volume = 30000,
-            projectedValueInr = "₹12.20 Cr",
+            projectedValueInr = "â‚¹12.20 Cr",
             status = "Enquiry Intake",
             sorDocId = "HLPL-HEV-RFQ-2026",
             isOpportunity = true
@@ -640,7 +640,7 @@ class ScmsRepositoryTest {
     }
 
     @Test
-    fun testOperationalStageGateAdvancementAndPrerequisites() {
+    fun testOperationalStageGateAdvancementAndPrerequisites() = kotlinx.coroutines.runBlocking {
         // Current seed starts at Stage 4 (In Progress)
         val initialStages = repository.apqpStages.value
         val stage4 = initialStages.find { it.stageNumber == 4 }!!
@@ -683,6 +683,20 @@ class ScmsRepositoryTest {
         val auditLogs = repository.auditLogs.value
         assertTrue("Must record STAGE_GATE_ADVANCE audit", auditLogs.any { it.action == "STAGE_GATE_ADVANCE" })
         assertTrue("Must record STAGE_GATE_REGRESSION audit", auditLogs.any { it.action == "STAGE_GATE_REGRESSION" })
+    }
+
+    @Test
+    fun testAuthoritativeBackendGateAdvancementFailsWithoutAuth() = kotlinx.coroutines.runBlocking {
+        // When supabaseClient is wired but no authenticated session exists, gate advancement fails closed with AUTH_REQUIRED
+        val repoWithBackend = ScmsRepositoryImpl(
+            secureStorage = null,
+            supabaseClient = com.example.myapplication.data.remote.SupabaseClient()
+        )
+        val result = repoWithBackend.verifyAndAdvanceStageGate(5, "Attempt without authentication")
+        assertTrue("Unauthenticated stage gate advancement must fail", result.isFailure)
+        val ex = result.exceptionOrNull()
+        assertTrue("Must throw SecurityException for AUTH_REQUIRED", ex is SecurityException)
+        assertTrue("Error message must indicate AUTH_REQUIRED", ex?.message?.contains("AUTH_REQUIRED") == true)
     }
 
     @Test
