@@ -641,23 +641,24 @@ class ScmsRepositoryTest {
 
     @Test
     fun testOperationalStageGateAdvancementAndPrerequisites() = kotlinx.coroutines.runBlocking {
+        val testRecordId = "c8f2b7a0-3d14-4b5c-9c9e-5e8f1b2a3c4d"
         // Current seed starts at Stage 4 (In Progress)
         val initialStages = repository.apqpStages.value
         val stage4 = initialStages.find { it.stageNumber == 4 }!!
         assertEquals("In Progress", stage4.status)
 
         // 1. Idempotent advance: advancing to same current stage returns success
-        val sameStageResult = repository.verifyAndAdvanceStageGate(4, "Re-triggering stage 4 check")
+        val sameStageResult = repository.verifyAndAdvanceStageGate(4, "Re-triggering stage 4 check", recordId = testRecordId)
         assertTrue("Idempotent check must succeed", sameStageResult.isSuccess)
 
         // 2. Cannot skip stages (jumping from 4 to 6 is denied)
-        val skipResult = repository.verifyAndAdvanceStageGate(6, "Attempting illegal stage jump")
+        val skipResult = repository.verifyAndAdvanceStageGate(6, "Attempting illegal stage jump", recordId = testRecordId)
         assertTrue("Skipping stages must fail", skipResult.isFailure)
         assertTrue(skipResult.exceptionOrNull() is IllegalStateException)
 
         // 3. Stage 4 Prerequisite check: advancing to Stage 5 requires approved EHW-SCH-01
         // Initially EHW-SCH-01 is 'Under Review'
-        val advanceTo5Blocked = repository.verifyAndAdvanceStageGate(5, "Attempting stage 5 without approved schematics")
+        val advanceTo5Blocked = repository.verifyAndAdvanceStageGate(5, "Attempting stage 5 without approved schematics", recordId = testRecordId)
         assertTrue("Advancing to stage 5 without approved schematics must fail", advanceTo5Blocked.isFailure)
         assertTrue(advanceTo5Blocked.exceptionOrNull()?.message?.contains("EHW-SCH-01") == true)
 
@@ -665,7 +666,7 @@ class ScmsRepositoryTest {
         val docApproveResult = repository.updateControlledDocStatus("HLPL-AI4T-01-EHW-SCH-01", "Approved")
         assertTrue("Updating document status must succeed", docApproveResult.isSuccess)
 
-        val advanceTo5Allowed = repository.verifyAndAdvanceStageGate(5, "Schematic approved, unlocking SMT Pilot")
+        val advanceTo5Allowed = repository.verifyAndAdvanceStageGate(5, "Schematic approved, unlocking SMT Pilot", recordId = testRecordId)
         assertTrue("Advancing to stage 5 must succeed after schematics approval", advanceTo5Allowed.isSuccess)
 
         val updatedStages = repository.apqpStages.value
@@ -673,7 +674,7 @@ class ScmsRepositoryTest {
         assertEquals("In Progress", updatedStages.find { it.stageNumber == 5 }!!.status)
 
         // 5. Stage regression is permitted (e.g. back to stage 3 for engineering rework)
-        val regressionResult = repository.verifyAndAdvanceStageGate(3, "Engineering rework triggered by client ECO")
+        val regressionResult = repository.verifyAndAdvanceStageGate(3, "Engineering rework triggered by client ECO", recordId = testRecordId)
         assertTrue("Stage regression must be permitted", regressionResult.isSuccess)
         val regressedStages = repository.apqpStages.value
         assertEquals("In Progress", regressedStages.find { it.stageNumber == 3 }!!.status)
@@ -686,13 +687,28 @@ class ScmsRepositoryTest {
     }
 
     @Test
+    fun testStageGateFailsWhenRecordIdIsMissing() = kotlinx.coroutines.runBlocking {
+        // Omitting record ID must fail closed with PROJECT_IDENTITY_REQUIRED (no placeholder fallback)
+        val result = repository.verifyAndAdvanceStageGate(5, "Attempt without record ID", recordId = null)
+        assertTrue("Advancement without recordId must fail", result.isFailure)
+        val ex = result.exceptionOrNull()
+        assertTrue("Must throw IllegalArgumentException", ex is IllegalArgumentException)
+        assertTrue("Error message must indicate PROJECT_IDENTITY_REQUIRED", ex?.message?.contains("PROJECT_IDENTITY_REQUIRED") == true)
+
+        val blankResult = repository.verifyAndAdvanceStageGate(5, "Attempt with blank record ID", recordId = "   ")
+        assertTrue("Advancement with blank recordId must fail", blankResult.isFailure)
+        assertTrue(blankResult.exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test
     fun testAuthoritativeBackendGateAdvancementFailsWithoutAuth() = kotlinx.coroutines.runBlocking {
+        val testRecordId = "c8f2b7a0-3d14-4b5c-9c9e-5e8f1b2a3c4d"
         // When supabaseClient is wired but no authenticated session exists, gate advancement fails closed with AUTH_REQUIRED
         val repoWithBackend = ScmsRepositoryImpl(
             secureStorage = null,
             supabaseClient = com.example.myapplication.data.remote.SupabaseClient()
         )
-        val result = repoWithBackend.verifyAndAdvanceStageGate(5, "Attempt without authentication")
+        val result = repoWithBackend.verifyAndAdvanceStageGate(5, "Attempt without authentication", recordId = testRecordId)
         assertTrue("Unauthenticated stage gate advancement must fail", result.isFailure)
         val ex = result.exceptionOrNull()
         assertTrue("Must throw SecurityException for AUTH_REQUIRED", ex is SecurityException)

@@ -2854,12 +2854,17 @@ class ScmsRepositoryImpl(
             return Result.success(Unit)
         }
 
+        // Project identity verification: A valid operational record ID is strictly required
+        if (recordId.isNullOrBlank()) {
+            return Result.failure(IllegalArgumentException("PROJECT_IDENTITY_REQUIRED: A valid operational record ID is required to advance stage gates."))
+        }
+
         // Authoritative Backend Check: If supabaseClient is configured, dispatch authoritative RPC call
         if (supabaseClient != null) {
             val accessToken = secureStorage?.getAccessToken()?.takeIf { it.isNotBlank() }
                 ?: return Result.failure(SecurityException("AUTH_REQUIRED: Authenticated session required for operational stage gate advancement"))
 
-            val targetRecordId = recordId?.takeIf { it.isNotBlank() } ?: "00000000-0000-0000-0000-000000000001"
+            val targetRecordId = recordId
             val targetStageStr = "Stage $targetStage"
 
             // Construct RPC payload matching verify_and_advance_stage_gate signature:
