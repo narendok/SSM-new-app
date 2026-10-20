@@ -71,13 +71,14 @@ fun AppShell(viewModel: MainViewModel) {
     val pendingApprovalsCount = approvals.count { it.outcome == "Pending" }
 
     var showAuthDialog by remember { mutableStateOf(false) }
+    var showSharedWorkspace by remember { mutableStateOf(false) }
     var showRoleSwitcherDialog by remember { mutableStateOf(false) }
     var showScannerModal by remember { mutableStateOf(false) }
     var showAiAssistantModal by remember { mutableStateOf(false) }
     var showApprovalsModal by remember { mutableStateOf(false) }
 
-    if (authState is AuthState.Authenticated && (authState as AuthState.Authenticated).session.testMembership != null) {
-        SharedTestScreen(viewModel)
+    if (showSharedWorkspace && authState is AuthState.Authenticated && (authState as AuthState.Authenticated).session.testMembership != null) {
+        SharedTestScreen(viewModel, onBack = { showSharedWorkspace = false })
         return
     }
 
@@ -228,6 +229,11 @@ fun AppShell(viewModel: MainViewModel) {
                             contentDescription = "Refresh",
                             modifier = Modifier.size(18.dp)
                         )
+                    }
+                    if (authState is AuthState.Authenticated) {
+                        IconButton(onClick = { showSharedWorkspace = true }, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.AccountTree, contentDescription = "Shared TEST records")
+                        }
                     }
                     IconButton(
                         onClick = { showAuthDialog = true },

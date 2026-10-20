@@ -19,7 +19,7 @@ private fun JsonObject.rows(key: String) = (get(key) as? JsonArray)?.mapNotNull 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun SharedTestScreen(vm: MainViewModel) {
+fun SharedTestScreen(vm: MainViewModel, onBack: () -> Unit) {
     val snapshot by vm.sharedSnapshot.collectAsState()
     val error by vm.sharedError.collectAsState()
     val busy by vm.sharedBusy.collectAsState()
@@ -44,6 +44,7 @@ fun SharedTestScreen(vm: MainViewModel) {
     val projects = snapshot?.rows("records").orEmpty().filter { it.text("record_type") == "Project" }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        OutlinedButton(onClick = onBack) { Text("Back to dashboard") }
         Text("Shared TEST workspace", style = MaterialTheme.typography.headlineSmall)
         Text("${member?.text("display_name").orEmpty()} | $role | ${member?.text("department_code").orEmpty()}")
         Text("Server read: ${snapshot?.text("serverTime").orEmpty()}", style = MaterialTheme.typography.bodySmall)
