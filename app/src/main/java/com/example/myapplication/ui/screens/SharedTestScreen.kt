@@ -89,7 +89,7 @@ fun SharedTestScreen(vm: MainViewModel, onBack: () -> Unit) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(row.text("title").ifBlank { row.text("action") }, style = MaterialTheme.typography.titleMedium)
                         Text(listOf("reference", "record_type", "stage", "status", "outcome", "document_type", "created_at").map { row.text(it) }.filter { it.isNotBlank() }.joinToString(" | "))
-                        if (tab == "Tasks" && role != "viewer") {
+                        if (tab == "Tasks" && com.example.myapplication.data.model.SharedAccess.canUpdateTask(snapshot, row)) {
                             FlowRow { listOf("Open", "In Progress", "Complete").forEach { status ->
                                 OutlinedButton(enabled = !busy && row.text("status") != status, onClick = {
                                     vm.mutateSharedWorkspace("update_task", buildJsonObject {
@@ -102,7 +102,7 @@ fun SharedTestScreen(vm: MainViewModel, onBack: () -> Unit) {
                             Text("Evidence revision: ${row.text("evidence_revision")}")
                             val record = snapshot?.rows("records")?.find { it.text("id") == row.text("record_id") }
                             record?.let { Text("${it.text("reference")} | ${it.text("title")}\n${it["fields"] ?: ""}") }
-                            if (row.text("outcome") == "pending" && (role == "admin" || role == "department_lead")) {
+                            if (com.example.myapplication.data.model.SharedAccess.canDecide(snapshot, row)) {
                                 Row { listOf("approved", "rejected").forEach { outcome ->
                                     OutlinedButton(enabled = !busy, onClick = {
                                         vm.mutateSharedWorkspace("decide_approval", buildJsonObject {

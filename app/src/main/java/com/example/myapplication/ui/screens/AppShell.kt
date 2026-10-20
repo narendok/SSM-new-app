@@ -66,6 +66,8 @@ import com.example.myapplication.ui.viewmodel.MainViewModel
 fun AppShell(viewModel: MainViewModel) {
     val selectedTab by viewModel.selectedTab.collectAsState()
     val authState by viewModel.authState.collectAsState()
+    val sharedSnapshot by viewModel.sharedSnapshot.collectAsState()
+    val viewDepartment by viewModel.viewDepartment.collectAsState()
     val currentRole by viewModel.scmsRepository.currentRole.collectAsState()
     val approvals by viewModel.scmsRepository.approvals.collectAsState()
     val pendingApprovalsCount = approvals.count { it.outcome == "Pending" }
@@ -114,7 +116,7 @@ fun AppShell(viewModel: MainViewModel) {
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Surface(
-                                    modifier = Modifier.clickable { if (authState is AuthState.Unauthenticated) showRoleSwitcherDialog = true else showAuthDialog = true },
+                                    modifier = Modifier.clickable { showRoleSwitcherDialog = true },
                                     shape = RoundedCornerShape(6.dp),
                                     color = MaterialTheme.colorScheme.secondaryContainer,
                                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
@@ -292,10 +294,19 @@ fun AppShell(viewModel: MainViewModel) {
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
-            when (selectedTab) {
+            if (authState is AuthState.Authenticated) {
+                when (selectedTab) {
+                    0 -> AuthenticatedCommandCenter(viewModel, onSwitchDepartment = { showRoleSwitcherDialog = true }, onOpenShared = { showSharedWorkspace = true })
+                    else -> Column(Modifier.padding(20.dp)) {
+                        Text("${listOf("Command", "Inventory", "Smart BOM", "Ingest & QA", "Docs & Vault")[selectedTab]}", style = MaterialTheme.typography.titleLarge)
+                        Text("This domain is not connected to an approved live mobile contract yet. Local prototype data is not your account's operational data.")
+                        androidx.compose.material3.OutlinedButton(onClick = { showSharedWorkspace = true }) { Text("Open permitted shared records") }
+                    }
+                }
+            } else when (selectedTab) {
                 0 -> CommandCenterScreen(
                     scmsRepository = viewModel.scmsRepository,
-                    onOpenRoleSwitcher = { if (authState is AuthState.Unauthenticated) showRoleSwitcherDialog = true else showAuthDialog = true }
+                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true }
                 )
                 1 -> GovernedInventoryScreen(scmsRepository = viewModel.scmsRepository)
                 2 -> SmartBomAndPurchasingScreen(scmsRepository = viewModel.scmsRepository)
@@ -305,7 +316,22 @@ fun AppShell(viewModel: MainViewModel) {
         }
     }
 
-    if (showRoleSwitcherDialog) {
+    if (showRoleSwitcherDialog && authState is AuthState.Authenticated) {
+        androidx.compose.material3.AlertDialog(onDismissRequest = { showRoleSwitcherDialog = false },
+            title = { Text("Department view") },
+            text = { Column {
+                Text("Navigation only. Your signed-in identity and permissions stay unchanged.")
+                if ((sharedSnapshot?.get("membership") as? kotlinx.serialization.json.JsonObject)?.get("role")?.toString() == "\"admin\"") {
+                    androidx.compose.material3.TextButton(onClick = { viewModel.selectDepartment(null); showRoleSwitcherDialog = false }) { Text("All permitted departments") }
+                }
+                com.example.myapplication.data.model.SharedAccess.departments(sharedSnapshot).forEach { dept ->
+                    androidx.compose.material3.TextButton(onClick = {
+                        viewModel.selectDepartment(com.example.myapplication.data.model.SharedAccess.text(dept, "id")); showRoleSwitcherDialog = false
+                    }) { Text(com.example.myapplication.data.model.SharedAccess.text(dept, "name")) }
+                }
+            } }, confirmButton = { androidx.compose.material3.TextButton(onClick = { showRoleSwitcherDialog = false }) { Text("Close") } })
+    }
+    if (showRoleSwitcherDialog && authState !is AuthState.Authenticated) {
         RoleSwitcherDialog(
             currentRole = currentRole,
             onRoleSelected = { role ->

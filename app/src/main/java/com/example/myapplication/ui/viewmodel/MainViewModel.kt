@@ -66,6 +66,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val sharedBusy: StateFlow<Boolean> = _sharedBusy.asStateFlow()
     private val _sharedSaved = MutableStateFlow(0)
     val sharedSaved: StateFlow<Int> = _sharedSaved.asStateFlow()
+    private val _viewDepartment = MutableStateFlow<String?>(null)
+    val viewDepartment: StateFlow<String?> = _viewDepartment.asStateFlow()
+    fun selectDepartment(id: String?) {
+        val snapshot = _sharedSnapshot.value ?: return
+        val member = snapshot["membership"] as? JsonObject ?: return
+        if (id == null && member["role"]?.jsonPrimitive?.content == "admin") _viewDepartment.value = null
+        else if (com.example.myapplication.data.model.SharedAccess.departments(snapshot).any { it["id"]?.jsonPrimitive?.content == id }) _viewDepartment.value = id
+    }
     private var sharedEpoch = 0
     private var retrySignature: String? = null
     private var retryId: String? = null
@@ -114,6 +122,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             authState.collect { state ->
                 sharedEpoch++
+                _viewDepartment.value = null
+                _selectedTab.value = 0
                 _sharedSnapshot.value = null; _sharedError.value = null; _sharedBusy.value = false
                 retryId = null; retrySignature = null
                 if (state is AuthState.Authenticated) {

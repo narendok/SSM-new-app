@@ -318,3 +318,7 @@ See docs/evidence/test-account-login-2026-10-20.md. Real server sign-in with exi
 
 ## 2026-10-20 shared TEST Android increment
 Dedicated authenticated shared screen and online RPC adapter implemented. Project/task creation, task status and approval decisions connected; records/documents/audit read connected. 37 tests and assembleDebug passed. See docs/evidence/android-shared-test-2026-10-20.md for remaining integration boundaries.
+
+
+## Department access correction
+Read planning commit a66eefc. Independent department navigation and TEST sign-in; server-scoped dashboard and action controls. 40 Android unit tests + debug build passed; 14 PostgreSQL contract tests passed. See docs/evidence/android-department-access-2026-10-20.md. Device acceptance and unconnected domain contracts remain open.
