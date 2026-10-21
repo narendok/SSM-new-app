@@ -758,7 +758,8 @@ class ScmsRepositoryTest {
         assertEquals("Pending_Finance", afterDeptReq.status)
 
         // Step 2: Finance lead approves final financial disbursement
-        val ehwAllocBefore = repository.departmentAllocations.value.find { it.departmentCode == "EHW" }!!
+        val ehwAllocBefore = repository.departmentAllocations.value.find { it.departmentCode == "EHW" && it.category == initialReq.category }!!
+        val committedBefore = ehwAllocBefore.committedAmount
         val spentBefore = ehwAllocBefore.spentAmount
 
         val finResult = repository.approveExpenseRequest("EXP-2026-004", "FIN")
@@ -767,8 +768,21 @@ class ScmsRepositoryTest {
         val approvedReq = repository.expenseRequests.value.find { it.requestId == "EXP-2026-004" }!!
         assertEquals("Approved", approvedReq.status)
 
-        val ehwAllocAfter = repository.departmentAllocations.value.find { it.departmentCode == "EHW" }!!
-        assertEquals(spentBefore + initialReq.amount, ehwAllocAfter.spentAmount, 0.001)
+        // Approval reserves committed funds; spentAmount must remain unchanged
+        val ehwAllocAfterApproval = repository.departmentAllocations.value.find { it.allocationId == ehwAllocBefore.allocationId }!!
+        assertEquals(committedBefore + initialReq.amount, ehwAllocAfterApproval.committedAmount, 0.001)
+        assertEquals(spentBefore, ehwAllocAfterApproval.spentAmount, 0.001)
+
+        // Step 3: Verified posting / settlement clears commitment and records actual spending
+        val settleResult = repository.settleExpenseRequest("EXP-2026-004")
+        assertTrue("Settlement must succeed", settleResult.isSuccess)
+
+        val settledReq = repository.expenseRequests.value.find { it.requestId == "EXP-2026-004" }!!
+        assertEquals("Settled", settledReq.status)
+
+        val ehwAllocAfterSettlement = repository.departmentAllocations.value.find { it.allocationId == ehwAllocBefore.allocationId }!!
+        assertEquals(committedBefore, ehwAllocAfterSettlement.committedAmount, 0.001)
+        assertEquals(spentBefore + initialReq.amount, ehwAllocAfterSettlement.spentAmount, 0.001)
     }
 
     @Test
@@ -822,7 +836,29 @@ class ScmsRepositoryTest {
         assertEquals(opt1VotesBefore, msgAfter2.poll!!.options.find { it.optionId == "OPT-1" }!!.votes)
         assertEquals(opt2VotesBefore + 1, msgAfter2.poll!!.options.find { it.optionId == "OPT-2" }!!.votes)
     }
+    @Test
+    fun testServiceTicketsSalesExclusion() {
+        repository.switchRole(DepartmentRole.SAL)
+        val visibleTickets = repository.serviceTickets.value
+        assertTrue("Sales must see client tickets", visibleTickets.any { it.source == "Client" })
+        assertFalse("Internal employee tickets must be strictly hidden from Sales", visibleTickets.any { it.source == "Internal" })
+    }
+
+    @Test
+    fun testServiceTicketsClientInternalNotesStripped() {
+        repository.switchRole(DepartmentRole.CLIENT)
+        val visibleTickets = repository.serviceTickets.value
+        assertTrue("Client must see client tickets", visibleTickets.isNotEmpty())
+        for (ticket in visibleTickets) {
+            assertFalse("Client must never see internal notes", ticket.replies.any { it.isInternalNote })
+        }
+    }
+
+    @Test
+    fun testServiceTicketsServiceLeadUniversalVisibility() {
+        repository.switchRole(DepartmentRole.SIT)
+        val visibleTickets = repository.serviceTickets.value
+        assertTrue("SIT lead must see internal tickets", visibleTickets.any { it.source == "Internal" })
+        assertTrue("SIT lead must see client tickets", visibleTickets.any { it.source == "Client" })
+    }
 }
-
-
-

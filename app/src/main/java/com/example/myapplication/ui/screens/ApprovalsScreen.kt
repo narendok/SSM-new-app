@@ -160,7 +160,7 @@ fun ApprovalsScreen(
                                 )
                             }
                             Text(
-                                text = "IATF 16949 §8.3.4 & ISO 9001:2015 · Department Sign-offs",
+                                text = "Department Sign-offs & Authorizations",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 10.5.sp
@@ -417,7 +417,7 @@ fun ApprovalsScreen(
                         onApprove = {
                             selectedApprovalForAction = item
                             actionType = "APPROVE"
-                            actionReasonNotes = "Sign-off verified and approved under ISO/IATF compliance."
+                            actionReasonNotes = "Sign-off verified and approved."
                         },
                         onReject = {
                             selectedApprovalForAction = item

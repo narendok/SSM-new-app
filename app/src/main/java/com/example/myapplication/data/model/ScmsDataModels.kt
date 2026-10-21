@@ -979,3 +979,38 @@ data class TravelPolicyRule(
     val flightAdvanceNoticeDays: Int,
     val webConfigVersion: String = "v2.4-WebAuthority"
 )
+
+/**
+ * Service & IT Support Tickets (Consolidated Handoff §6 / Batch C)
+ */
+@Serializable
+data class TicketReply(
+    val id: String,
+    val authorName: String,
+    val authorRole: String,
+    val isInternalNote: Boolean = false,
+    val message: String,
+    val createdAt: String
+)
+
+@Serializable
+data class ServiceTicket(
+    val id: String,
+    val reference: String,
+    val source: String, // "Internal" or "Client"
+    val requesterName: String,
+    val requesterEmail: String,
+    val requesterDepartment: String? = null,
+    val clientOrganization: String? = null,
+    val subject: String,
+    val description: String,
+    val category: String, // "Hardware Fault", "Firmware / Telemetry", "Cloud & Gateway", "Field RMA & Replacement", "IT Workstation & Network", "Facility & Power"
+    val priority: String, // "Critical", "High", "Normal", "Low"
+    val projectId: String? = null,
+    val assetId: String? = null,
+    val assignedOwner: String? = null,
+    val status: String = "Open", // "Open", "Assigned", "In Progress", "Waiting", "Resolved", "Closed"
+    val slaDueHours: Int = 24,
+    val createdAt: String = "2026-10-21T09:00:00Z",
+    val replies: List<TicketReply> = emptyList()
+)

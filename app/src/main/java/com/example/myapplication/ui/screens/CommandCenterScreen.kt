@@ -202,7 +202,7 @@ fun CommandCenterScreen(
                                 }
                             }
                             Text(
-                                text = "Expenses, Travel, POs, Deviations & Office Assets under IATF 16949 §8.3.4",
+                                text = "Expenses, Travel, POs, Deviations & Office Assets",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 10.5.sp,
@@ -271,7 +271,7 @@ fun CommandCenterScreen(
                                     color = Color(0xFFE8F5E9)
                                 ) {
                                     Text(
-                                        text = "IATF 16949",
+                                        text = "Verified",
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF2E7D32),
@@ -723,7 +723,7 @@ fun CommandCenterScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "IATF 16949 / Stage Gates",
+                    text = "Stage Gates & Lifecycle",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -827,7 +827,7 @@ fun CommandCenterScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Stage 6 Electronic Traveler • IATF 16949 §8.5.1",
+                                    text = "Stage 6 Electronic Traveler",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

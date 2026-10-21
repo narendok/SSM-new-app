@@ -110,6 +110,10 @@ fun DepartmentRecordsScreen(
     val receivingDrafts by scmsRepository.receivingDrafts.collectAsState()
     val departmentAllocations by scmsRepository.departmentAllocations.collectAsState()
     val expenseRequests by scmsRepository.expenseRequests.collectAsState()
+    val serviceTickets by scmsRepository.serviceTickets.collectAsState()
+    val employeeDirectory by scmsRepository.employeeDirectory.collectAsState()
+    val assignedPolicies by scmsRepository.assignedPolicies.collectAsState()
+    val assignedTrainings by scmsRepository.assignedTrainings.collectAsState()
 
     val selectedProject by scmsRepository.selectedProject.collectAsState()
     var selectedSubTab by remember { mutableIntStateOf(0) }
@@ -125,8 +129,10 @@ fun DepartmentRecordsScreen(
         "EMF" -> listOf("SMT Lines", "Control Plans", "Work Orders", "Receiving Drafts")
         "QA" -> listOf("DVP&R Matrix", "PPAP Level 3", "Calibration Logs", "NCR Logs")
         "FIN" -> listOf("Dept Budgets", "Expense Claims", "Invoices", "PO Ledger", "Milestone Cashflow")
+        "SIT" -> listOf("Service Tickets", "IT Assets", "Field RMA")
+        "HROPS" -> listOf("Team Directory", "Company Policies", "Training & Skills", "Facility Assets", "Dept Budgets", "Expense Claims")
         "CLIENT" -> listOf("Deliverables", "Client POs", "Support Tickets")
-        else -> listOf("All Inventory", "Dept Budgets", "Expense Claims", "Capital Assets", "Orders (POs)", "Wire Harnesses", "DVP&R Tests")
+        else -> listOf("All Inventory", "Service Tickets", "Dept Budgets", "Expense Claims", "Capital Assets", "Orders (POs)", "Wire Harnesses", "DVP&R Tests")
     }
 
     val activeSubTabIndex = if (selectedSubTab >= subTabs.size) 0 else selectedSubTab
@@ -389,6 +395,74 @@ fun DepartmentRecordsScreen(
                     }
                     items(dvprTests) { test ->
                         DvprTestCard(test = test, onClick = { selectedRecordForInspect = test })
+                    }
+                }
+
+// SERVICE & FIELD SUPPORT TICKETS
+                                subTabs[activeSubTabIndex].contains("Directory", ignoreCase = true) ||
+                subTabs[activeSubTabIndex].contains("Team", ignoreCase = true) -> {
+                    item {
+                        RecordSectionHeader(
+                            title = "Personnel & Team Directory",
+                            count = employeeDirectory.size,
+                            unit = "Employees",
+                            onAdd = { showCreateRecordModal = true }
+                        )
+                    }
+                    items(employeeDirectory) { emp ->
+                        EmployeeDirectoryCard(emp = emp, onClick = { selectedRecordForInspect = emp })
+                    }
+                }
+
+                subTabs[activeSubTabIndex].contains("Policies", ignoreCase = true) ||
+                subTabs[activeSubTabIndex].contains("Policy", ignoreCase = true) -> {
+                    item {
+                        RecordSectionHeader(
+                            title = "Organizational & Compliance Policies",
+                            count = assignedPolicies.size,
+                            unit = "Policies",
+                            onAdd = { showCreateRecordModal = true }
+                        )
+                    }
+                    items(assignedPolicies) { pol ->
+                        AssignedPolicyCard(policy = pol, onClick = { selectedRecordForInspect = pol })
+                    }
+                }
+
+                subTabs[activeSubTabIndex].contains("Training", ignoreCase = true) ||
+                subTabs[activeSubTabIndex].contains("Skill", ignoreCase = true) -> {
+                    item {
+                        RecordSectionHeader(
+                            title = "Training Curriculum & Skills",
+                            count = assignedTrainings.size,
+                            unit = "Modules",
+                            onAdd = { showCreateRecordModal = true }
+                        )
+                    }
+                    items(assignedTrainings) { trn ->
+                        AssignedTrainingCard(training = trn, onClick = { selectedRecordForInspect = trn })
+                    }
+                }
+
+                subTabs[activeSubTabIndex].contains("Tickets", ignoreCase = true) -> {
+                    item {
+                        RecordSectionHeader(
+                            title = "Service & Field Support Tickets",
+                            count = serviceTickets.size,
+                            unit = "tickets",
+                            onAdd = { showCreateRecordModal = true }
+                        )
+                    }
+                    items(serviceTickets) { ticket ->
+                        ServiceTicketCard(
+                            ticket = ticket,
+                            isClient = currentRole.isClient,
+                            canManage = currentRole == com.example.myapplication.data.model.DepartmentRole.ADMIN || currentRole == com.example.myapplication.data.model.DepartmentRole.SIT,
+                            onClick = { selectedRecordForInspect = ticket },
+                            onUpdateStatus = { newStatus ->
+                                scmsRepository.updateServiceTicketStatus(ticket.id, newStatus)
+                            }
+                        )
                     }
                 }
 
@@ -1704,6 +1778,198 @@ fun ExpenseRequestCard(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun EmployeeDirectoryCard(emp: com.example.myapplication.data.model.EmployeeDirectoryRecord, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = emp.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        text = emp.deptCode,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                }
+            }
+            Text(
+                text = "${emp.roleTitle} · ${emp.email}",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Skill: ${emp.skillMatrixLevel}",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "ID: ${emp.employeeId}",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AssignedPolicyCard(policy: com.example.myapplication.data.model.AssignedPolicyItem, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = policy.policyCode,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (policy.status == "Acknowledged") Color(0xFFE8F5E9) else Color(0xFFFFF3E0)
+                ) {
+                    Text(
+                        text = policy.status,
+                        color = if (policy.status == "Acknowledged") Color(0xFF2E7D32) else Color(0xFFE65100),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                }
+            }
+            Text(
+                text = policy.title,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = policy.summary,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Category: ${policy.category}",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Deadline: ${policy.deadline}",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AssignedTrainingCard(training: com.example.myapplication.data.model.AssignedTrainingItem, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = training.courseCode,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (training.status == "Completed") Color(0xFFE8F5E9) else Color(0xFFE3F2FD)
+                ) {
+                    Text(
+                        text = training.status,
+                        color = if (training.status == "Completed") Color(0xFF2E7D32) else Color(0xFF1565C0),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                }
+            }
+            Text(
+                text = training.title,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Trainer: ${training.trainer}",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Duration: ${training.durationHours} hrs",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }

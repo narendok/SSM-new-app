@@ -38,6 +38,8 @@ import com.example.myapplication.data.model.EmployeeDirectoryRecord
 import com.example.myapplication.data.model.AiProceduralQuery
 import com.example.myapplication.data.model.ApprovalDecisionRecord
 import com.example.myapplication.data.model.ApprovalCategory
+import com.example.myapplication.data.model.ServiceTicket
+import com.example.myapplication.data.model.TicketReply
 import com.example.myapplication.data.model.TravelPolicyRule
 import com.example.myapplication.data.model.TeamMemberItem
 import com.example.myapplication.data.model.DepartmentHandoffItem
@@ -108,6 +110,9 @@ interface ScmsRepository {
     // Human Approvals & Governance Center (Master Plan Â§26.3)
     val approvals: StateFlow<List<ApprovalDecisionRecord>>
     val travelPolicyRules: StateFlow<List<TravelPolicyRule>>
+    val serviceTickets: StateFlow<List<ServiceTicket>>
+    fun createServiceTicket(ticket: ServiceTicket): Result<String>
+    fun updateServiceTicketStatus(ticketId: String, newStatus: String): Result<Unit>
 
     fun switchRole(role: DepartmentRole)
     fun lookupMouserCatalog(mpn: String): PartComponent?
@@ -192,6 +197,7 @@ interface ScmsRepository {
 
     fun submitExpenseRequest(request: com.example.myapplication.data.model.ExpenseRequestItem): Result<String>
     fun approveExpenseRequest(requestId: String, approverRole: String): Result<String>
+    fun settleExpenseRequest(requestId: String, settleRef: String = ""): Result<String>
     fun rejectExpenseRequest(requestId: String, reason: String): Result<String>
     fun acknowledgePolicy(policyId: String): Result<String>
     fun submitTrainingQuiz(trainingId: String, scorePct: Int): Result<String>
@@ -230,6 +236,107 @@ class ScmsRepositoryImpl(
     private val _selectedProject = MutableStateFlow("HLPL-AI4T-01")
     override val selectedProject: StateFlow<String> = _selectedProject.asStateFlow()
 
+    // Service & Field Support Tickets (Consolidated Handoff §6 / Batch C)
+    private val _allTickets = MutableStateFlow(
+        listOf(
+            ServiceTicket(
+                id = "tkt-001",
+                reference = "TKT-2026-0101",
+                source = "Client",
+                requesterName = "Rohan Verma",
+                requesterEmail = "rohan.verma@tatamotors.com",
+                clientOrganization = "Tata Motors Limited",
+                subject = "AIS-140 GPS fix dropping intermittently on Ace EV Pilot Batch",
+                description = "During highway road trials between Pune and Mumbai, GPS NMEA fix drops for 3-5 seconds after aggressive regenerative braking.",
+                category = "Hardware Fault",
+                priority = "High",
+                projectId = "HLPL-AI4T-01",
+                assetId = "ast-yamaha-ys12",
+                assignedOwner = "Preeti Joshi (SIT)",
+                status = "In Progress",
+                slaDueHours = 24,
+                createdAt = "2026-10-20 09:30",
+                replies = listOf(
+                    TicketReply(
+                        id = "rep-001",
+                        authorName = "Preeti Joshi",
+                        authorRole = "Field RMA (SIT)",
+                        isInternalNote = true,
+                        message = "Internal RMA triage: EHW confirmed buck TVS diode clamp voltage is fine, but ground loop suspected.",
+                        createdAt = "2026-10-20 11:00"
+                    ),
+                    TicketReply(
+                        id = "rep-002",
+                        authorName = "Kai Morgan",
+                        authorRole = "SIT Lead",
+                        isInternalNote = false,
+                        message = "Diagnostic firmware patch v1.0.4 dispatched to Tata Motors test vehicles to capture CAN J1939 logs.",
+                        createdAt = "2026-10-20 14:15"
+                    )
+                )
+            ),
+            ServiceTicket(
+                id = "tkt-002",
+                reference = "TKT-2026-0102",
+                source = "Internal",
+                requesterName = "Avery Vale",
+                requesterEmail = "avery.vale@example.com",
+                requesterDepartment = "EHW",
+                subject = "CAD Workstation Dell Precision BSOD on Altium 3D DRC render",
+                description = "Dell Precision 5820 workstation crashes with MEMORY_MANAGEMENT BSOD when opening 8-layer rigid-flex board in Altium 24.",
+                category = "IT Workstation & Network",
+                priority = "High",
+                assetId = "ast-dell-ws-01",
+                assignedOwner = "Sameer Khan (SIT)",
+                status = "Assigned",
+                slaDueHours = 8,
+                createdAt = "2026-10-21 08:00",
+                replies = listOf(
+                    TicketReply(
+                        id = "rep-003",
+                        authorName = "Sameer Khan",
+                        authorRole = "IT Admin (SIT)",
+                        isInternalNote = true,
+                        message = "MemTest86 scheduled over lunch. Replacement 32GB ECC DIMM ready in IT stores.",
+                        createdAt = "2026-10-21 08:30"
+                    )
+                )
+            )
+        )
+    )
+
+    private val _serviceTickets = MutableStateFlow<List<ServiceTicket>>(_allTickets.value)
+    override val serviceTickets: StateFlow<List<ServiceTicket>> = _serviceTickets.asStateFlow()
+
+    private fun refreshScopedTickets() {
+        val role = _currentRole.value
+        val all = _allTickets.value
+        _serviceTickets.value = when {
+            role == DepartmentRole.ADMIN || role == DepartmentRole.SIT -> all
+            role == DepartmentRole.CLIENT -> all.filter { it.source == "Client" }
+                .map { it.copy(replies = it.replies.filter { r -> !r.isInternalNote }) }
+            role == DepartmentRole.SAL -> all.filter { it.source == "Client" }
+            else -> all.filter { it.requesterDepartment == role.code || it.requesterEmail.equals(role.email, ignoreCase = true) }
+        }
+    }
+
+    override fun createServiceTicket(ticket: ServiceTicket): Result<String> {
+        val nextList = listOf(ticket) + _allTickets.value
+        _allTickets.value = nextList
+        refreshScopedTickets()
+        return Result.success(ticket.reference)
+    }
+
+    override fun updateServiceTicketStatus(ticketId: String, newStatus: String): Result<Unit> {
+        val nextList = _allTickets.value.map {
+            if (it.id == ticketId) it.copy(status = newStatus) else it
+        }
+        _allTickets.value = nextList
+        refreshScopedTickets()
+        return Result.success(Unit)
+    }
+
+
     override fun selectProject(projectId: String) {
         _selectedProject.value = projectId
     }
@@ -267,6 +374,10 @@ class ScmsRepositoryImpl(
     // 1. Current Active Role
     private val _currentRole = MutableStateFlow(DepartmentRole.ADMIN)
     override val currentRole: StateFlow<DepartmentRole> = _currentRole.asStateFlow()
+
+    init {
+        refreshScopedTickets()
+    }
 
     // 2. 9-Stage APQP Stepper
     private val _apqpStages = MutableStateFlow(
@@ -2364,22 +2475,29 @@ class ScmsRepositoryImpl(
                     return Result.success("Department review passed by $approverRole. Forwarded to Finance.")
                 }
 
-                // If Finance or Admin directly reviewing, verify available budget
+                // If Finance or Admin directly reviewing, verify available budget and exact allocation
                 val targetAlloc = _departmentAllocations.value.find {
                     it.departmentCode.equals(req.requesterDept, ignoreCase = true) &&
+                            it.category.equals(req.category, ignoreCase = true) &&
                             (req.projectId == null || it.projectId == null || it.projectId == req.projectId)
-                } ?: _departmentAllocations.value.find { it.departmentCode.equals(req.requesterDept, ignoreCase = true) }
+                } ?: _departmentAllocations.value.find {
+                    it.departmentCode.equals(req.requesterDept, ignoreCase = true) &&
+                            it.category.equals(req.category, ignoreCase = true)
+                }
 
-                if (targetAlloc != null && req.amount > targetAlloc.availableAmount) {
+                if (targetAlloc == null) {
+                    return Result.failure(Exception("No matching budget allocation found for department ${req.requesterDept} and category ${req.category}."))
+                }
+
+                if (req.amount > targetAlloc.availableAmount) {
                     return Result.failure(Exception("Insufficient budget: Claim ₹${req.amount} exceeds available allocation ₹${targetAlloc.availableAmount} for ${targetAlloc.category}."))
                 }
 
-                if (targetAlloc != null) {
-                    _departmentAllocations.value = _departmentAllocations.value.map { alloc ->
-                        if (alloc.allocationId == targetAlloc.allocationId) {
-                            alloc.copy(spentAmount = alloc.spentAmount + req.amount)
-                        } else alloc
-                    }
+                // Final approval reserves committed funds (does NOT increment spentAmount)
+                _departmentAllocations.value = _departmentAllocations.value.map { alloc ->
+                    if (alloc.allocationId == targetAlloc.allocationId) {
+                        alloc.copy(committedAmount = alloc.committedAmount + req.amount)
+                    } else alloc
                 }
 
                 _expenseRequests.value = _expenseRequests.value.map {
@@ -2387,7 +2505,7 @@ class ScmsRepositoryImpl(
                         it.copy(status = "Approved", approvedBy = approverRole)
                     } else it
                 }
-                return Result.success("Approved by $approverRole. Deducted ₹${req.amount} from ${targetAlloc?.category ?: "Department Budget"}.")
+                return Result.success("Approved by $approverRole. Reserved ₹${req.amount} in commitment under ${targetAlloc.category}.")
             }
 
             "Pending_Finance", "Pending_Admin" -> {
@@ -2400,19 +2518,26 @@ class ScmsRepositoryImpl(
 
                 val targetAlloc = _departmentAllocations.value.find {
                     it.departmentCode.equals(req.requesterDept, ignoreCase = true) &&
+                            it.category.equals(req.category, ignoreCase = true) &&
                             (req.projectId == null || it.projectId == null || it.projectId == req.projectId)
-                } ?: _departmentAllocations.value.find { it.departmentCode.equals(req.requesterDept, ignoreCase = true) }
+                } ?: _departmentAllocations.value.find {
+                    it.departmentCode.equals(req.requesterDept, ignoreCase = true) &&
+                            it.category.equals(req.category, ignoreCase = true)
+                }
 
-                if (targetAlloc != null && req.amount > targetAlloc.availableAmount) {
+                if (targetAlloc == null) {
+                    return Result.failure(Exception("No matching budget allocation found for department ${req.requesterDept} and category ${req.category}."))
+                }
+
+                if (req.amount > targetAlloc.availableAmount) {
                     return Result.failure(Exception("Insufficient budget: Claim ₹${req.amount} exceeds available allocation ₹${targetAlloc.availableAmount} for ${targetAlloc.category}."))
                 }
 
-                if (targetAlloc != null) {
-                    _departmentAllocations.value = _departmentAllocations.value.map { alloc ->
-                        if (alloc.allocationId == targetAlloc.allocationId) {
-                            alloc.copy(spentAmount = alloc.spentAmount + req.amount)
-                        } else alloc
-                    }
+                // Final approval reserves committed funds (does NOT increment spentAmount)
+                _departmentAllocations.value = _departmentAllocations.value.map { alloc ->
+                    if (alloc.allocationId == targetAlloc.allocationId) {
+                        alloc.copy(committedAmount = alloc.committedAmount + req.amount)
+                    } else alloc
                 }
 
                 _expenseRequests.value = _expenseRequests.value.map {
@@ -2420,7 +2545,7 @@ class ScmsRepositoryImpl(
                         it.copy(status = "Approved", approvedBy = approverRole)
                     } else it
                 }
-                return Result.success("Approved by $approverRole. Deducted ₹${req.amount} from ${targetAlloc?.category ?: "Department Budget"}.")
+                return Result.success("Approved by $approverRole. Reserved ₹${req.amount} in commitment under ${targetAlloc.category}.")
             }
 
             "Approved" -> return Result.success("Claim is already approved.")
@@ -2428,12 +2553,63 @@ class ScmsRepositoryImpl(
         }
     }
 
+    override fun settleExpenseRequest(requestId: String, settleRef: String): Result<String> {
+        val req = _expenseRequests.value.find { it.requestId == requestId }
+            ?: return Result.failure(Exception("Expense request not found: $requestId"))
+
+        if (req.status != "Approved") {
+            return Result.failure(Exception("Cannot settle claim with status '${req.status}'. Only Approved claims can be posted and settled."))
+        }
+
+        val targetAlloc = _departmentAllocations.value.find {
+            it.departmentCode.equals(req.requesterDept, ignoreCase = true) &&
+                    it.category.equals(req.category, ignoreCase = true)
+        } ?: _departmentAllocations.value.find {
+            it.departmentCode.equals(req.requesterDept, ignoreCase = true)
+        }
+
+        if (targetAlloc != null) {
+            // Posting actuals clears commitment and records spent atomically (no double counting)
+            _departmentAllocations.value = _departmentAllocations.value.map { alloc ->
+                if (alloc.allocationId == targetAlloc.allocationId) {
+                    alloc.copy(
+                        committedAmount = (alloc.committedAmount - req.amount).coerceAtLeast(0.0),
+                        spentAmount = alloc.spentAmount + req.amount
+                    )
+                } else alloc
+            }
+        }
+
+        val finalRef = if (settleRef.isNotBlank()) settleRef else "FIN-SETTLE-${UUID.randomUUID().toString().take(6)}"
+        _expenseRequests.value = _expenseRequests.value.map {
+            if (it.requestId == requestId) {
+                it.copy(status = "Settled")
+            } else it
+        }
+        return Result.success("Claim settled successfully. Ref: $finalRef. Released commitment and recorded ₹${req.amount} as actual spend.")
+    }
+
     override fun rejectExpenseRequest(requestId: String, reason: String): Result<String> {
         val req = _expenseRequests.value.find { it.requestId == requestId }
             ?: return Result.failure(Exception("Expense request not found: $requestId"))
 
+        if (req.status == "Settled") {
+            return Result.failure(Exception("Cannot reject an already settled claim."))
+        }
+
+        // If previously approved, release reserved commitment
         if (req.status == "Approved") {
-            return Result.failure(Exception("Cannot reject an already approved claim."))
+            val targetAlloc = _departmentAllocations.value.find {
+                it.departmentCode.equals(req.requesterDept, ignoreCase = true) &&
+                        it.category.equals(req.category, ignoreCase = true)
+            }
+            if (targetAlloc != null) {
+                _departmentAllocations.value = _departmentAllocations.value.map { alloc ->
+                    if (alloc.allocationId == targetAlloc.allocationId) {
+                        alloc.copy(committedAmount = (alloc.committedAmount - req.amount).coerceAtLeast(0.0))
+                    } else alloc
+                }
+            }
         }
 
         _expenseRequests.value = _expenseRequests.value.map { reqItem ->
@@ -2599,6 +2775,7 @@ class ScmsRepositoryImpl(
 
     override fun switchRole(role: DepartmentRole) {
         _currentRole.value = role
+        refreshScopedTickets()
     }
 
     override fun lookupMouserCatalog(mpn: String): PartComponent? {
