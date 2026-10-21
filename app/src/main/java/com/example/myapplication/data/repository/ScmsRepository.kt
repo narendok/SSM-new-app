@@ -180,6 +180,23 @@ interface ScmsRepository {
     val selectedProject: StateFlow<String>
     fun selectProject(projectId: String)
     fun executeCrossDeptSync(): Result<String>
+
+    // Department Budgets & Self-Service
+    val departmentAllocations: StateFlow<List<com.example.myapplication.data.model.DepartmentAllocationItem>>
+    val expenseRequests: StateFlow<List<com.example.myapplication.data.model.ExpenseRequestItem>>
+    val employeeLetters: StateFlow<List<com.example.myapplication.data.model.EmployeeLetterItem>>
+    val assignedPolicies: StateFlow<List<com.example.myapplication.data.model.AssignedPolicyItem>>
+    val assignedTrainings: StateFlow<List<com.example.myapplication.data.model.AssignedTrainingItem>>
+    val assignedSurveys: StateFlow<List<com.example.myapplication.data.model.AssignedSurveyItem>>
+    val assignedAssets: StateFlow<List<com.example.myapplication.data.model.AssignedAssetItem>>
+
+    fun submitExpenseRequest(request: com.example.myapplication.data.model.ExpenseRequestItem): Result<String>
+    fun approveExpenseRequest(requestId: String, approverRole: String): Result<String>
+    fun rejectExpenseRequest(requestId: String, reason: String): Result<String>
+    fun acknowledgePolicy(policyId: String): Result<String>
+    fun submitTrainingQuiz(trainingId: String, scorePct: Int): Result<String>
+    fun submitSurvey(surveyId: String): Result<String>
+    fun castPollVote(messageId: String, optionId: String): Result<String>
 }
 
 data class WhatIfSimulationResult(
@@ -2035,6 +2052,323 @@ class ScmsRepositoryImpl(
         )
     )
     override val approvals: StateFlow<List<ApprovalDecisionRecord>> = _approvals.asStateFlow()
+    // 36B. Department Budgets & Allocations
+    private val _departmentAllocations = MutableStateFlow(
+        listOf(
+            com.example.myapplication.data.model.DepartmentAllocationItem(
+                allocationId = "ALLOC-EHW-01",
+                departmentCode = "EHW",
+                departmentName = "Hardware Engineering",
+                category = "Consumables & Lab Supplies",
+                allocatedAmount = 450000.0,
+                committedAmount = 85000.0,
+                spentAmount = 195000.0,
+                projectId = "HLPL-AI4T-01"
+            ),
+            com.example.myapplication.data.model.DepartmentAllocationItem(
+                allocationId = "ALLOC-PUR-01",
+                departmentCode = "PUR",
+                departmentName = "Purchasing & SCM",
+                category = "Consumables & Lab Supplies",
+                allocatedAmount = 350000.0,
+                committedAmount = 42000.0,
+                spentAmount = 118000.0
+            ),
+            com.example.myapplication.data.model.DepartmentAllocationItem(
+                allocationId = "ALLOC-QA-01",
+                departmentCode = "QA",
+                departmentName = "Quality Assurance & APQP",
+                category = "Maintenance & Calibration",
+                allocatedAmount = 600000.0,
+                committedAmount = 150000.0,
+                spentAmount = 220000.0,
+                projectId = "HLPL-AI4T-01"
+            ),
+            com.example.myapplication.data.model.DepartmentAllocationItem(
+                allocationId = "ALLOC-SAL-01",
+                departmentCode = "SAL",
+                departmentName = "Sales & Business Development",
+                category = "Travel & Transport",
+                allocatedAmount = 500000.0,
+                committedAmount = 90000.0,
+                spentAmount = 215000.0,
+                projectId = "HLPL-AI4T-01"
+            ),
+            com.example.myapplication.data.model.DepartmentAllocationItem(
+                allocationId = "ALLOC-FIN-01",
+                departmentCode = "FIN",
+                departmentName = "Accounts & Finance",
+                category = "Software & Subscriptions",
+                allocatedAmount = 800000.0,
+                committedAmount = 60000.0,
+                spentAmount = 520000.0
+            )
+        )
+    )
+    override val departmentAllocations: StateFlow<List<com.example.myapplication.data.model.DepartmentAllocationItem>> = _departmentAllocations.asStateFlow()
+
+    private val _expenseRequests = MutableStateFlow(
+        listOf(
+            com.example.myapplication.data.model.ExpenseRequestItem(
+                requestId = "EXP-2026-001",
+                reference = "EXP-EHW-2026-081",
+                requesterName = "Avery Vale",
+                requesterDept = "EHW",
+                category = "Consumables & Lab Supplies",
+                amount = 38500.0,
+                purpose = "Precision SMD rework nozzles and solder paste SAC305 for Stage 4 MCU rework",
+                projectId = "HLPL-AI4T-01",
+                status = "Pending_Finance",
+                currentApproverRole = "FIN Lead",
+                alternateApprover = "Executive Admin"
+            ),
+            com.example.myapplication.data.model.ExpenseRequestItem(
+                requestId = "EXP-2026-002",
+                reference = "TRV-SAL-2026-042",
+                requesterName = "Priya Sharma",
+                requesterDept = "SAL",
+                category = "Travel & Transport",
+                amount = 24800.0,
+                purpose = "Customer commercial technical sign-off meeting at Tata Motors EV Fleet Division, Pune",
+                projectId = "HLPL-AI4T-01",
+                status = "Approved",
+                currentApproverRole = "FIN Lead",
+                travelDetails = "Tata Motors Ltd, Pune (Advance: ₹20,000)"
+            ),
+            com.example.myapplication.data.model.ExpenseRequestItem(
+                requestId = "EXP-2026-003",
+                reference = "AST-QA-2026-019",
+                requesterName = "Jordan Blake",
+                requesterDept = "QA",
+                category = "Maintenance & Calibration",
+                amount = 65000.0,
+                purpose = "NABL annual calibration certificate for Chroma 8000 EOL test jig and EMI receiver",
+                projectId = "HLPL-AI4T-01",
+                status = "Pending_Admin",
+                currentApproverRole = "Executive Admin"
+            )
+        )
+    )
+    override val expenseRequests: StateFlow<List<com.example.myapplication.data.model.ExpenseRequestItem>> = _expenseRequests.asStateFlow()
+
+    private val _employeeLetters = MutableStateFlow(
+        listOf(
+            com.example.myapplication.data.model.EmployeeLetterItem(
+                letterId = "LTR-2026-001",
+                title = "Official Appointment Letter — Principal Hardware Engineer",
+                referenceNo = "HLPL/HR/2022/APT-089",
+                letterType = "Appointment",
+                effectiveDate = "2022-08-01",
+                status = "Issued",
+                signerName = "Taylor Quinn (HR Lead)",
+                summary = "Formal employment terms, compensation structure, and IATF 16949 IP assignment."
+            ),
+            com.example.myapplication.data.model.EmployeeLetterItem(
+                letterId = "LTR-2026-002",
+                title = "Promotion & Designation Elevation — Hardware Engineering Lead",
+                referenceNo = "HLPL/HR/2025/PRM-031",
+                letterType = "Promotion",
+                effectiveDate = "2025-04-01",
+                status = "Issued",
+                signerName = "Taylor Quinn (HR Lead)",
+                summary = "Promotion to Department Lead with engineering signing authority under IATF 16949 §8.3."
+            ),
+            com.example.myapplication.data.model.EmployeeLetterItem(
+                letterId = "LTR-2026-003",
+                title = "Authorized Stage-Gate Signing Authority Assignment (Rev 2)",
+                referenceNo = "HLPL/HR/2026/SOP-014",
+                letterType = "SOP_Notice",
+                effectiveDate = "2026-10-01",
+                status = "Issued",
+                signerName = "Executive Admin",
+                summary = "Statutory delegation for signing Stage 4 Hardware Schematics and BOM freezing."
+            )
+        )
+    )
+    override val employeeLetters: StateFlow<List<com.example.myapplication.data.model.EmployeeLetterItem>> = _employeeLetters.asStateFlow()
+
+    private val _assignedPolicies = MutableStateFlow(
+        listOf(
+            com.example.myapplication.data.model.AssignedPolicyItem(
+                policyId = "POL-001",
+                policyCode = "POL-IATF-08",
+                title = "IATF 16949 Automotive Product Safety & Design Verification Policy",
+                revision = "Rev 3.0",
+                category = "Quality (IATF 16949)",
+                deadline = "2026-10-15",
+                status = "Acknowledged",
+                acknowledgedAt = "2026-10-14",
+                summary = "Zero-defect verification, DFMEA risk mitigation, and prototype traceability guidelines."
+            ),
+            com.example.myapplication.data.model.AssignedPolicyItem(
+                policyId = "POL-002",
+                policyCode = "POL-SEC-04",
+                title = "ISO 27001 Engineering Intellectual Property & Clean Desk Standard",
+                revision = "Rev 2.2",
+                category = "Information Security (ISO 27001)",
+                deadline = "2026-10-31",
+                status = "Pending",
+                summary = "Protection of CAD schematics, client firmware keys, CAN telemetry credentials."
+            ),
+            com.example.myapplication.data.model.AssignedPolicyItem(
+                policyId = "POL-003",
+                policyCode = "POL-ESD-02",
+                title = "ANSI/ESD S20.20 Electrostatic Discharge Safe Handling in Electronics Labs",
+                revision = "Rev 1.4",
+                category = "Workplace Health & Safety",
+                deadline = "2026-09-10",
+                status = "Acknowledged",
+                acknowledgedAt = "2026-09-08",
+                summary = "Grounding straps, dissipative mat verification, and ionization standards."
+            )
+        )
+    )
+    override val assignedPolicies: StateFlow<List<com.example.myapplication.data.model.AssignedPolicyItem>> = _assignedPolicies.asStateFlow()
+
+    private val _assignedTrainings = MutableStateFlow(
+        listOf(
+            com.example.myapplication.data.model.AssignedTrainingItem(
+                trainingId = "TRN-001",
+                courseCode = "TRN-IATF-GATE",
+                title = "IATF 16949 & VDA 6.3 Stage-Gate Readiness & APQP Protocol",
+                category = "Automotive Standards",
+                trainer = "Jordan Blake (QA Lead)",
+                durationHours = 8.0,
+                status = "Completed",
+                scorePct = 96,
+                certificateRef = "CERT-IATF-2026-088"
+            ),
+            com.example.myapplication.data.model.AssignedTrainingItem(
+                trainingId = "TRN-002",
+                courseCode = "TRN-CAN-J1939",
+                title = "Automotive Dual-CAN J1939 & OBD-II Diagnostics Protocol",
+                category = "Automotive Standards",
+                trainer = "Devon Lane (Firmware Lead)",
+                durationHours = 6.0,
+                status = "In_Progress"
+            )
+        )
+    )
+    override val assignedTrainings: StateFlow<List<com.example.myapplication.data.model.AssignedTrainingItem>> = _assignedTrainings.asStateFlow()
+
+    private val _assignedSurveys = MutableStateFlow(
+        listOf(
+            com.example.myapplication.data.model.AssignedSurveyItem(
+                surveyId = "FRM-001",
+                formCode = "FRM-ESD-Q3",
+                title = "Q3 Ergonomics, ESD & SMT Facility Safety Inspection",
+                deadline = "2026-10-31",
+                status = "Pending",
+                isAnonymous = false,
+                description = "Periodic inspection of ESD mats, wrist straps, and soldering ventilation."
+            ),
+            com.example.myapplication.data.model.AssignedSurveyItem(
+                surveyId = "SURV-002",
+                formCode = "SURV-PULSE-26",
+                title = "Annual Automotive Engineering Team Collaboration Pulse",
+                deadline = "2026-10-20",
+                status = "Submitted",
+                isAnonymous = true,
+                description = "Anonymous feedback on cross-department handoffs, toolchains, and gate approvals."
+            )
+        )
+    )
+    override val assignedSurveys: StateFlow<List<com.example.myapplication.data.model.AssignedSurveyItem>> = _assignedSurveys.asStateFlow()
+
+    private val _assignedAssets = MutableStateFlow(
+        listOf(
+            com.example.myapplication.data.model.AssignedAssetItem(
+                assetId = "AST-001",
+                assetTag = "AST-NB-DELL-5520",
+                name = "Dell Precision 5520 Mobile Workstation (i7 / 32GB)",
+                category = "IT Computing & CAD",
+                serialNumber = "CN-0F3K88-72872",
+                conditionStatus = "Good",
+                issuedDate = "2022-08-01",
+                custodian = "Avery Vale"
+            ),
+            com.example.myapplication.data.model.AssignedAssetItem(
+                assetId = "AST-002",
+                assetTag = "AST-LAB-OSC-RIGOL",
+                name = "Rigol MSO5000 4-Channel 350MHz Mixed Signal Oscilloscope",
+                category = "Laboratory Test Equipment",
+                serialNumber = "MSO5A241100912",
+                conditionStatus = "Good",
+                issuedDate = "2023-02-15",
+                custodian = "Avery Vale"
+            ),
+            com.example.myapplication.data.model.AssignedAssetItem(
+                assetId = "AST-003",
+                assetTag = "AST-SEC-BADGE-L4",
+                name = "Smart RFID Facility Security Keycard — Level 4 Access",
+                category = "Security & Access",
+                serialNumber = "RFID-HEX-103",
+                conditionStatus = "Brand New",
+                issuedDate = "2026-01-05",
+                custodian = "Avery Vale"
+            )
+        )
+    )
+    override val assignedAssets: StateFlow<List<com.example.myapplication.data.model.AssignedAssetItem>> = _assignedAssets.asStateFlow()
+
+    override fun submitExpenseRequest(request: com.example.myapplication.data.model.ExpenseRequestItem): Result<String> {
+        _expenseRequests.value = listOf(request) + _expenseRequests.value
+        return Result.success(request.reference)
+    }
+
+    override fun approveExpenseRequest(requestId: String, approverRole: String): Result<String> {
+        _expenseRequests.value = _expenseRequests.value.map { req ->
+            if (req.requestId == requestId) {
+                req.copy(status = "Approved", approvedBy = approverRole)
+            } else req
+        }
+        return Result.success("Approved by " + approverRole)
+    }
+
+    override fun rejectExpenseRequest(requestId: String, reason: String): Result<String> {
+        _expenseRequests.value = _expenseRequests.value.map { req ->
+            if (req.requestId == requestId) {
+                req.copy(status = "Rejected")
+            } else req
+        }
+        return Result.success("Expense request rejected")
+    }
+
+    override fun acknowledgePolicy(policyId: String): Result<String> {
+        _assignedPolicies.value = _assignedPolicies.value.map { pol ->
+            if (pol.policyId == policyId) pol.copy(status = "Acknowledged") else pol
+        }
+        return Result.success("Policy acknowledged")
+    }
+
+    override fun submitTrainingQuiz(trainingId: String, scorePct: Int): Result<String> {
+        _assignedTrainings.value = _assignedTrainings.value.map { trn ->
+            if (trn.trainingId == trainingId) {
+                trn.copy(status = if (scorePct >= 80) "Completed" else "In_Progress", scorePct = scorePct, certificateRef = if (scorePct >= 80) "CERT-" else null)
+            } else trn
+        }
+        return Result.success("Quiz submitted with %")
+    }
+
+    override fun submitSurvey(surveyId: String): Result<String> {
+        _assignedSurveys.value = _assignedSurveys.value.map { surv ->
+            if (surv.surveyId == surveyId) surv.copy(status = "Submitted") else surv
+        }
+        return Result.success("Survey response recorded")
+    }
+
+    override fun castPollVote(messageId: String, optionId: String): Result<String> {
+        _chatMessages.value = _chatMessages.value.map { msg ->
+            if (msg.id == messageId && msg.poll != null) {
+                val updatedOptions = msg.poll.options.map { opt ->
+                    if (opt.optionId == optionId) opt.copy(votes = opt.votes + 1) else opt
+                }
+                msg.copy(poll = msg.poll.copy(options = updatedOptions, userVotedOptionId = optionId))
+            } else msg
+        }
+        return Result.success("Vote recorded")
+    }
+
     // 37. Team Chat & Channel Messages
     private val _chatMessages = MutableStateFlow(
         listOf(
@@ -2046,7 +2380,9 @@ class ScmsRepositoryImpl(
                 message = "Schematics netlist EHW-SCH-01 Rev B is locked. STM32G0B1VCT6 and Quectel EG915N footprints verified for SMT pilot.",
                 timestamp = "14:15",
                 isUrgent = false,
-                referenceId = "EHW-SCH-01"
+                referenceId = "EHW-SCH-01",
+                recordLinkRef = "EHW-SCH-01",
+                recordLinkTitle = "Schematics Netlist Rev B"
             ),
             TeamChatMessage(
                 id = "MSG-02",
@@ -2056,7 +2392,27 @@ class ScmsRepositoryImpl(
                 message = "SMT Line 2 reflow profiling with 10 thermal sensors scheduled for tomorrow morning. Solder paste stencil delivered.",
                 timestamp = "14:40",
                 isUrgent = false,
-                referenceId = "EMF-CP-01"
+                referenceId = "EMF-CP-01",
+                recordLinkRef = "EMF-CP-01",
+                recordLinkTitle = "SMT 10-Zone Control Plan"
+            ),
+            TeamChatMessage(
+                id = "MSG-POLL-01",
+                channel = "hlpl-ai4t-01",
+                senderName = "Avery Vale",
+                senderDept = "EHW",
+                message = "Technical poll on secondary CAN transceiver footprint compatibility before Gerber tapeout:",
+                timestamp = "14:55",
+                isUrgent = false,
+                poll = com.example.myapplication.data.model.ChatPollData(
+                    pollId = "POLL-CAN-01",
+                    question = "Select ISO 11898-2 CAN FD Transceiver for Dual-Source",
+                    options = listOf(
+                        com.example.myapplication.data.model.ChatPollOptionData("OPT-1", "TI TCAN1042V (SOIC-8)", 4),
+                        com.example.myapplication.data.model.ChatPollOptionData("OPT-2", "NXP TJA1051T (AEC-Q100)", 6),
+                        com.example.myapplication.data.model.ChatPollOptionData("OPT-3", "Microchip MCP2562FD (Vio pin)", 2)
+                    )
+                )
             ),
             TeamChatMessage(
                 id = "MSG-03",
@@ -2066,7 +2422,9 @@ class ScmsRepositoryImpl(
                 message = "ISO 7637-2 Transient Pulse 1 passed. Awaiting SMT pilot boards for CISPR 25 radiated emissions chamber test.",
                 timestamp = "15:10",
                 isUrgent = false,
-                referenceId = "QA-DVP-01"
+                referenceId = "QA-DVP-01",
+                recordLinkRef = "QA-DVP-01",
+                recordLinkTitle = "DVP&R Environmental Test Matrix"
             ),
             TeamChatMessage(
                 id = "MSG-04",
@@ -2076,7 +2434,9 @@ class ScmsRepositoryImpl(
                 message = "Quectel 4G modems 500 pcs delivered to WH-02. TI Buck regulators expected by Friday afternoon.",
                 timestamp = "15:35",
                 isUrgent = false,
-                referenceId = "HLPL-PO-2026-042"
+                referenceId = "HLPL-PO-2026-042",
+                recordLinkRef = "HLPL-PO-2026-042",
+                recordLinkTitle = "Quectel Modem PO (500 pcs)"
             ),
             TeamChatMessage(
                 id = "MSG-05",
@@ -2084,29 +2444,11 @@ class ScmsRepositoryImpl(
                 senderName = "Priya Sharma",
                 senderDept = "SAL",
                 message = "Tata Motors fleet manager Rohan Verma requested update on ARAI AIS-140 TAC certificate delivery schedule.",
-                timestamp = "16:00",
+                timestamp = "16:05",
                 isUrgent = true,
-                referenceId = "DELIV-TAC-01"
-            ),
-            TeamChatMessage(
-                id = "MSG-06",
-                channel = "cross-dept-sync",
-                senderName = "Devon Lane",
-                senderDept = "ESW",
-                message = "Firmware v2.4 CAN J1939 telemetry stack build is ready for EOL Chroma jig validation.",
-                timestamp = "16:20",
-                isUrgent = false,
-                referenceId = "TSK-06"
-            ),
-            TeamChatMessage(
-                id = "MSG-07",
-                channel = "governance-alerts",
-                senderName = "Marcus Vance",
-                senderDept = "ADMIN",
-                message = "All Stage 4 review handoffs require lead sign-off prior to Stage 5 SMT pilot build authorization.",
-                timestamp = "16:45",
-                isUrgent = true,
-                referenceId = "STAGE-5"
+                referenceId = "HLPL-AI4T-SAL-SOR-01",
+                recordLinkRef = "HLPL-AI4T-SAL-SOR-01",
+                recordLinkTitle = "Customer SOR Requirements"
             )
         )
     )

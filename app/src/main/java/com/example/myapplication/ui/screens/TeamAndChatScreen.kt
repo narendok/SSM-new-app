@@ -26,11 +26,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Poll
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Laptop
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Send
@@ -91,6 +98,13 @@ fun TeamAndChatScreen(
 
     val filteredMessages = chatMessages.filter { it.channel == activeChannel }
     val myTasks = tasks.filter { it.assignee.contains(currentRole.leadName, ignoreCase = true) || it.dept.equals(currentRole.code, ignoreCase = true) }
+    val employeeLetters by scmsRepository.employeeLetters.collectAsState()
+    val assignedPolicies by scmsRepository.assignedPolicies.collectAsState()
+    val assignedTrainings by scmsRepository.assignedTrainings.collectAsState()
+    val assignedSurveys by scmsRepository.assignedSurveys.collectAsState()
+    val assignedAssets by scmsRepository.assignedAssets.collectAsState()
+    val expenseRequests by scmsRepository.expenseRequests.collectAsState()
+    var myProfileSubTab by remember { mutableIntStateOf(0) } // 0: Letters & Policies, 1: Training & Surveys, 2: Assets & Expenses, 3: Tasks
 
     Column(
         modifier = Modifier
@@ -216,8 +230,12 @@ fun TeamAndChatScreen(
                         ) {
                             val channels = listOf(
                                 "hlpl-ai4t-01" to "#hlpl-ai4t-01 (Tata Ace EV)",
-                                "cross-dept-sync" to "#cross-dept-sync",
-                                "governance-alerts" to "#governance-alerts"
+                                "chan-general" to "#general",
+                                "chan-engineering-hw" to "#engineering-hw",
+                                "chan-purchasing-scm" to "#purchasing-scm",
+                                "chan-quality-apqp" to "#quality-apqp",
+                                "chan-fin-budgets" to "#fin-budgets",
+                                "cross-dept-sync" to "#cross-dept-sync"
                             )
                             items(channels) { (chId, label) ->
                                 val isSelected = activeChannel == chId
@@ -274,7 +292,7 @@ fun TeamAndChatScreen(
 
                         items(filteredMessages) { msg ->
                             val isMe = msg.senderName.contains(currentRole.leadName, ignoreCase = true)
-                            ChatMessageCard(msg = msg, isMe = isMe)
+                            ChatMessageCard(msg = msg, isMe = isMe, onVotePoll = { mId, oId -> scmsRepository.castPollVote(mId, oId) })
                         }
                     }
 
@@ -391,10 +409,11 @@ fun TeamAndChatScreen(
 
             2 -> {
                 // TAB 2: MY PROFILE & ACCOUNT
+                val profileSubTabs = listOf("Letters & Policies", "Training & Surveys", "Assets & Claims", "My Tasks")
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     item {
@@ -464,43 +483,312 @@ fun TeamAndChatScreen(
                         }
                     }
 
+                    // Profile Sub-tab Selector
                     item {
-                        Text(
-                            text = "My Operational Tasks (${myTasks.size})",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
+                        ScrollableTabRow(
+                            selectedTabIndex = myProfileSubTab,
+                            edgePadding = 0.dp,
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                        ) {
+                            profileSubTabs.forEachIndexed { idx, title ->
+                                Tab(
+                                    selected = myProfileSubTab == idx,
+                                    onClick = { myProfileSubTab = idx },
+                                    text = {
+                                        Text(
+                                            text = title,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (myProfileSubTab == idx) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    }
+                                )
+                            }
+                        }
                     }
 
-                    items(myTasks) { task ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(task.title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("Lane: ${task.lane} · Due: ${task.dueDate} · Priority: ${task.priority}", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
-                                }
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = if (task.isCompleted) Color(0xFFE8F5E9) else Color(0xFFE3F2FD)
+                    when (myProfileSubTab) {
+                        0 -> {
+                            // Sub-tab 0: Letters & Policies
+                            item {
+                                Text("Official HR & Governance Letters (${employeeLetters.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                            items(employeeLetters) { letter ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                                 ) {
-                                    Text(
-                                        text = if (task.isCompleted) "Completed" else "In Progress",
-                                        color = if (task.isCompleted) Color(0xFF2E7D32) else Color(0xFF1565C0),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                            Text(letter.title, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                                            Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFFE8F5E9)) {
+                                                Text(letter.status, color = Color(0xFF2E7D32), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                            }
+                                        }
+                                        Text("Ref: ${letter.referenceNo} · Effective: ${letter.effectiveDate} · Signer: ${letter.signerName}", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(letter.summary, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+
+                            item {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text("Assigned Quality & Security Policies (${assignedPolicies.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                            items(assignedPolicies) { pol ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                            Text(pol.title, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = if (pol.status == "Acknowledged") Color(0xFFE8F5E9) else Color(0xFFFFF3E0)
+                                            ) {
+                                                Text(
+                                                    text = pol.status,
+                                                    color = if (pol.status == "Acknowledged") Color(0xFF2E7D32) else Color(0xFFE65100),
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                        Text("${pol.policyCode} · ${pol.revision} · Category: ${pol.category}", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(pol.summary, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                                        if (pol.status != "Acknowledged") {
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Button(
+                                                onClick = { scmsRepository.acknowledgePolicy(pol.policyId) },
+                                                shape = RoundedCornerShape(6.dp),
+                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                modifier = Modifier.height(30.dp)
+                                            ) {
+                                                Text("Acknowledge & Sign", fontSize = 11.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        1 -> {
+                            // Sub-tab 1: Training & Surveys
+                            item {
+                                Text("Assigned Automotive Training Courses (${assignedTrainings.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                            items(assignedTrainings) { trn ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                            Text(trn.title, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = if (trn.status == "Completed") Color(0xFFE8F5E9) else Color(0xFFE3F2FD)
+                                            ) {
+                                                Text(
+                                                    text = trn.status,
+                                                    color = if (trn.status == "Completed") Color(0xFF2E7D32) else Color(0xFF1565C0),
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                        Text("Course: ${trn.courseCode} · Trainer: ${trn.trainer} · Duration: ${trn.durationHours} hrs", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
+                                        trn.certificateRef?.let { cert ->
+                                            Text("Certificate: $cert (Score: ${trn.scorePct}%)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                                        }
+
+                                        if (trn.status != "Completed") {
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Button(
+                                                onClick = { scmsRepository.submitTrainingQuiz(trn.trainingId, 95) },
+                                                shape = RoundedCornerShape(6.dp),
+                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                modifier = Modifier.height(30.dp)
+                                            ) {
+                                                Text("Take Assessment Quiz", fontSize = 11.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            item {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text("Facility Forms & Quality Surveys (${assignedSurveys.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                            items(assignedSurveys) { surv ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                            Text(surv.title, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = if (surv.status == "Submitted") Color(0xFFE8F5E9) else Color(0xFFFFF8E1)
+                                            ) {
+                                                Text(
+                                                    text = surv.status,
+                                                    color = if (surv.status == "Submitted") Color(0xFF2E7D32) else Color(0xFFF57F17),
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                        Text("Form: ${surv.formCode} · Deadline: ${surv.deadline} · ${if (surv.isAnonymous) "Anonymous" else "Named"}", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(surv.description, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                                        if (surv.status != "Submitted") {
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Button(
+                                                onClick = { scmsRepository.submitSurvey(surv.surveyId) },
+                                                shape = RoundedCornerShape(6.dp),
+                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                modifier = Modifier.height(30.dp)
+                                            ) {
+                                                Text("Submit Survey Feedback", fontSize = 11.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        2 -> {
+                            // Sub-tab 2: Assets & Claims
+                            item {
+                                Text("My Assigned Hardware & Capital Assets (${assignedAssets.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                            items(assignedAssets) { asset ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                            Text(asset.name, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                                            Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFFE8F5E9)) {
+                                                Text(asset.conditionStatus, color = Color(0xFF2E7D32), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                            }
+                                        }
+                                        Text("Tag: ${asset.assetTag} · S/N: ${asset.serialNumber} · Category: ${asset.category}", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
+                                        Text("Issued: ${asset.issuedDate} · Custodian: ${asset.custodian}", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+
+                            item {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text("My Submitted Expense Claims (${expenseRequests.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                            items(expenseRequests) { exp ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                            Text(exp.reference, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = when (exp.status) {
+                                                    "Approved" -> Color(0xFFE8F5E9)
+                                                    "Rejected" -> Color(0xFFFFEBEE)
+                                                    else -> Color(0xFFFFF8E1)
+                                                }
+                                            ) {
+                                                Text(
+                                                    text = exp.status,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = when (exp.status) {
+                                                        "Approved" -> Color(0xFF2E7D32)
+                                                        "Rejected" -> Color(0xFFC62828)
+                                                        else -> Color(0xFFF57F17)
+                                                    },
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(exp.purpose, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text("₹" + String.format(java.util.Locale.US, "%,.0f", exp.amount), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                            Text("Approver: ${exp.currentApproverRole}", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        else -> {
+                            // Sub-tab 3: Tasks
+                            item {
+                                Text(
+                                    text = "My Operational Tasks (${myTasks.size})",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            items(myTasks) { task ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(task.title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                            Text("Lane: ${task.lane} · Due: ${task.dueDate} · Priority: ${task.priority}", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
+                                        }
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = if (task.isCompleted) Color(0xFFE8F5E9) else Color(0xFFE3F2FD)
+                                        ) {
+                                            Text(
+                                                text = if (task.isCompleted) "Completed" else "In Progress",
+                                                color = if (task.isCompleted) Color(0xFF2E7D32) else Color(0xFF1565C0),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -543,7 +831,11 @@ fun TeamAndChatScreen(
 // -----------------------------------------------------------------------------
 
 @Composable
-fun ChatMessageCard(msg: TeamChatMessage, isMe: Boolean) {
+fun ChatMessageCard(
+    msg: TeamChatMessage,
+    isMe: Boolean,
+    onVotePoll: (messageId: String, optionId: String) -> Unit = { _, _ -> }
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
@@ -611,19 +903,94 @@ fun ChatMessageCard(msg: TeamChatMessage, isMe: Boolean) {
                         color = if (isMe) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                         lineHeight = 16.sp
                     )
-                    msg.referenceId?.let { ref ->
+                    // Record Link Chip
+                    msg.recordLinkRef?.let { ref ->
                         Spacer(modifier = Modifier.height(4.dp))
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
                         ) {
-                            Text(
-                                text = "Ref: $ref",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "$ref · ${msg.recordLinkTitle ?: "Linked Record"}",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                    }
+
+                    // Interactive Technical Poll
+                    msg.poll?.let { poll ->
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(6.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Poll, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Technical Poll: ${poll.question}", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                val totalVotes = poll.options.sumOf { it.votes }.coerceAtLeast(1)
+                                poll.options.forEach { opt ->
+                                    val isUserVoted = poll.userVotedOptionId == opt.optionId
+                                    val pct = (opt.votes.toFloat() / totalVotes)
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = if (isUserVoted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 2.dp)
+                                            .clickable { onVotePoll(msg.id, opt.optionId) },
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isUserVoted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                                    ) {
+                                        Column(modifier = Modifier.padding(6.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(opt.text, fontSize = 10.sp, fontWeight = if (isUserVoted) FontWeight.Bold else FontWeight.Normal)
+                                                Text("${opt.votes} votes", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                            }
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            LinearProgressIndicator(
+                                                progress = { pct },
+                                                modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(1.dp)),
+                                                color = if (isUserVoted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    msg.referenceId?.let { ref ->
+                        if (msg.recordLinkRef == null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ) {
+                                Text(
+                                    text = "Ref: $ref",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                     }
                 }

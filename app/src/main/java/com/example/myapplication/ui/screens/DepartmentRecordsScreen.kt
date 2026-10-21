@@ -108,6 +108,8 @@ fun DepartmentRecordsScreen(
     val clientDeliverables by scmsRepository.clientDeliverables.collectAsState()
     val workOrders by scmsRepository.workOrders.collectAsState()
     val receivingDrafts by scmsRepository.receivingDrafts.collectAsState()
+    val departmentAllocations by scmsRepository.departmentAllocations.collectAsState()
+    val expenseRequests by scmsRepository.expenseRequests.collectAsState()
 
     val selectedProject by scmsRepository.selectedProject.collectAsState()
     var selectedSubTab by remember { mutableIntStateOf(0) }
@@ -122,9 +124,9 @@ fun DepartmentRecordsScreen(
         "MECH" -> listOf("Wire Harnesses", "Enclosures & CAD", "Tooling & Ingress")
         "EMF" -> listOf("SMT Lines", "Control Plans", "Work Orders", "Receiving Drafts")
         "QA" -> listOf("DVP&R Matrix", "PPAP Level 3", "Calibration Logs", "NCR Logs")
-        "FIN" -> listOf("Invoices", "PO Ledger", "Milestone Cashflow")
+        "FIN" -> listOf("Dept Budgets", "Expense Claims", "Invoices", "PO Ledger", "Milestone Cashflow")
         "CLIENT" -> listOf("Deliverables", "Client POs", "Support Tickets")
-        else -> listOf("All Inventory", "Capital Assets", "Orders (POs)", "Wire Harnesses", "DVP&R Tests")
+        else -> listOf("All Inventory", "Dept Budgets", "Expense Claims", "Capital Assets", "Orders (POs)", "Wire Harnesses", "DVP&R Tests")
     }
 
     val activeSubTabIndex = if (selectedSubTab >= subTabs.size) 0 else selectedSubTab
@@ -453,6 +455,54 @@ fun DepartmentRecordsScreen(
                                 Text("Batch Qty: ${wo.batchQuantity} pcs · Station: ${wo.currentStationNo} · Completed: ${wo.completedQuantity}", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                             }
                         }
+                    }
+                }
+
+                // DEPARTMENT BUDGET ALLOCATIONS
+                subTabs[activeSubTabIndex].contains("Budgets", ignoreCase = true) -> {
+                    val filteredAllocations = departmentAllocations.filter {
+                        selectedProject == "ALL" || it.projectId == null || it.projectId == selectedProject
+                    }
+                    item {
+                        RecordSectionHeader(
+                            title = "Department FY 2026-27 Budget Allocations",
+                            count = filteredAllocations.size,
+                            unit = "allocations",
+                            onAdd = { showCreateRecordModal = true }
+                        )
+                    }
+                    items(filteredAllocations) { alloc ->
+                        DepartmentAllocationCard(allocation = alloc, onClick = { selectedRecordForInspect = alloc })
+                    }
+                }
+
+                // EXPENSE CLAIMS & REQUISITIONS
+                subTabs[activeSubTabIndex].contains("Expense", ignoreCase = true) -> {
+                    val filteredExpenses = expenseRequests.filter {
+                        selectedProject == "ALL" || it.projectId == null || it.projectId == selectedProject
+                    }
+                    item {
+                        RecordSectionHeader(
+                            title = "Department Expense Claims & Requisitions",
+                            count = filteredExpenses.size,
+                            unit = "claims",
+                            onAdd = { showCreateRecordModal = true }
+                        )
+                    }
+                    items(filteredExpenses) { expense ->
+                        ExpenseRequestCard(
+                            expense = expense,
+                            currentRoleCode = currentRole.code,
+                            onApprove = { approver ->
+                                scmsRepository.approveExpenseRequest(expense.requestId, approver)
+                                statusMessage = "Approved claim " + expense.reference
+                            },
+                            onReject = { reason ->
+                                scmsRepository.rejectExpenseRequest(expense.requestId, reason)
+                                statusMessage = "Rejected claim " + expense.reference
+                            },
+                            onClick = { selectedRecordForInspect = expense }
+                        )
                     }
                 }
 
@@ -1322,5 +1372,243 @@ fun RecordDetailInspectionView(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+
+// -----------------------------------------------------------------------------
+// Department Budget Allocation Card
+// -----------------------------------------------------------------------------
+@Composable
+fun DepartmentAllocationCard(
+    allocation: com.example.myapplication.data.model.DepartmentAllocationItem,
+    onClick: () -> Unit = {}
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = Color(0xFFE0F2FE)
+                    ) {
+                        Text(
+                            text = allocation.departmentCode,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0369A1),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = allocation.allocationId,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (allocation.availableAmount > 0) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+                ) {
+                    Text(
+                        text = "Avail: ₹" + String.format(java.util.Locale.US, "%,.0f", allocation.availableAmount),
+                        color = if (allocation.availableAmount > 0) Color(0xFF2E7D32) else Color(0xFFC62828),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = allocation.departmentName + " · " + allocation.category,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            allocation.projectId?.let { proj ->
+                Text(
+                    text = "Project Scope: " + proj,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Allocated", fontSize = 9.sp, color = MaterialTheme.colorScheme.outline)
+                    Text("₹" + String.format(java.util.Locale.US, "%,.0f", allocation.allocatedAmount), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+                Column {
+                    Text("Committed", fontSize = 9.sp, color = MaterialTheme.colorScheme.outline)
+                    Text("₹" + String.format(java.util.Locale.US, "%,.0f", allocation.committedAmount), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
+                }
+                Column {
+                    Text("Posted Actuals", fontSize = 9.sp, color = MaterialTheme.colorScheme.outline)
+                    Text("₹" + String.format(java.util.Locale.US, "%,.0f", allocation.spentAmount), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+            val spentRatio = ((allocation.spentAmount + allocation.committedAmount) / allocation.allocatedAmount.coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f)
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { spentRatio },
+                modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                color = if (spentRatio > 0.9f) Color(0xFFC62828) else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Department Expense Request Card
+// -----------------------------------------------------------------------------
+@Composable
+fun ExpenseRequestCard(
+    expense: com.example.myapplication.data.model.ExpenseRequestItem,
+    currentRoleCode: String,
+    onApprove: (String) -> Unit = {},
+    onReject: (String) -> Unit = {},
+    onClick: () -> Unit = {}
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(expense.reference, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Text(expense.requesterDept, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+                    }
+                }
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = when (expense.status) {
+                        "Approved" -> Color(0xFFE8F5E9)
+                        "Rejected" -> Color(0xFFFFEBEE)
+                        else -> Color(0xFFFFF8E1)
+                    }
+                ) {
+                    Text(
+                        text = expense.status,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = when (expense.status) {
+                            "Approved" -> Color(0xFF2E7D32)
+                            "Rejected" -> Color(0xFFC62828)
+                            else -> Color(0xFFF57F17)
+                        },
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(expense.purpose, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Claim: ₹" + String.format(java.util.Locale.US, "%,.0f", expense.amount), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                    Text("By " + expense.requesterName + " · " + expense.category, fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
+                }
+                expense.projectId?.let { proj ->
+                    Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                        Text(proj, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                    }
+                }
+            }
+
+            expense.travelDetails?.let { trv ->
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Travel / Advance: " + trv, fontSize = 10.sp, color = Color(0xFF00838F))
+            }
+
+            // Approver Action Row (No self-approval rule enforced)
+            if (expense.status.contains("Pending", ignoreCase = true)) {
+                val isSelfClaim = expense.requesterName.contains(currentRoleCode, ignoreCase = true)
+                val canApprove = (currentRoleCode == "FIN" || currentRoleCode == "ADMIN" || currentRoleCode == "MD") && !isSelfClaim
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isSelfClaim) {
+                        Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFFFFF3E0), modifier = Modifier.weight(1f)) {
+                            Text(
+                                "No self-approval: routed to " + (expense.alternateApprover ?: "Finance Lead"),
+                                fontSize = 10.sp,
+                                color = Color(0xFFE65100),
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    } else if (canApprove) {
+                        OutlinedButton(
+                            onClick = { onReject("Policy deviation") },
+                            modifier = Modifier.weight(1f).height(32.dp),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("Reject", fontSize = 11.sp, color = Color(0xFFC62828))
+                        }
+                        Button(
+                            onClick = { onApprove(currentRoleCode) },
+                            modifier = Modifier.weight(1f).height(32.dp),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(0.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                        ) {
+                            Text("Approve", fontSize = 11.sp, color = Color.White)
+                        }
+                    } else {
+                        Text(
+                            "Awaiting sign-off by: " + expense.currentApproverRole,
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+            }
+        }
     }
 }

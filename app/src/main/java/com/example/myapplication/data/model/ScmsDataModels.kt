@@ -447,6 +447,31 @@ data class AppNotification(
 /**
  * Team Discussion and Project Collaboration Message.
  */
+/**
+ * Poll Option Data for Team Chat.
+ */
+@Serializable
+data class ChatPollOptionData(
+    val optionId: String,
+    val text: String,
+    val votes: Int = 0
+)
+
+/**
+ * Technical Poll Data for Team Chat.
+ */
+@Serializable
+data class ChatPollData(
+    val pollId: String,
+    val question: String,
+    val options: List<ChatPollOptionData>,
+    val userVotedOptionId: String? = null,
+    val isClosed: Boolean = false
+)
+
+/**
+ * Team Discussion and Project Collaboration Message.
+ */
 @Serializable
 data class TeamChatMessage(
     val id: String,
@@ -456,7 +481,142 @@ data class TeamChatMessage(
     val message: String,
     val timestamp: String,
     val isUrgent: Boolean = false,
-    val referenceId: String? = null
+    val referenceId: String? = null,
+    val recordLinkRef: String? = null,
+    val recordLinkTitle: String? = null,
+    val poll: ChatPollData? = null,
+    val repliesCount: Int = 0
+)
+
+/**
+ * Department Budget Allocation Item.
+ */
+@Serializable
+data class DepartmentAllocationItem(
+    val allocationId: String,
+    val departmentCode: String,
+    val departmentName: String,
+    val period: String = "FY 2026-27 Q3",
+    val category: String,
+    val allocatedAmount: Double,
+    val committedAmount: Double = 0.0,
+    val spentAmount: Double = 0.0,
+    val projectId: String? = null,
+    val effectiveDate: String = "2026-10-01",
+    val approvedBy: String = "Finance Lead / Admin"
+) {
+    val availableAmount: Double get() = allocatedAmount - committedAmount - spentAmount
+}
+
+/**
+ * Department Expense Claim / Requisition Item.
+ */
+@Serializable
+data class ExpenseRequestItem(
+    val requestId: String,
+    val reference: String,
+    val requesterName: String,
+    val requesterDept: String,
+    val category: String,
+    val amount: Double,
+    val purpose: String,
+    val projectId: String? = null,
+    val status: String = "Pending_Approval", // "Pending_Approval", "Approved", "Rejected", "Settled"
+    val currentApproverRole: String = "FIN Lead",
+    val alternateApprover: String? = null,
+    val iatfClause: String = "IATF 16949 §8.3.4",
+    val travelDetails: String? = null,
+    val assetTag: String? = null,
+    val dateSubmitted: String = "2026-10-21",
+    val approvedBy: String? = null
+)
+
+/**
+ * Employee Letter Item.
+ */
+@Serializable
+data class EmployeeLetterItem(
+    val letterId: String,
+    val referenceNo: String,
+    val title: String,
+    val letterType: String,
+    val effectiveDate: String,
+    val status: String = "Issued",
+    val signerName: String,
+    val summary: String
+)
+
+/**
+ * Assigned Policy Item.
+ */
+@Serializable
+data class AssignedPolicyItem(
+    val policyId: String,
+    val policyCode: String,
+    val title: String,
+    val category: String,
+    val revision: String,
+    val status: String = "Pending", // "Pending", "Acknowledged"
+    val deadline: String,
+    val acknowledgedAt: String? = null,
+    val summary: String
+)
+
+/**
+ * Training Quiz Question.
+ */
+@Serializable
+data class TrainingQuizQuestion(
+    val id: String,
+    val question: String,
+    val options: List<String>,
+    val correctOptionIndex: Int
+)
+
+/**
+ * Assigned Training Item.
+ */
+@Serializable
+data class AssignedTrainingItem(
+    val trainingId: String,
+    val courseCode: String,
+    val title: String,
+    val category: String,
+    val trainer: String,
+    val durationHours: Double,
+    val status: String = "Assigned", // "Assigned", "In_Progress", "Completed"
+    val scorePct: Int? = null,
+    val certificateRef: String? = null,
+    val quizQuestions: List<TrainingQuizQuestion> = emptyList()
+)
+
+/**
+ * Assigned Form / Survey Item.
+ */
+@Serializable
+data class AssignedSurveyItem(
+    val surveyId: String,
+    val formCode: String,
+    val title: String,
+    val deadline: String,
+    val status: String = "Pending", // "Pending", "Submitted"
+    val isAnonymous: Boolean = true,
+    val description: String
+)
+
+/**
+ * Assigned Asset / Equipment Item.
+ */
+@Serializable
+data class AssignedAssetItem(
+    val assetId: String,
+    val assetTag: String,
+    val name: String,
+    val category: String,
+    val serialNumber: String,
+    val issuedDate: String,
+    val conditionStatus: String = "Good",
+    val custodian: String
 )
 
 // ==============================================================================
