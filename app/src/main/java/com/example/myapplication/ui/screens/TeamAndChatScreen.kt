@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.SupervisorAccount
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -88,12 +89,51 @@ fun TeamAndChatScreen(
 ) {
     var selectedTopTab by remember { mutableIntStateOf(0) } // 0: Project Channels & Chat, 1: Team Roster & Capacity, 2: My Profile
     var activeChannel by remember { mutableStateOf("hlpl-ai4t-01") }
+
     var messageInput by remember { mutableStateOf("") }
     var isUrgentMark by remember { mutableStateOf(false) }
 
     val chatMessages by scmsRepository.chatMessages.collectAsState()
     val teamMembers by scmsRepository.teamMembers.collectAsState()
     val currentRole by scmsRepository.currentRole.collectAsState()
+
+    val channels = remember(currentRole.code) {
+        if (currentRole.code == "CLIENT") {
+            listOf("hlpl-ai4t-01" to "#hlpl-ai4t-01 (Tata Ace EV)")
+        } else if (currentRole.code in listOf("ADMIN", "MD")) {
+            listOf(
+                "hlpl-ai4t-01" to "#hlpl-ai4t-01 (Tata Ace EV)",
+                "chan-general" to "#general",
+                "chan-engineering-hw" to "#engineering-hw",
+                "chan-purchasing-scm" to "#purchasing-scm",
+                "chan-quality-apqp" to "#quality-apqp",
+                "chan-fin-budgets" to "#fin-budgets",
+                "cross-dept-sync" to "#cross-dept-sync"
+            )
+        } else {
+            val base = mutableListOf(
+                "hlpl-ai4t-01" to "#hlpl-ai4t-01 (Tata Ace EV)",
+                "chan-general" to "#general",
+                "cross-dept-sync" to "#cross-dept-sync"
+            )
+            when (currentRole.code) {
+                "EHW", "ESW", "MECH" -> base.add(2, "chan-engineering-hw" to "#engineering-hw")
+                "PUR" -> base.add(2, "chan-purchasing-scm" to "#purchasing-scm")
+                "QA", "EMF", "TST" -> base.add(2, "chan-quality-apqp" to "#quality-apqp")
+                "FIN" -> {
+                    base.add(2, "chan-fin-budgets" to "#fin-budgets")
+                    base.add(3, "chan-purchasing-scm" to "#purchasing-scm")
+                }
+                "SAL" -> base.add(2, "chan-fin-budgets" to "#fin-budgets")
+            }
+            base
+        }
+    }
+    LaunchedEffect(channels) {
+        if (channels.none { it.first == activeChannel }) {
+            activeChannel = channels.firstOrNull()?.first ?: "hlpl-ai4t-01"
+        }
+    }
     val tasks by scmsRepository.tasks.collectAsState()
 
     val filteredMessages = chatMessages.filter { it.channel == activeChannel }
@@ -105,6 +145,8 @@ fun TeamAndChatScreen(
     val assignedAssets by scmsRepository.assignedAssets.collectAsState()
     val expenseRequests by scmsRepository.expenseRequests.collectAsState()
     var myProfileSubTab by remember { mutableIntStateOf(0) } // 0: Letters & Policies, 1: Training & Surveys, 2: Assets & Expenses, 3: Tasks
+    var selectedSurveyForModal by remember { mutableStateOf<com.example.myapplication.data.model.AssignedSurveyItem?>(null) }
+    var surveyFeedbackInput by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -228,15 +270,6 @@ fun TeamAndChatScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val channels = listOf(
-                                "hlpl-ai4t-01" to "#hlpl-ai4t-01 (Tata Ace EV)",
-                                "chan-general" to "#general",
-                                "chan-engineering-hw" to "#engineering-hw",
-                                "chan-purchasing-scm" to "#purchasing-scm",
-                                "chan-quality-apqp" to "#quality-apqp",
-                                "chan-fin-budgets" to "#fin-budgets",
-                                "cross-dept-sync" to "#cross-dept-sync"
-                            )
                             items(channels) { (chId, label) ->
                                 val isSelected = activeChannel == chId
                                 Surface(
@@ -410,12 +443,72 @@ fun TeamAndChatScreen(
             2 -> {
                 // TAB 2: MY PROFILE & ACCOUNT
                 val profileSubTabs = listOf("Letters & Policies", "Training & Surveys", "Assets & Claims", "My Tasks")
+                val myLetters = employeeLetters.filter {
+                    it.title.contains(currentRole.title, ignoreCase = true) || currentRole.code in listOf("ADMIN", "MD")
+                }
+                val myAssets = assignedAssets.filter {
+                    it.custodian.contains(currentRole.leadName, ignoreCase = true) || currentRole.code in listOf("ADMIN", "MD")
+                }
+                val myExpenses = expenseRequests.filter {
+                    it.requesterName.contains(currentRole.leadName, ignoreCase = true) || it.requesterDept.equals(currentRole.code, ignoreCase = true)
+                }
+
+                if (currentRole.code == "CLIENT") {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.Lock, contentDescription = "Access Restricted", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(36.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("Access Restricted — Employee Self-Service", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        "Employee self-service, official letters, compliance training, and company asset records are restricted to internal employees. Client accounts do not have access to internal employee self-service.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    item {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "SANDBOX DEMO MODE · Changes persist in local session for evaluation. Shared sync requires authenticated Enterprise API session.",
+                                    fontSize = 9.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -664,12 +757,12 @@ fun TeamAndChatScreen(
                                         if (surv.status != "Submitted") {
                                             Spacer(modifier = Modifier.height(6.dp))
                                             Button(
-                                                onClick = { scmsRepository.submitSurvey(surv.surveyId) },
+                                                onClick = { selectedSurveyForModal = surv },
                                                 shape = RoundedCornerShape(6.dp),
                                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                                                 modifier = Modifier.height(30.dp)
                                             ) {
-                                                Text("Submit Survey Feedback", fontSize = 11.sp)
+                                                Text("Fill & Submit Survey", fontSize = 11.sp)
                                             }
                                         }
                                     }
@@ -682,7 +775,7 @@ fun TeamAndChatScreen(
                             item {
                                 Text("My Assigned Hardware & Capital Assets (${assignedAssets.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                             }
-                            items(assignedAssets) { asset ->
+                            items(myAssets) { asset ->
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(8.dp),
@@ -704,9 +797,9 @@ fun TeamAndChatScreen(
 
                             item {
                                 Spacer(modifier = Modifier.height(6.dp))
-                                Text("My Submitted Expense Claims (${expenseRequests.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                Text("My Submitted Expense Claims (${myExpenses.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                             }
-                            items(expenseRequests) { exp ->
+                            items(myExpenses) { exp ->
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(8.dp),
@@ -821,7 +914,45 @@ fun TeamAndChatScreen(
                         }
                     }
                 }
+                }
             }
+        }
+
+        selectedSurveyForModal?.let { surv ->
+            AlertDialog(
+                onDismissRequest = { selectedSurveyForModal = null },
+                title = { Text(text = surv.title, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Form: " + surv.formCode + " · Deadline: " + surv.deadline, fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                        Text(text = surv.description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = "1. Were laboratory ESD & safety compliance standards observed? [Compliant]", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        Text(text = "2. Operational feedback & suggestions:", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        OutlinedTextField(
+                            value = surveyFeedbackInput,
+                            onValueChange = { surveyFeedbackInput = it },
+                            placeholder = { Text("Enter feedback remarks...", fontSize = 11.sp) },
+                            modifier = Modifier.fillMaxWidth().height(80.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scmsRepository.submitSurvey(surv.surveyId)
+                            selectedSurveyForModal = null
+                            surveyFeedbackInput = ""
+                        }
+                    ) {
+                        Text("Submit Feedback")
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(onClick = { selectedSurveyForModal = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }
@@ -935,10 +1066,21 @@ fun ChatMessageCard(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Poll, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Technical Poll: ${poll.question}", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                        Icon(Icons.Default.Poll, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Technical Poll: ${poll.question}", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    if (poll.isClosed) {
+                                        Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFFFFEBEE)) {
+                                            Text("CLOSED", fontSize = 8.sp, fontWeight = FontWeight.Black, color = Color(0xFFC62828), modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+                                        }
+                                    }
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 val totalVotes = poll.options.sumOf { it.votes }.coerceAtLeast(1)
@@ -951,7 +1093,7 @@ fun ChatMessageCard(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(vertical = 2.dp)
-                                            .clickable { onVotePoll(msg.id, opt.optionId) },
+                                            .clickable(enabled = !poll.isClosed) { onVotePoll(msg.id, opt.optionId) },
                                         border = androidx.compose.foundation.BorderStroke(1.dp, if (isUserVoted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                                     ) {
                                         Column(modifier = Modifier.padding(6.dp)) {

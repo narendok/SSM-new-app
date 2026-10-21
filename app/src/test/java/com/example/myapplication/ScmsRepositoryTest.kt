@@ -723,6 +723,105 @@ class ScmsRepositoryTest {
         assertFalse("public or arbitrary buckets must not be approved", buckets.contains("public-files"))
         assertEquals("Max signed URL expiry must be 60 seconds", 60, com.example.myapplication.data.repository.PrivateStorageRepositoryImpl.MAX_EXPIRY_SECONDS)
     }
+
+    @Test
+    fun testDepartmentAllocationAvailableBudgetArithmetic() {
+        val alloc = repository.departmentAllocations.value.first()
+        val expectedAvailable = alloc.allocatedAmount - alloc.committedAmount - alloc.spentAmount
+        assertEquals(expectedAvailable, alloc.availableAmount, 0.001)
+    }
+
+    @Test
+    fun testExpenseApprovalRejectsClientPersona() {
+        val result = repository.approveExpenseRequest("EXP-2026-001", "CLIENT")
+        assertTrue("Client accounts must be rejected from approving expenses", result.isFailure)
+        assertTrue(result.exceptionOrNull()?.message?.contains("Client accounts have zero financial approval authority") == true)
+    }
+
+    @Test
+    fun testExpenseApprovalRejectsSelfApproval() {
+        val result = repository.approveExpenseRequest("EXP-2026-001", "Avery Vale")
+        assertTrue("Requesters must not self-approve their own claims", result.isFailure)
+        assertTrue(result.exceptionOrNull()?.message?.contains("cannot self-approve") == true)
+    }
+
+    @Test
+    fun testStagedExpenseApprovalWorkflow() {
+        // EXP-2026-004 starts at Pending_Dept_Review
+        val initialReq = repository.expenseRequests.value.find { it.requestId == "EXP-2026-004" }!!
+        assertEquals("Pending_Dept_Review", initialReq.status)
+
+        // Step 1: EHW lead approves department review
+        val deptResult = repository.approveExpenseRequest("EXP-2026-004", "EHW")
+        assertTrue("EHW lead department review must succeed", deptResult.isSuccess)
+        val afterDeptReq = repository.expenseRequests.value.find { it.requestId == "EXP-2026-004" }!!
+        assertEquals("Pending_Finance", afterDeptReq.status)
+
+        // Step 2: Finance lead approves final financial disbursement
+        val ehwAllocBefore = repository.departmentAllocations.value.find { it.departmentCode == "EHW" }!!
+        val spentBefore = ehwAllocBefore.spentAmount
+
+        val finResult = repository.approveExpenseRequest("EXP-2026-004", "FIN")
+        assertTrue("Finance disbursement approval must succeed", finResult.isSuccess)
+
+        val approvedReq = repository.expenseRequests.value.find { it.requestId == "EXP-2026-004" }!!
+        assertEquals("Approved", approvedReq.status)
+
+        val ehwAllocAfter = repository.departmentAllocations.value.find { it.departmentCode == "EHW" }!!
+        assertEquals(spentBefore + initialReq.amount, ehwAllocAfter.spentAmount, 0.001)
+    }
+
+    @Test
+    fun testExpenseApprovalRejectsOverdraftWhenExceedingAvailableBudget() {
+        val oversizedReq = com.example.myapplication.data.model.ExpenseRequestItem(
+            requestId = "EXP-OVERDRAFT-01",
+            reference = "EXP-EHW-2026-OVER",
+            requesterName = "Junior Engineer",
+            requesterDept = "EHW",
+            category = "Consumables & Lab Supplies",
+            amount = 99999999.0, // Exceeds available allocation
+            purpose = "Excessive unbudgeted hardware equipment",
+            status = "Pending_Finance"
+        )
+        repository.submitExpenseRequest(oversizedReq)
+
+        val result = repository.approveExpenseRequest("EXP-OVERDRAFT-01", "FIN")
+        assertTrue("Approval must fail when request exceeds available department allocation", result.isFailure)
+        assertTrue(result.exceptionOrNull()?.message?.contains("Insufficient budget") == true)
+    }
+
+    @Test
+    fun testPollVotingRejectsClosedPoll() {
+        val closedResult = repository.castPollVote("MSG-POLL-02", "OPT-B")
+        assertTrue("Voting on a closed poll must fail", closedResult.isFailure)
+        assertTrue(closedResult.exceptionOrNull()?.message?.contains("Voting closed") == true)
+    }
+
+    @Test
+    fun testPollVotingHandlesVoteChangeAndDeduplication() {
+        val msg = repository.chatMessages.value.find { it.id == "MSG-POLL-01" }!!
+        val opt1VotesBefore = msg.poll!!.options.find { it.optionId == "OPT-1" }!!.votes
+        val opt2VotesBefore = msg.poll!!.options.find { it.optionId == "OPT-2" }!!.votes
+
+        // Vote OPT-1
+        val vote1 = repository.castPollVote("MSG-POLL-01", "OPT-1")
+        assertTrue(vote1.isSuccess)
+        val msgAfter1 = repository.chatMessages.value.find { it.id == "MSG-POLL-01" }!!
+        assertEquals(opt1VotesBefore + 1, msgAfter1.poll!!.options.find { it.optionId == "OPT-1" }!!.votes)
+
+        // Duplicate vote on OPT-1 leaves votes unchanged
+        val voteDuplicate = repository.castPollVote("MSG-POLL-01", "OPT-1")
+        assertTrue(voteDuplicate.isSuccess)
+        val msgAfterDup = repository.chatMessages.value.find { it.id == "MSG-POLL-01" }!!
+        assertEquals(opt1VotesBefore + 1, msgAfterDup.poll!!.options.find { it.optionId == "OPT-1" }!!.votes)
+
+        // Switch vote to OPT-2
+        val vote2 = repository.castPollVote("MSG-POLL-01", "OPT-2")
+        assertTrue(vote2.isSuccess)
+        val msgAfter2 = repository.chatMessages.value.find { it.id == "MSG-POLL-01" }!!
+        assertEquals(opt1VotesBefore, msgAfter2.poll!!.options.find { it.optionId == "OPT-1" }!!.votes)
+        assertEquals(opt2VotesBefore + 1, msgAfter2.poll!!.options.find { it.optionId == "OPT-2" }!!.votes)
+    }
 }
 
 

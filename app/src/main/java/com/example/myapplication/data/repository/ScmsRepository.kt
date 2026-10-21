@@ -2146,6 +2146,19 @@ class ScmsRepositoryImpl(
                 projectId = "HLPL-AI4T-01",
                 status = "Pending_Admin",
                 currentApproverRole = "Executive Admin"
+            ),
+            com.example.myapplication.data.model.ExpenseRequestItem(
+                requestId = "EXP-2026-004",
+                reference = "EXP-EHW-2026-095",
+                requesterName = "Rohan Deshmukh",
+                requesterDept = "EHW",
+                category = "Consumables & Lab Supplies",
+                amount = 14500.0,
+                purpose = "High-temperature Kapton tape and thermal pads for ECU thermal chamber test",
+                projectId = "HLPL-AI4T-01",
+                status = "Pending_Dept_Review",
+                currentApproverRole = "EHW Lead",
+                alternateApprover = "Finance Lead"
             )
         )
     )
@@ -2317,26 +2330,123 @@ class ScmsRepositoryImpl(
     }
 
     override fun approveExpenseRequest(requestId: String, approverRole: String): Result<String> {
-        _expenseRequests.value = _expenseRequests.value.map { req ->
-            if (req.requestId == requestId) {
-                req.copy(status = "Approved", approvedBy = approverRole)
-            } else req
+        val req = _expenseRequests.value.find { it.requestId == requestId }
+            ?: return Result.failure(Exception("Expense request not found: $requestId"))
+
+        if (approverRole.equals("CLIENT", ignoreCase = true)) {
+            return Result.failure(Exception("Client accounts have zero financial approval authority."))
         }
-        return Result.success("Approved by " + approverRole)
+
+        val normApprover = approverRole.uppercase()
+        val isSelf = req.requesterName.contains(approverRole, ignoreCase = true) ||
+                (req.requesterDept.equals(normApprover, ignoreCase = true) && normApprover !in listOf("FIN", "ADMIN", "MD") && req.requesterName.contains("Lead", ignoreCase = true))
+        if (isSelf) {
+            val alt = req.alternateApprover ?: "Finance Lead / Executive Admin"
+            return Result.failure(Exception("Requesters cannot self-approve their own claims. Action routed to $alt."))
+        }
+
+        when (req.status) {
+            "Pending_Dept_Review", "Pending_Approval" -> {
+                val isDeptLead = normApprover == req.requesterDept.uppercase()
+                val isAdmin = normApprover in listOf("ADMIN", "MD")
+                val isFin = normApprover == "FIN"
+
+                if (!isDeptLead && !isAdmin && !isFin) {
+                    return Result.failure(Exception("Only ${req.requesterDept} Lead or Finance/Admin can approve department review."))
+                }
+
+                if (isDeptLead && !isAdmin && !isFin) {
+                    _expenseRequests.value = _expenseRequests.value.map {
+                        if (it.requestId == requestId) {
+                            it.copy(status = "Pending_Finance", currentApproverRole = "FIN Lead", approvedBy = approverRole)
+                        } else it
+                    }
+                    return Result.success("Department review passed by $approverRole. Forwarded to Finance.")
+                }
+
+                // If Finance or Admin directly reviewing, verify available budget
+                val targetAlloc = _departmentAllocations.value.find {
+                    it.departmentCode.equals(req.requesterDept, ignoreCase = true) &&
+                            (req.projectId == null || it.projectId == null || it.projectId == req.projectId)
+                } ?: _departmentAllocations.value.find { it.departmentCode.equals(req.requesterDept, ignoreCase = true) }
+
+                if (targetAlloc != null && req.amount > targetAlloc.availableAmount) {
+                    return Result.failure(Exception("Insufficient budget: Claim ₹${req.amount} exceeds available allocation ₹${targetAlloc.availableAmount} for ${targetAlloc.category}."))
+                }
+
+                if (targetAlloc != null) {
+                    _departmentAllocations.value = _departmentAllocations.value.map { alloc ->
+                        if (alloc.allocationId == targetAlloc.allocationId) {
+                            alloc.copy(spentAmount = alloc.spentAmount + req.amount)
+                        } else alloc
+                    }
+                }
+
+                _expenseRequests.value = _expenseRequests.value.map {
+                    if (it.requestId == requestId) {
+                        it.copy(status = "Approved", approvedBy = approverRole)
+                    } else it
+                }
+                return Result.success("Approved by $approverRole. Deducted ₹${req.amount} from ${targetAlloc?.category ?: "Department Budget"}.")
+            }
+
+            "Pending_Finance", "Pending_Admin" -> {
+                val isFin = normApprover == "FIN"
+                val isAdmin = normApprover in listOf("ADMIN", "MD")
+
+                if (!isFin && !isAdmin) {
+                    return Result.failure(Exception("Only Finance Lead or Admin can approve financial disbursement for ${req.status}."))
+                }
+
+                val targetAlloc = _departmentAllocations.value.find {
+                    it.departmentCode.equals(req.requesterDept, ignoreCase = true) &&
+                            (req.projectId == null || it.projectId == null || it.projectId == req.projectId)
+                } ?: _departmentAllocations.value.find { it.departmentCode.equals(req.requesterDept, ignoreCase = true) }
+
+                if (targetAlloc != null && req.amount > targetAlloc.availableAmount) {
+                    return Result.failure(Exception("Insufficient budget: Claim ₹${req.amount} exceeds available allocation ₹${targetAlloc.availableAmount} for ${targetAlloc.category}."))
+                }
+
+                if (targetAlloc != null) {
+                    _departmentAllocations.value = _departmentAllocations.value.map { alloc ->
+                        if (alloc.allocationId == targetAlloc.allocationId) {
+                            alloc.copy(spentAmount = alloc.spentAmount + req.amount)
+                        } else alloc
+                    }
+                }
+
+                _expenseRequests.value = _expenseRequests.value.map {
+                    if (it.requestId == requestId) {
+                        it.copy(status = "Approved", approvedBy = approverRole)
+                    } else it
+                }
+                return Result.success("Approved by $approverRole. Deducted ₹${req.amount} from ${targetAlloc?.category ?: "Department Budget"}.")
+            }
+
+            "Approved" -> return Result.success("Claim is already approved.")
+            else -> return Result.failure(Exception("Cannot approve claim with status '${req.status}'."))
+        }
     }
 
     override fun rejectExpenseRequest(requestId: String, reason: String): Result<String> {
-        _expenseRequests.value = _expenseRequests.value.map { req ->
-            if (req.requestId == requestId) {
-                req.copy(status = "Rejected")
-            } else req
+        val req = _expenseRequests.value.find { it.requestId == requestId }
+            ?: return Result.failure(Exception("Expense request not found: $requestId"))
+
+        if (req.status == "Approved") {
+            return Result.failure(Exception("Cannot reject an already approved claim."))
         }
-        return Result.success("Expense request rejected")
+
+        _expenseRequests.value = _expenseRequests.value.map { reqItem ->
+            if (reqItem.requestId == requestId) {
+                reqItem.copy(status = "Rejected")
+            } else reqItem
+        }
+        return Result.success("Expense request rejected: $reason")
     }
 
     override fun acknowledgePolicy(policyId: String): Result<String> {
         _assignedPolicies.value = _assignedPolicies.value.map { pol ->
-            if (pol.policyId == policyId) pol.copy(status = "Acknowledged") else pol
+            if (pol.policyId == policyId) pol.copy(status = "Acknowledged", acknowledgedAt = "2026-10-21") else pol
         }
         return Result.success("Policy acknowledged")
     }
@@ -2344,10 +2454,11 @@ class ScmsRepositoryImpl(
     override fun submitTrainingQuiz(trainingId: String, scorePct: Int): Result<String> {
         _assignedTrainings.value = _assignedTrainings.value.map { trn ->
             if (trn.trainingId == trainingId) {
-                trn.copy(status = if (scorePct >= 80) "Completed" else "In_Progress", scorePct = scorePct, certificateRef = if (scorePct >= 80) "CERT-" else null)
+                val cert = if (scorePct >= 80) "CERT-IATF-2026-${(1000 + (scorePct * 37) % 9000)}" else null
+                trn.copy(status = if (scorePct >= 80) "Completed" else "In_Progress", scorePct = scorePct, certificateRef = cert)
             } else trn
         }
-        return Result.success("Quiz submitted with %")
+        return Result.success("Quiz submitted with $scorePct%")
     }
 
     override fun submitSurvey(surveyId: String): Result<String> {
@@ -2358,12 +2469,24 @@ class ScmsRepositoryImpl(
     }
 
     override fun castPollVote(messageId: String, optionId: String): Result<String> {
+        val targetMsg = _chatMessages.value.find { it.id == messageId }
+        val poll = targetMsg?.poll ?: return Result.failure(Exception("Poll not found"))
+        if (poll.isClosed) {
+            return Result.failure(Exception("Voting closed. Poll results are finalized."))
+        }
+        val currentVote = poll.userVotedOptionId
+        if (currentVote == optionId) {
+            return Result.success("Vote recorded")
+        }
+        val updatedOptions = poll.options.map { opt ->
+            var delta = 0
+            if (opt.optionId == optionId) delta += 1
+            if (opt.optionId == currentVote) delta -= 1
+            opt.copy(votes = (opt.votes + delta).coerceAtLeast(0))
+        }
         _chatMessages.value = _chatMessages.value.map { msg ->
-            if (msg.id == messageId && msg.poll != null) {
-                val updatedOptions = msg.poll.options.map { opt ->
-                    if (opt.optionId == optionId) opt.copy(votes = opt.votes + 1) else opt
-                }
-                msg.copy(poll = msg.poll.copy(options = updatedOptions, userVotedOptionId = optionId))
+            if (msg.id == messageId) {
+                msg.copy(poll = poll.copy(options = updatedOptions, userVotedOptionId = optionId))
             } else msg
         }
         return Result.success("Vote recorded")
@@ -2412,6 +2535,25 @@ class ScmsRepositoryImpl(
                         com.example.myapplication.data.model.ChatPollOptionData("OPT-2", "NXP TJA1051T (AEC-Q100)", 6),
                         com.example.myapplication.data.model.ChatPollOptionData("OPT-3", "Microchip MCP2562FD (Vio pin)", 2)
                     )
+                )
+            ),
+            TeamChatMessage(
+                id = "MSG-POLL-02",
+                channel = "hlpl-ai4t-01",
+                senderName = "Marcus Vance",
+                senderDept = "ADMIN",
+                message = "Finalized governance vote on Stage 4 tapeout timeline:",
+                timestamp = "13:00",
+                isUrgent = false,
+                poll = com.example.myapplication.data.model.ChatPollData(
+                    pollId = "POLL-GOV-01",
+                    question = "Freeze Gerber tapeout on Oct 25?",
+                    options = listOf(
+                        com.example.myapplication.data.model.ChatPollOptionData("OPT-A", "Approved (Proceed)", 9),
+                        com.example.myapplication.data.model.ChatPollOptionData("OPT-B", "Hold for 48h EMC review", 1)
+                    ),
+                    userVotedOptionId = "OPT-A",
+                    isClosed = true
                 )
             ),
             TeamChatMessage(

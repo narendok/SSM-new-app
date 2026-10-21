@@ -460,49 +460,137 @@ fun DepartmentRecordsScreen(
 
                 // DEPARTMENT BUDGET ALLOCATIONS
                 subTabs[activeSubTabIndex].contains("Budgets", ignoreCase = true) -> {
-                    val filteredAllocations = departmentAllocations.filter {
-                        selectedProject == "ALL" || it.projectId == null || it.projectId == selectedProject
-                    }
-                    item {
-                        RecordSectionHeader(
-                            title = "Department FY 2026-27 Budget Allocations",
-                            count = filteredAllocations.size,
-                            unit = "allocations",
-                            onAdd = { showCreateRecordModal = true }
-                        )
-                    }
-                    items(filteredAllocations) { alloc ->
-                        DepartmentAllocationCard(allocation = alloc, onClick = { selectedRecordForInspect = alloc })
+                    if (currentRole.code == "CLIENT") {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.Lock, contentDescription = "Access Restricted", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(36.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("Access Restricted — Internal Budgets", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        "Department budgets and expense claims are internal operational controls. Client accounts do not have access to internal company finances.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        val filteredAllocations = departmentAllocations.filter {
+                            val matchesProject = selectedProject == "ALL" || it.projectId == null || it.projectId == selectedProject
+                            val matchesDept = if (currentRole.code in listOf("ADMIN", "MD", "FIN")) true else it.departmentCode.equals(currentRole.code, ignoreCase = true)
+                            matchesProject && matchesDept
+                        }
+                        item {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        "SANDBOX DEMO MODE · Changes persist in local session for evaluation. Shared sync requires authenticated Enterprise API session.",
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            RecordSectionHeader(
+                                title = "Department FY 2026-27 Budget Allocations",
+                                count = filteredAllocations.size,
+                                unit = "allocations",
+                                onAdd = { showCreateRecordModal = true }
+                            )
+                        }
+                        items(filteredAllocations) { alloc ->
+                            DepartmentAllocationCard(allocation = alloc, onClick = { selectedRecordForInspect = alloc })
+                        }
                     }
                 }
 
                 // EXPENSE CLAIMS & REQUISITIONS
                 subTabs[activeSubTabIndex].contains("Expense", ignoreCase = true) -> {
-                    val filteredExpenses = expenseRequests.filter {
-                        selectedProject == "ALL" || it.projectId == null || it.projectId == selectedProject
-                    }
-                    item {
-                        RecordSectionHeader(
-                            title = "Department Expense Claims & Requisitions",
-                            count = filteredExpenses.size,
-                            unit = "claims",
-                            onAdd = { showCreateRecordModal = true }
-                        )
-                    }
-                    items(filteredExpenses) { expense ->
-                        ExpenseRequestCard(
-                            expense = expense,
-                            currentRoleCode = currentRole.code,
-                            onApprove = { approver ->
-                                scmsRepository.approveExpenseRequest(expense.requestId, approver)
-                                statusMessage = "Approved claim " + expense.reference
-                            },
-                            onReject = { reason ->
-                                scmsRepository.rejectExpenseRequest(expense.requestId, reason)
-                                statusMessage = "Rejected claim " + expense.reference
-                            },
-                            onClick = { selectedRecordForInspect = expense }
-                        )
+                    if (currentRole.code == "CLIENT") {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.Lock, contentDescription = "Access Restricted", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(36.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("Access Restricted — Expense Claims", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        "Department budgets and expense claims are internal operational controls. Client accounts do not have access to internal company finances.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        val filteredExpenses = expenseRequests.filter {
+                            val matchesProject = selectedProject == "ALL" || it.projectId == null || it.projectId == selectedProject
+                            val matchesDept = if (currentRole.code in listOf("ADMIN", "MD", "FIN")) true else it.requesterDept.equals(currentRole.code, ignoreCase = true)
+                            matchesProject && matchesDept
+                        }
+                        item {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        "SANDBOX DEMO MODE · Changes persist in local session for evaluation. Shared sync requires authenticated Enterprise API session.",
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            RecordSectionHeader(
+                                title = "Department Expense Claims & Requisitions",
+                                count = filteredExpenses.size,
+                                unit = "claims",
+                                onAdd = { showCreateRecordModal = true }
+                            )
+                        }
+                        items(filteredExpenses) { expense ->
+                            ExpenseRequestCard(
+                                expense = expense,
+                                currentRoleCode = currentRole.code,
+                                onApprove = { approver ->
+                                    val res = scmsRepository.approveExpenseRequest(expense.requestId, approver)
+                                    statusMessage = if (res.isSuccess) res.getOrNull() else res.exceptionOrNull()?.message
+                                },
+                                onReject = { reason ->
+                                    val res = scmsRepository.rejectExpenseRequest(expense.requestId, reason)
+                                    statusMessage = if (res.isSuccess) res.getOrNull() else res.exceptionOrNull()?.message
+                                },
+                                onClick = { selectedRecordForInspect = expense }
+                            )
+                        }
                     }
                 }
 
@@ -1564,7 +1652,15 @@ fun ExpenseRequestCard(
             // Approver Action Row (No self-approval rule enforced)
             if (expense.status.contains("Pending", ignoreCase = true)) {
                 val isSelfClaim = expense.requesterName.contains(currentRoleCode, ignoreCase = true)
-                val canApprove = (currentRoleCode == "FIN" || currentRoleCode == "ADMIN" || currentRoleCode == "MD") && !isSelfClaim
+                val isDeptLead = currentRoleCode.equals(expense.requesterDept, ignoreCase = true)
+                val isFin = currentRoleCode.equals("FIN", ignoreCase = true)
+                val isAdmin = currentRoleCode in listOf("ADMIN", "MD")
+
+                val canApprove = when (expense.status) {
+                    "Pending_Dept_Review", "Pending_Approval" -> (isDeptLead || isFin || isAdmin) && !isSelfClaim
+                    "Pending_Finance", "Pending_Admin" -> (isFin || isAdmin) && !isSelfClaim
+                    else -> false
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
