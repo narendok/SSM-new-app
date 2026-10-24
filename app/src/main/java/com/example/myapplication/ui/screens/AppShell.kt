@@ -318,7 +318,8 @@ fun AppShell(viewModel: MainViewModel) {
                 )
                 1 -> DepartmentRecordsScreen(
                     scmsRepository = viewModel.scmsRepository,
-                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true }
+                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true },
+                    sharedBusinessContent = if(authState is AuthState.Authenticated) { section -> SharedBusinessScreen(viewModel, section) } else null
                 )
                 2 -> UnifiedSearchScreen(
                     scmsRepository = viewModel.scmsRepository
@@ -327,7 +328,7 @@ fun AppShell(viewModel: MainViewModel) {
                     scmsRepository = viewModel.scmsRepository,
                     onOpenRoleSwitcher = { showRoleSwitcherDialog = true }
                 )
-                4 -> TeamAndChatScreen(
+                4 -> if(authState is AuthState.Authenticated) SharedBusinessScreen(viewModel, "communication") else TeamAndChatScreen(
                     scmsRepository = viewModel.scmsRepository,
                     onOpenRoleSwitcher = { showRoleSwitcherDialog = true },
                     onOpenAuthDialog = { showAuthDialog = true }

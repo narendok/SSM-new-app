@@ -2436,11 +2436,13 @@ class ScmsRepositoryImpl(
     override val assignedAssets: StateFlow<List<com.example.myapplication.data.model.AssignedAssetItem>> = _assignedAssets.asStateFlow()
 
     override fun submitExpenseRequest(request: com.example.myapplication.data.model.ExpenseRequestItem): Result<String> {
+        if (secureStorage?.getSession() != null) return Result.failure(SecurityException("Use the authenticated shared business workflow; local TEST writes are disabled."))
         _expenseRequests.value = listOf(request) + _expenseRequests.value
         return Result.success(request.reference)
     }
 
     override fun approveExpenseRequest(requestId: String, approverRole: String): Result<String> {
+        if (secureStorage?.getSession() != null) return Result.failure(SecurityException("Use the authenticated shared business workflow; local TEST writes are disabled."))
         val req = _expenseRequests.value.find { it.requestId == requestId }
             ?: return Result.failure(Exception("Expense request not found: $requestId"))
 
@@ -2554,6 +2556,7 @@ class ScmsRepositoryImpl(
     }
 
     override fun settleExpenseRequest(requestId: String, settleRef: String): Result<String> {
+        if (secureStorage?.getSession() != null) return Result.failure(SecurityException("Use the authenticated shared business workflow; local TEST writes are disabled."))
         val req = _expenseRequests.value.find { it.requestId == requestId }
             ?: return Result.failure(Exception("Expense request not found: $requestId"))
 
@@ -2590,6 +2593,7 @@ class ScmsRepositoryImpl(
     }
 
     override fun rejectExpenseRequest(requestId: String, reason: String): Result<String> {
+        if (secureStorage?.getSession() != null) return Result.failure(SecurityException("Use the authenticated shared business workflow; local TEST writes are disabled."))
         val req = _expenseRequests.value.find { it.requestId == requestId }
             ?: return Result.failure(Exception("Expense request not found: $requestId"))
 
@@ -2621,6 +2625,7 @@ class ScmsRepositoryImpl(
     }
 
     override fun acknowledgePolicy(policyId: String): Result<String> {
+        if (secureStorage?.getSession() != null) return Result.failure(SecurityException("Use the authenticated shared business workflow; local TEST writes are disabled."))
         _assignedPolicies.value = _assignedPolicies.value.map { pol ->
             if (pol.policyId == policyId) pol.copy(status = "Acknowledged", acknowledgedAt = "2026-10-21") else pol
         }
@@ -2645,6 +2650,7 @@ class ScmsRepositoryImpl(
     }
 
     override fun castPollVote(messageId: String, optionId: String): Result<String> {
+        if (secureStorage?.getSession() != null) return Result.failure(SecurityException("Use the authenticated shared business workflow; local TEST writes are disabled."))
         val targetMsg = _chatMessages.value.find { it.id == messageId }
         val poll = targetMsg?.poll ?: return Result.failure(Exception("Poll not found"))
         if (poll.isClosed) {
@@ -4110,6 +4116,7 @@ class ScmsRepositoryImpl(
     }
 
     override fun sendChatMessage(channel: String, message: String, isUrgent: Boolean, referenceId: String?): Result<TeamChatMessage> {
+        if (secureStorage?.getSession() != null) return Result.failure(SecurityException("Use the authenticated shared business workflow; local TEST writes are disabled."))
         val newMsg = TeamChatMessage(
             id = "MSG-${UUID.randomUUID().toString().take(6).uppercase()}",
             channel = channel,

@@ -74,6 +74,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (id == null && member["role"]?.jsonPrimitive?.content == "admin") _viewDepartment.value = null
         else if (com.example.myapplication.data.model.SharedAccess.departments(snapshot).any { it["id"]?.jsonPrimitive?.content == id }) _viewDepartment.value = id
     }
+    private val businessRepository = com.example.myapplication.data.repository.SharedBusinessRepository(supabaseClient)
+    private val _businessSnapshot = MutableStateFlow<JsonObject?>(null)
+    val businessSnapshot: StateFlow<JsonObject?> = _businessSnapshot.asStateFlow()
+    private val _businessError = MutableStateFlow<String?>(null)
+    val businessError: StateFlow<String?> = _businessError.asStateFlow()
+    private val _businessBusy = MutableStateFlow(false)
+    val businessBusy: StateFlow<Boolean> = _businessBusy.asStateFlow()
+    private val _businessSaved = MutableStateFlow(0)
+    val businessSaved: StateFlow<Int> = _businessSaved.asStateFlow()
+    fun clearBusinessError() { _businessError.value = null }
+    fun refreshBusinessWorkspace() {
+        if (authState.value !is AuthState.Authenticated || _businessBusy.value) return
+        val epoch = sharedEpoch
+        _businessBusy.value = true
+        viewModelScope.launch {
+            try { val snapshot = businessRepository.load(authRepository.validAccessToken()); if(epoch == sharedEpoch) { _businessSnapshot.value = snapshot; _businessError.value = null } }
+            catch(e:Exception) { if(e is kotlinx.coroutines.CancellationException) throw e; if(epoch == sharedEpoch) { _businessSnapshot.value = null; _businessError.value = e.message ?: "Shared read failed" } }
+            finally { if(epoch == sharedEpoch) _businessBusy.value = false }
+        }
+    }
+    fun mutateBusinessWorkspace(action:String, payload:JsonObject) {
+        val user = (authState.value as? AuthState.Authenticated)?.session?.user?.id ?: return
+        if(_businessBusy.value) return
+        val signature = "business:" + action + payload.toString()
+        val requestId = try { secureStorage.sharedRequestId(user, signature) } catch (e: Exception) {
+            _businessError.value = "Cannot preserve retry identity. Nothing was sent."; return
+        }
+        val epoch = sharedEpoch
+        _businessBusy.value = true; _businessError.value = null
+        viewModelScope.launch {
+            try {
+                businessRepository.mutate(authRepository.validAccessToken(),action,payload,requestId)
+                if(epoch == sharedEpoch) {
+                    secureStorage.completeSharedRequest(user, signature)
+                    _businessSaved.value++
+                    _businessSnapshot.value = businessRepository.load(authRepository.validAccessToken())
+                }
+            } catch(e:Exception) { if(e is kotlinx.coroutines.CancellationException) throw e; if(epoch == sharedEpoch) _businessError.value = e.message ?: "Save failed; retry without changing the form" }
+            finally { if(epoch == sharedEpoch) _businessBusy.value = false }
+        }
+    }
+
     private var sharedEpoch = 0
 
     fun refreshSharedWorkspace() {
@@ -126,6 +168,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (identity != null && identity == priorIdentity) return@collect
                 priorIdentity = identity
                 sharedEpoch++
+                _businessSnapshot.value = null; _businessError.value = null; _businessBusy.value = false; _businessSaved.value = 0
                 _viewDepartment.value = null
                 _selectedTab.value = 0
                 _sharedSnapshot.value = null; _sharedError.value = null; _sharedBusy.value = false

@@ -95,7 +95,8 @@ import java.util.UUID
 @Composable
 fun DepartmentRecordsScreen(
     scmsRepository: ScmsRepository,
-    onOpenRoleSwitcher: () -> Unit = {}
+    onOpenRoleSwitcher: () -> Unit = {},
+    sharedBusinessContent: (@Composable (String) -> Unit)? = null
 ) {
     val currentRole by scmsRepository.currentRole.collectAsState()
     val parts by scmsRepository.parts.collectAsState()
@@ -136,6 +137,23 @@ fun DepartmentRecordsScreen(
     }
 
     val activeSubTabIndex = if (selectedSubTab >= subTabs.size) 0 else selectedSubTab
+
+    val sharedSection = when(subTabs[activeSubTabIndex]) {
+        "Dept Budgets", "Expense Claims" -> "budgets"
+        "Service Tickets", "Support Tickets", "Field RMA" -> "tickets"
+        "Team Directory", "Company Policies", "Training & Skills" -> "profile"
+        else -> null
+    }
+    if(sharedBusinessContent != null && sharedSection != null) {
+        Column(Modifier.fillMaxSize()) {
+            LazyRow { items(subTabs.size) { index ->
+                TextButton(onClick = { selectedSubTab = index }) { Text(subTabs[index]) }
+            } }
+            Box(Modifier.weight(1f)) { sharedBusinessContent(sharedSection) }
+        }
+        return
+    }
+
 
     Column(
         modifier = Modifier

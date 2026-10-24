@@ -33,7 +33,9 @@ data class TestMembership(
     @SerialName("organization_name") val organizationName: String,
     val role: String,
     @SerialName("department_code") val departmentCode: String? = null,
-    @SerialName("display_name") val displayName: String
+    @SerialName("display_name") val displayName: String,
+    @SerialName("organization_id") val organizationId: String = "",
+    @SerialName("membership_id") val membershipId: String = ""
 ) {
     fun workspaceRole(): DepartmentRole? = when (role) {
         "admin" -> DepartmentRole.ADMIN
