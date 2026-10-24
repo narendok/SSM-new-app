@@ -981,7 +981,7 @@ data class TravelPolicyRule(
 )
 
 /**
- * Service & IT Support Tickets (Consolidated Handoff �6 / Batch C)
+ * Service & IT Support Tickets (Consolidated Handoff �6 / Batch C)
  */
 @Serializable
 data class TicketReply(
@@ -1014,3 +1014,245 @@ data class ServiceTicket(
     val createdAt: String = "2026-10-21T09:00:00Z",
     val replies: List<TicketReply> = emptyList()
 )
+
+/**
+ * Six Realistic Lifecycle Scenarios (§14.14) & Connected Fixture Contract (§14.13)
+ */
+data class ScenarioDependencyItem(
+    val id: String,
+    val whatNeeded: String,
+    val deliverableCode: String,
+    val providerDept: String,
+    val providerLead: String,
+    val waitingDept: String,
+    val state: String,
+    val nextAction: String,
+    val criticalPath: Boolean
+)
+
+data class ProductionReconciliationItem(
+    val totalPlannedUnits: Int,
+    val lotQuantity: Int,
+    val acceptedUnits: Int,
+    val heldUnits: Int,
+    val pendingInspectionUnits: Int,
+    val remainingPlannedUnits: Int
+) {
+    val isReconciled: Boolean
+        get() = (acceptedUnits + heldUnits + pendingInspectionUnits == lotQuantity) &&
+                (totalPlannedUnits - lotQuantity == remainingPlannedUnits)
+}
+
+data class LifecycleScenarioItem(
+    val id: String,
+    val fixtureKey: String,
+    val title: String,
+    val projectCode: String? = null,
+    val enquiryCode: String? = null,
+    val isExternalClient: Boolean,
+    val clientName: String? = null,
+    val currentPosition: String,
+    val stageRemark: String,
+    val currentNextAction: String,
+    val dependencies: List<ScenarioDependencyItem>,
+    val productionReconciliation: ProductionReconciliationItem? = null
+)
+
+object LifecycleScenarios {
+    val all: List<LifecycleScenarioItem> = listOf(
+        LifecycleScenarioItem(
+            id = "S01",
+            fixtureKey = "INTERNAL-JIG",
+            title = "TEST Internal Harness & EOL Jig",
+            projectCode = "TEST-JIG-01",
+            isExternalClient = false,
+            clientName = "Internal Hexense Labs — Production Tooling",
+            currentPosition = "Internal need -> scoped requirements -> feasibility -> draft interface/fixture design; implementation in progress.",
+            stageRemark = "Harness pin mapping reviewed; fixture cover clearance remains open. Complete fit check before jig validation.",
+            currentNextAction = "Mechanical fixture clearance awaiting review by MECH lead.",
+            dependencies = listOf(
+                ScenarioDependencyItem(
+                    id = "dep-s01-1",
+                    whatNeeded = "Harness 20-Pin Continuity Schematic",
+                    deliverableCode = "HLPL-JIG-EHW-SCH-01",
+                    providerDept = "Hardware",
+                    providerLead = "Avery Vale",
+                    waitingDept = "Mechanical & Testing",
+                    state = "Approved/Frozen",
+                    nextAction = "Schematic frozen; awaiting fixture mechanical housing",
+                    criticalPath = true
+                ),
+                ScenarioDependencyItem(
+                    id = "dep-s01-2",
+                    whatNeeded = "Pogo-Pin Enclosure Clearance 3D STEP",
+                    deliverableCode = "HLPL-JIG-MECH-STP-01",
+                    providerDept = "Mechanical",
+                    providerLead = "Devin Taylor",
+                    waitingDept = "Testing (Jig Bring-up)",
+                    state = "Under Review",
+                    nextAction = "Verify 1.5mm top cover clearance with toggle clamp",
+                    criticalPath = true
+                )
+            )
+        ),
+        LifecycleScenarioItem(
+            id = "S02",
+            fixtureKey = "DECLINED-ENQUIRY",
+            title = "TEST Extended-Temperature Tracker Enquiry",
+            enquiryCode = "ENQ-2026-EXT-01",
+            projectCode = null,
+            isExternalClient = true,
+            clientName = "Nordic Fleet Logistics AB",
+            currentPosition = "Customer request -> clarification -> opportunity -> technical feasibility with documented limitations -> Sales lead closes declined with reason. Terminal enquiry outcome; NO project created.",
+            stageRemark = "Requested delivery window cannot accommodate the required qualification work; no confirmed alternate scope accepted.",
+            currentNextAction = "Terminal state reached. Archived in Sales Enquiry Register with formal declination letter sent.",
+            dependencies = listOf(
+                ScenarioDependencyItem(
+                    id = "dep-s02-1",
+                    whatNeeded = "Automotive Cold-Temp Component Sourcing",
+                    deliverableCode = "HLPL-EXT-PUR-FEAS-01",
+                    providerDept = "Purchasing",
+                    providerLead = "Morgan Reed",
+                    waitingDept = "Sales & BD",
+                    state = "Returned/Rework",
+                    nextAction = "Arrow 14-week lead-time exceeds customer 6-week window",
+                    criticalPath = true
+                )
+            )
+        ),
+        LifecycleScenarioItem(
+            id = "S03",
+            fixtureKey = "CLIENT-POC",
+            title = "TEST Fleet OBD Tracker PoC",
+            projectCode = "TEST-POC-01",
+            enquiryCode = "ENQ-2026-POC-01",
+            isExternalClient = true,
+            clientName = "Tata Motors Limited · EV Fleet Division",
+            currentPosition = "Enquiry -> qualified opportunity -> accepted scoped feasibility -> explicit project gate -> requirements/PRS draft and reviewed baseline -> prototype BOM/design/build -> initial bench evidence -> PoC delivery/evaluation.",
+            stageRemark = "Basic reporting demonstrated on the agreed test setup; ignition-state debounce feedback remains pending. PoC acceptance does not authorize mass production.",
+            currentNextAction = "Await client PoC feedback and one interface clarification regarding ignition debounce threshold.",
+            dependencies = listOf(
+                ScenarioDependencyItem(
+                    id = "dep-s03-1",
+                    whatNeeded = "Client Ignition-Line Debounce Clarification",
+                    deliverableCode = "HLPL-POC-SAL-CRD-02",
+                    providerDept = "Sales & Client",
+                    providerLead = "Priya Sharma",
+                    waitingDept = "Firmware (ESW)",
+                    state = "Under Review",
+                    nextAction = "Confirm 50ms vs 200ms debounce filter timing",
+                    criticalPath = true
+                )
+            )
+        ),
+        LifecycleScenarioItem(
+            id = "S04",
+            fixtureKey = "SYSTEM-PILOT",
+            title = "TEST Vehicle Gateway Integration Pilot",
+            projectCode = "TEST-PILOT-01",
+            enquiryCode = "ENQ-2026-VGW-01",
+            isExternalClient = true,
+            clientName = "Ashok Leyland Limited · Commercial Trucks",
+            currentPosition = "Requirements -> technical feasibility -> approved project -> hardware/firmware/mechanical design baselines -> validation -> HSI/system integration -> controlled pilot candidate -> customer pilot.",
+            stageRemark = "Bench integration complete for the agreed sample configuration; customer pilot observation period remains open.",
+            currentNextAction = "Complete 30-day customer pilot observation period across 5 trial commercial trucks.",
+            dependencies = listOf(
+                ScenarioDependencyItem(
+                    id = "dep-s04-1",
+                    whatNeeded = "Cloud Telemetry Server Ingestion Acknowledgment",
+                    deliverableCode = "HLPL-VGW-SIT-ACK-01",
+                    providerDept = "Service & IT",
+                    providerLead = "Kai Morgan",
+                    waitingDept = "QA (Compliance)",
+                    state = "Approved/Frozen",
+                    nextAction = "MQTT 3.1.1 broker operational; 99.98% packet receipt verified",
+                    criticalPath = false
+                ),
+                ScenarioDependencyItem(
+                    id = "dep-s04-2",
+                    whatNeeded = "Customer Pilot 30-Day Field Sign-off",
+                    deliverableCode = "HLPL-VGW-QA-PILOT-01",
+                    providerDept = "Quality Assurance",
+                    providerLead = "Jordan Blake",
+                    waitingDept = "Executive Admin",
+                    state = "Under Review",
+                    nextAction = "Day 19 of 30 currently logged with zero fatal resets",
+                    criticalPath = true
+                )
+            )
+        ),
+        LifecycleScenarioItem(
+            id = "S05",
+            fixtureKey = "PILOT-REFINEMENT",
+            title = "TEST Cold-Chain Tracker Pilot Refinement",
+            projectCode = "TEST-REFINEMENT-01",
+            enquiryCode = "ENQ-2026-CCT-01",
+            isExternalClient = true,
+            clientName = "TransFresh Cold Chain Solutions",
+            currentPosition = "Requirements/design/build/validation -> pilot issue -> actual simulated feedback -> linked engineering change/NCR as applicable -> refinement tasks/retest plan.",
+            stageRemark = "Pilot feedback identified intermittent alert duplication; corrective candidate is under regression review. Final customer acceptance and bulk release remain blocked.",
+            currentNextAction = "QA regression re-test of firmware patch v2.1.2 on cell handover test bench.",
+            dependencies = listOf(
+                ScenarioDependencyItem(
+                    id = "dep-s05-1",
+                    whatNeeded = "Firmware v2.1.2 Handover Debounce Patch",
+                    deliverableCode = "HLPL-CCT-FW-REL-2.1.2",
+                    providerDept = "Firmware",
+                    providerLead = "Quinn Alex",
+                    waitingDept = "QA (Regression Test)",
+                    state = "Submitted",
+                    nextAction = "Awaiting QA dual-chamber test confirmation",
+                    criticalPath = true
+                )
+            )
+        ),
+        LifecycleScenarioItem(
+            id = "S06",
+            fixtureKey = "BULK-PRODUCTION",
+            title = "TEST Rugged Fleet Tracker Production",
+            projectCode = "TEST-PROD-01",
+            enquiryCode = "ENQ-2026-RFT-01",
+            isExternalClient = true,
+            clientName = "Bharat Fleet Telematics Limited",
+            currentPosition = "Reviewed requirements and design -> verified validation -> recorded pilot acceptance -> authorized production release -> released BOM/process/control-plan baseline -> production orders/lots -> receiving/inspection/EOL/release evidence -> dispatch/receivables.",
+            stageRemark = "Hold disposition pending for five units; only accepted quantity is eligible for release.",
+            currentNextAction = "QA material review board disposition on 5 held units; release 150 accepted units to dispatch.",
+            productionReconciliation = ProductionReconciliationItem(
+                totalPlannedUnits = 500,
+                lotQuantity = 200,
+                acceptedUnits = 150,
+                heldUnits = 5,
+                pendingInspectionUnits = 45,
+                remainingPlannedUnits = 300
+            ),
+            dependencies = listOf(
+                ScenarioDependencyItem(
+                    id = "dep-s06-1",
+                    whatNeeded = "MRB Disposition on 5 SMT Rework Units",
+                    deliverableCode = "HLPL-RFT-QA-MRB-01",
+                    providerDept = "Quality Assurance",
+                    providerLead = "Jordan Blake",
+                    waitingDept = "Manufacturing (EMF)",
+                    state = "Under Review",
+                    nextAction = "Cold solder joint inspect under X-Ray machine",
+                    criticalPath = false
+                ),
+                ScenarioDependencyItem(
+                    id = "dep-s06-2",
+                    whatNeeded = "Commercial Tax Invoice for 150 Accepted Units",
+                    deliverableCode = "HLPL-RFT-FIN-INV-01",
+                    providerDept = "Finance",
+                    providerLead = "Priya Voss",
+                    waitingDept = "Client Logistics & Dispatch",
+                    state = "Submitted",
+                    nextAction = "Ready for GST e-way bill generation upon release",
+                    criticalPath = true
+                )
+            )
+        )
+    )
+
+    fun get(idOrKey: String): LifecycleScenarioItem? {
+        return all.find { it.id == idOrKey || it.fixtureKey == idOrKey || it.projectCode == idOrKey }
+    }
+}

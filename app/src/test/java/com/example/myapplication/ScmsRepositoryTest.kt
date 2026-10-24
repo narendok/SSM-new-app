@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import com.example.myapplication.data.model.DepartmentRole
+import com.example.myapplication.data.model.LifecycleScenarios
 import com.example.myapplication.data.model.PartComponent
 import com.example.myapplication.data.repository.ScmsRepositoryImpl
 import org.junit.Assert.assertEquals
@@ -860,5 +861,73 @@ class ScmsRepositoryTest {
         val visibleTickets = repository.serviceTickets.value
         assertTrue("SIT lead must see internal tickets", visibleTickets.any { it.source == "Internal" })
         assertTrue("SIT lead must see client tickets", visibleTickets.any { it.source == "Client" })
+    }
+
+    @Test
+    fun testLifecycleScenariosCountAndKeys() {
+        assertEquals(6, LifecycleScenarios.all.size)
+        val keys = LifecycleScenarios.all.map { it.fixtureKey }
+        assertTrue(keys.contains("INTERNAL-JIG"))
+        assertTrue(keys.contains("DECLINED-ENQUIRY"))
+        assertTrue(keys.contains("CLIENT-POC"))
+        assertTrue(keys.contains("SYSTEM-PILOT"))
+        assertTrue(keys.contains("PILOT-REFINEMENT"))
+        assertTrue(keys.contains("BULK-PRODUCTION"))
+    }
+
+    @Test
+    fun testScenarioS01InternalJigClientlessBoundary() {
+        val s01 = LifecycleScenarios.get("INTERNAL-JIG")
+        assertNotNull(s01)
+        assertEquals("S01", s01?.id)
+        assertEquals("TEST-JIG-01", s01?.projectCode)
+        assertFalse(s01?.isExternalClient ?: true)
+        assertFalse(s01?.isExternalClient ?: true)
+        assertTrue(s01?.dependencies?.isNotEmpty() == true)
+    }
+
+    @Test
+    fun testScenarioS02DeclinedEnquiryZeroProjectCreation() {
+        val s02 = LifecycleScenarios.get("DECLINED-ENQUIRY")
+        assertNotNull(s02)
+        assertEquals("S02", s02?.id)
+        assertEquals("ENQ-2026-EXT-01", s02?.enquiryCode)
+        assertEquals("Declined enquiry MUST NOT create a project code", null, s02?.projectCode)
+        assertTrue(s02?.isExternalClient ?: false)
+        assertTrue(s02?.currentPosition?.contains("declined") == true)
+    }
+
+    @Test
+    fun testScenarioS03ToS05Milestones() {
+        val s03 = LifecycleScenarios.get("CLIENT-POC")
+        assertNotNull(s03)
+        assertEquals("TEST-POC-01", s03?.projectCode)
+        assertTrue(s03?.isExternalClient ?: false)
+
+        val s04 = LifecycleScenarios.get("SYSTEM-PILOT")
+        assertNotNull(s04)
+        assertEquals("TEST-PILOT-01", s04?.projectCode)
+        assertTrue(s04?.isExternalClient ?: false)
+
+        val s05 = LifecycleScenarios.get("PILOT-REFINEMENT")
+        assertNotNull(s05)
+        assertEquals("TEST-REFINEMENT-01", s05?.projectCode)
+        assertTrue(s05?.dependencies?.any { it.criticalPath } == true)
+    }
+
+    @Test
+    fun testScenarioS06ProductionReconciliationExactMath() {
+        val s06 = LifecycleScenarios.get("BULK-PRODUCTION")
+        assertNotNull(s06)
+        assertEquals("TEST-PROD-01", s06?.projectCode)
+        val recon = s06?.productionReconciliation
+        assertNotNull(recon)
+        assertEquals(500, recon?.totalPlannedUnits)
+        assertEquals(200, recon?.lotQuantity)
+        assertEquals(150, recon?.acceptedUnits)
+        assertEquals(5, recon?.heldUnits)
+        assertEquals(45, recon?.pendingInspectionUnits)
+        assertEquals(300, recon?.remainingPlannedUnits)
+        assertTrue("Lot parts must reconcile: 150 + 5 + 45 == 200", recon?.isReconciled ?: false)
     }
 }
