@@ -3,6 +3,9 @@ package com.example.myapplication.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import com.example.myapplication.data.model.LifecycleScenarios
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -56,7 +59,7 @@ fun SharedTestScreen(vm: MainViewModel, onBack: () -> Unit) {
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("Projects", "Records", "Tasks", "Approvals", "Documents", "Activity").forEach { name ->
+            listOf("Projects", "Records", "Tasks", "Approvals", "Documents", "Scenarios", "Activity").forEach { name ->
                 FilterChip(selected = tab == name, onClick = { tab = name; title = ""; reference = "" }, label = { Text(name) })
             }
         }
@@ -80,6 +83,69 @@ fun SharedTestScreen(vm: MainViewModel, onBack: () -> Unit) {
                     })
                 }) { Text("Create shared task") }
             }
+            if (tab == "Scenarios") {
+                Text(
+                    text = "Lifecycle Scenarios (§14.14) & Connected Verification",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                LifecycleScenarios.all.forEach { scenario ->
+                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(
+                                    text = "${scenario.id} · ${scenario.fixtureKey}",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = scenario.projectCode ?: "No Project Created (§14.14 Invariant)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (scenario.projectCode == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(text = scenario.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                            Text(text = "Client: ${scenario.clientName ?: "Internal Tooling"}", style = MaterialTheme.typography.bodySmall)
+                            Text(text = "Position: ${scenario.currentPosition}", style = MaterialTheme.typography.bodySmall)
+                            Text(text = "Remark: ${scenario.stageRemark}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                            Text(text = "Next: ${scenario.currentNextAction}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+                            if (scenario.productionReconciliation != null) {
+                                val pr = scenario.productionReconciliation
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(8.dp)) {
+                                        Text(
+                                            text = "Reconciliation Matrix (§14.14): ${pr.acceptedUnits} Accepted + ${pr.heldUnits} Held + ${pr.pendingInspectionUnits} Pending Inspection = ${pr.lotQuantity} Lot 1 | Total Planned: ${pr.totalPlannedUnits} (Balance: ${pr.remainingPlannedUnits})",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                            if (scenario.dependencies.isNotEmpty()) {
+                                Text(
+                                    text = "Dependencies (${scenario.dependencies.size}):",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                                scenario.dependencies.forEach { dep ->
+                                    Text(
+                                        text = "• ${dep.deliverableCode}: ${dep.whatNeeded} [${dep.state}] -> ${dep.nextAction}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
             val key = when(tab) { "Projects", "Records" -> "records"; "Tasks" -> "tasks"; "Approvals" -> "approvals"; "Documents" -> "documents"; else -> "audit" }
             val rows = snapshot?.rows(key).orEmpty().filter { tab != "Projects" || it.text("record_type") == "Project" }
                 .filter { tab != "Records" || it.text("record_type") != "Project" }
@@ -114,6 +180,7 @@ fun SharedTestScreen(vm: MainViewModel, onBack: () -> Unit) {
                         }
                     }
                 }
+            }
             }
         }
     }
