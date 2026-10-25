@@ -768,12 +768,15 @@ fun DraftDocumentDialog(
     onDismiss: () -> Unit,
     onSuccess: () -> Unit
 ) {
+    val selectedProject by scmsRepository.selectedProject.collectAsState()
+    val projRef = if (selectedProject == "ALL") "HLPL-AI4T-01" else selectedProject
+
     var docType by remember { mutableStateOf("PRS") }
     var dept by remember { mutableStateOf("EHW") }
     var title by remember { mutableStateOf("") }
     var stage by remember { mutableStateOf("Stage 3") }
 
-    val autoDocId = "HLPL-AI4T-01-$dept-$docType-01"
+    val autoDocId = "$projRef-$dept-$docType-01"
 
     AlertDialog(
         onDismissRequest = onDismiss,

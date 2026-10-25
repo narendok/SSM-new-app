@@ -1184,7 +1184,7 @@ fun CreateRecordDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // Record type selector chips
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    val types = listOf("Part / Component", "Purchase Order", "Wire Harness", "DVP&R Test", "Capital Asset")
+                    val types = listOf("Part / Component", "Purchase Order", "Wire Harness", "DVP&R Test", "Capital Asset", "Controlled Doc")
                     items(types) { type ->
                         val selected = recordType == type
                         Surface(
@@ -1319,6 +1319,36 @@ fun CreateRecordDialog(
                             singleLine = true
                         )
                     }
+                    "Controlled Doc" -> {
+                        OutlinedTextField(
+                            value = field1,
+                            onValueChange = { field1 = it },
+                            label = { Text("Document ID (e.g. HLPL-AI4T-01-HROPS-CRS-01)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = field2,
+                            onValueChange = { field2 = it },
+                            label = { Text("Document Title (e.g. Competency & Safety Freeze)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = field3,
+                            onValueChange = { field3 = it },
+                            label = { Text("Department Code (e.g. HR, SAL, EHW, QA)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = field4,
+                            onValueChange = { field4 = it },
+                            label = { Text("APQP Stage (e.g. Stage 3)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
                     else -> { // Part / Component
                         OutlinedTextField(
                             value = field1,
@@ -1424,6 +1454,20 @@ fun CreateRecordDialog(
                             )
                             scmsRepository.createAsset(asset)
                             onSuccess("Successfully registered Capital Asset $aId")
+                        }
+                        "Controlled Doc" -> {
+                            val dId = if (field1.isNotBlank()) field1 else "DOC-${UUID.randomUUID().toString().take(6).uppercase()}"
+                            val doc = ControlledDoc(
+                                docId = dId,
+                                title = if (field2.isNotBlank()) field2 else "Department Controlled Document",
+                                dept = if (field3.isNotBlank()) field3 else "EHW",
+                                stage = if (field4.isNotBlank()) field4 else "Stage 3",
+                                owner = "Department Lead",
+                                revision = "Rev 01",
+                                status = "Approved"
+                            )
+                            scmsRepository.addControlledDoc(doc)
+                            onSuccess("Successfully registered Controlled Document $dId")
                         }
                         else -> { // Part / Component
                             val pMpn = if (field1.isNotBlank()) field1 else "HLPL-PART-${UUID.randomUUID().toString().take(6).uppercase()}"
