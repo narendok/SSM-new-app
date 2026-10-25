@@ -1059,6 +1059,7 @@ class ScmsRepositoryImpl(
         listOf(
             ControlledDoc("HLPL-AI4T-01-EHW-PRS-01", "Product Requirement Specification (PRS) Rev 01", "EHW", "Stage 3", "Avery Vale", "Rev 01", "Approved", storagePath = "01_Governance/EHW-PRS-01.pdf"),
             ControlledDoc("HLPL-AI4T-01-SAL-QUO-01", "Commercial Quotation & Volume Price Commitment", "SAL", "Stage 3", "Priya Sharma", "Rev 01", "Approved", storagePath = "01_Governance/SAL-QUO-01.pdf"),
+            ControlledDoc("HLPL-AI4T-01-HROPS-CRS-01", "Competency & Safety Requirement Freeze (HR-OPS)", "HR", "Stage 3", "Taylor Quinn", "Rev 01", "Approved", storagePath = "01_Governance/HROPS-CRS-01.pdf"),
             ControlledDoc("HLPL-AI4T-01-EHW-SCH-01", "Hardware Schematic Diagram & ECAD Netlist", "EHW", "Stage 4", "Avery Vale", "Rev 02", "Under Review", storagePath = "03_Hardware/EHW-SCH-01.pdf"),
             ControlledDoc("HLPL-AI4T-01-QA-DVP-01", "Design Verification Plan and Report (DVP&R)", "QA", "Stage 6", "Jordan Blake", "Rev 01", "In Progress", storagePath = "06_Quality/QA-DVP-01.pdf"),
             ControlledDoc("HLPL-AI4T-01-ENC-MECH-01", "IP67 Enclosure 3D CAD & Thermal Simulation", "MECH", "Stage 4", "Samira Holt", "Rev 01", "Approved", storagePath = "04_Mechanical/ENC-MECH-01.stp")
@@ -1071,7 +1072,7 @@ class ScmsRepositoryImpl(
         listOf(
             RaciRow(1, "Intake & Opportunity", "SAL (Sales & BD)", "Managing Director", "EHW, PUR, FIN", "All Departments"),
             RaciRow(2, "Feasibility & Contract Review", "EHW, ESW, MECH, PUR, QA, FIN", "QA Lead (Jordan Blake)", "Executive Admin", "Client (Tata Motors)"),
-            RaciRow(3, "Requirement & Commercial Lock", "EHW & SAL", "Executive Admin", "FIN & PUR", "Engineering Team"),
+            RaciRow(3, "Requirement & Commercial Lock", "EHW, SAL & HR/OPS", "Executive Admin", "FIN & PUR", "Engineering Team"),
             RaciRow(4, "Engineering Design & Schematics", "EHW (Avery Vale)", "EHW Lead", "QA, MECH, PUR", "EMF (Manufacturing)"),
             RaciRow(5, "SMT Pilot Build & Proto Tooling", "EMF (Casey Rowan)", "EMF Lead", "EHW, PUR, TST", "Executive Admin"),
             RaciRow(6, "DVP&R Pre-Compliance Validation", "QA (Jordan Blake)", "QA Lead", "EHW, ESW, MECH", "Client & ARAI Pune"),
