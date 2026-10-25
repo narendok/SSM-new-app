@@ -288,10 +288,12 @@ fun AppShell(viewModel: MainViewModel) {
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             // Prominent Project Filter Dropdown Bar matching web DepartmentProjectWorkspace
-            com.example.myapplication.ui.components.ProjectFilterDropdown(
-                selectedProjectId = selectedProject,
-                onProjectSelected = { viewModel.scmsRepository.selectProject(it) }
-            )
+            if (selectedTab in listOf(0, 1, 3)) {
+                com.example.myapplication.ui.components.ProjectFilterDropdown(
+                    selectedProjectId = selectedProject,
+                    onProjectSelected = { viewModel.scmsRepository.selectProject(it) }
+                )
+            }
             Box(Modifier.weight(1f)) {
             when (selectedTab) {
                 0 -> CommandCenterScreen(
