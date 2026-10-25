@@ -1071,11 +1071,11 @@ class ScmsRepositoryImpl(
     private val _raciMatrix = MutableStateFlow(
         listOf(
             RaciRow(1, "Intake & Opportunity", "SAL (Sales & BD)", "Managing Director", "EHW, PUR, FIN", "All Departments"),
-            RaciRow(2, "Feasibility & Contract Review", "EHW, ESW, MECH, PUR, QA, FIN", "QA Lead (Jordan Blake)", "Executive Admin", "Client (Tata Motors)"),
-            RaciRow(3, "Requirement & Commercial Lock", "EHW, SAL & HR/OPS", "Executive Admin", "FIN & PUR", "Engineering Team"),
+            RaciRow(2, "Feasibility & Contract Review", "EHW, ESW, MECH, PUR, QA & Testing, FIN", "QA & Testing Lead (Jordan Blake)", "Executive Admin", "Client (Tata Motors)"),
+            RaciRow(3, "Requirement & Commercial Lock", "HR/OPS & SAL", "Executive Admin", "EHW, ESW, MECH, FIN & PUR", "Engineering Team"),
             RaciRow(4, "Engineering Design & Schematics", "EHW (Avery Vale)", "EHW Lead", "QA, MECH, PUR", "EMF (Manufacturing)"),
             RaciRow(5, "SMT Pilot Build & Proto Tooling", "EMF (Casey Rowan)", "EMF Lead", "EHW, PUR, TST", "Executive Admin"),
-            RaciRow(6, "DVP&R Pre-Compliance Validation", "QA (Jordan Blake)", "QA Lead", "EHW, ESW, MECH", "Client & ARAI Pune"),
+            RaciRow(6, "DVP&R Pre-Compliance Validation", "QA & Testing (Jordan Blake)", "QA Lead", "EHW, ESW, MECH", "Client & ARAI Pune"),
             RaciRow(7, "Production Release & PPAP Level 3", "QA & EMF", "Plant Manager", "PUR, EHW, SAL", "Client Fleet Team"),
             RaciRow(8, "Mass Manufacturing & Invoicing", "EMF & FIN", "Managing Director", "PUR, Stores", "Client Accounts"),
             RaciRow(9, "EOL Testing & Field Warranty", "TST & SIT", "Service Head", "QA, EMF", "Client Fleet Manager")
