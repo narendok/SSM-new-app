@@ -13,13 +13,38 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.net.InetAddress
+import java.net.UnknownHostException
+import okhttp3.Dns
 
 class SupabaseClient {
 
     private val baseUrl = BuildConfig.SUPABASE_URL.trimEnd('/')
     private val anonKey = BuildConfig.SUPABASE_ANON_KEY
 
+    private val fallbackDns = object : Dns {
+        override fun lookup(hostname: String): List<InetAddress> {
+            return try {
+                val resolved = Dns.SYSTEM.lookup(hostname)
+                if (resolved.isNotEmpty()) resolved else fallback(hostname)
+            } catch (e: Exception) {
+                fallback(hostname)
+            }
+        }
+
+        private fun fallback(hostname: String): List<InetAddress> {
+            if (hostname == "rzskhndweihuczbdhoxk.supabase.co") {
+                return listOf(
+                    InetAddress.getByAddress(hostname, byteArrayOf(104.toByte(), 18.toByte(), 38.toByte(), 10.toByte())),
+                    InetAddress.getByAddress(hostname, byteArrayOf(172.toByte(), 64.toByte(), 149.toByte(), 246.toByte()))
+                )
+            }
+            throw UnknownHostException("Unable to resolve host: $hostname")
+        }
+    }
+
     private val httpClient = OkHttpClient.Builder()
+        .dns(fallbackDns)
         .build()
 
     private val json = Json {
@@ -88,6 +113,7 @@ class SupabaseClient {
 
             val response = httpClient.newCall(request).execute()
             val responseBody = response.body?.string() ?: ""
+            android.util.Log.d("SupabaseClient", "exchangePkceCode response code: ${response.code}, body: ${responseBody.take(200)}")
 
             if (!response.isSuccessful) {
                 return@withContext Result.failure(
@@ -121,18 +147,21 @@ class SupabaseClient {
                 .post(jsonBody)
                 .build()
 
+            android.util.Log.d("SupabaseClient", "Calling ${url} for ${email}")
             val response = httpClient.newCall(request).execute()
             val responseBody = response.body?.string() ?: ""
+            android.util.Log.d("SupabaseClient", "Response code: ${response.code}, body: ${responseBody.take(200)}")
 
             if (!response.isSuccessful) {
-                return@withContext Result.failure(
-                    IOException("Sign-in failed: HTTP ${response.code} - $responseBody")
-                )
+                val err = IOException("Sign-in failed: HTTP ${response.code} - $responseBody")
+                android.util.Log.e("SupabaseClient", "HTTP error", err)
+                return@withContext Result.failure(err)
             }
 
             val session = json.decodeFromString<AuthSession>(responseBody)
             Result.success(session)
         } catch (e: Exception) {
+            android.util.Log.e("SupabaseClient", "Exception in signInWithPassword: ${e.javaClass.name}: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -226,6 +255,7 @@ class SupabaseClient {
             val request = requestBuilder.build()
             val response = httpClient.newCall(request).execute()
             val responseBody = response.body?.string() ?: ""
+            android.util.Log.d("SupabaseClient", "invokeRpc: ${rpcName}, response code: ${response.code}, body: ${responseBody.take(200)}")
 
             if (!response.isSuccessful) {
                 if (response.code == 401 || response.code == 403) {

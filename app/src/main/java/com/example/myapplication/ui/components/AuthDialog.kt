@@ -34,7 +34,7 @@ fun AuthDialog(
                 is AuthState.Authenticated -> {
                     Text("Signed in: ${authState.session.user?.email.orEmpty()}")
                     authState.session.testMembership?.let {
-                        Text("${it.displayName} · ${it.role} · ${it.departmentCode ?: "Organization"}")
+                        Text("${it.displayName} Â· ${it.role} Â· ${it.departmentCode ?: "Organization"}")
                     }
                     OutlinedButton(onClick = authRepository::signOut) { Text("Sign out") }
                 }

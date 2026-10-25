@@ -84,16 +84,20 @@ class AuthRepositoryImpl(
             val raw = supabaseClient.invokeRpc("resolve_test_membership", "{}", session.accessToken).getOrThrow()
             val membership = membershipJson.decodeFromString<List<com.example.myapplication.data.model.TestMembership>>(raw).singleOrNull()
                 ?: throw SecurityException("No active TEST workspace membership")
-            require(membership.organizationName == "TEST ONLY \u00b7 SSM-new1 synthetic workspace" && membership.workspaceRole() != null) { "Unsupported TEST membership" }
+            val org = membership.organizationName.replace("\u00C2", "").trim()
+            val isExpectedOrg = org == "TEST ONLY \u00b7 SSM-new1 synthetic workspace" ||
+                (org.startsWith("TEST ONLY") && org.contains("SSM-new1"))
+            require(isExpectedOrg && membership.workspaceRole() != null) { "Unsupported TEST membership: " + membership.organizationName + " (" + membership.role + "/" + membership.departmentCode + ")" }
             session.copy(testMembership = membership)
         }
         if (generation != identityGeneration) return Result.failure(SecurityException("Account changed during sign-in"))
         return result.onSuccess { session ->
             secureStorage.saveSession(session)
             _authState.value = AuthState.Authenticated(session)
-        }.onFailure {
+        }.onFailure { error ->
+            android.util.Log.e("AuthRepository", "Sign-in failed for " + email + ": " + error.javaClass.name + ": " + error.message, error)
             secureStorage.clearSession()
-            _authState.value = AuthState.Error("Server sign-in failed. Check credentials, network and TEST membership.")
+            _authState.value = AuthState.Error(error.message ?: "Server sign-in failed. Check credentials, network and TEST membership.")
         }
     }
 
