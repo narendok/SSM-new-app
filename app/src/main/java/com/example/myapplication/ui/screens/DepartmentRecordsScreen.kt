@@ -238,6 +238,7 @@ fun DepartmentRecordsScreen(
                     listOf(
                         "HLPL-AI4T-01" to "Tata Ace EV (AI4T-01)",
                         "HLPL-SLCT-01" to "Select AIS-140",
+                        "HLPL-SW-01" to "Fleet Cloud (Pure SW)",
                         "ALL" to "All Projects"
                     ).forEach { (id, label) ->
                         val isSelected = selectedProject == id

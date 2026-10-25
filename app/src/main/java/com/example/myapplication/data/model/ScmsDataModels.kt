@@ -92,6 +92,17 @@ object AutomotiveProjects {
             deliverable = "AIS-140 Annexure 3 GPS Tracker \u00b7 SOS Beacon"
         ),
         ProjectMetadata(
+            id = "HLPL-SW-01",
+            reference = "HLPL-SW-01",
+            title = "Commercial Fleet Telematics & Driver Analytics Cloud Platform",
+            client = "Tata Motors Limited \u00b7 Connected Fleet Cloud Division",
+            volume = "Unlimited SaaS Subscriptions",
+            totalValue = "\u20b96.80 Cr ($820k)",
+            stage = "Stage 4: Cloud Architecture & Sprint PoC",
+            status = "Active",
+            deliverable = "Enterprise Cloud SaaS \u00b7 High-Concurrency Ingestion \u00b7 SOC 2 / ISO 27001"
+        ),
+        ProjectMetadata(
             id = "HLPL-XLINK-03",
             reference = "HLPL-XLINK-03",
             title = "Commercial Vehicle Dual-CAN Gateway",

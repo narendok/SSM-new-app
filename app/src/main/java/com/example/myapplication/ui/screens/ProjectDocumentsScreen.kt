@@ -179,6 +179,7 @@ fun ProjectDocumentsScreen(
                     listOf(
                         "HLPL-AI4T-01" to "Tata Ace EV",
                         "HLPL-SLCT-01" to "Select AIS-140",
+                        "HLPL-SW-01" to "Fleet Cloud SW",
                         "HLPL-XLINK-03" to "Commercial CV",
                         "ALL" to "All Projects"
                     ).forEach { (id, label) ->

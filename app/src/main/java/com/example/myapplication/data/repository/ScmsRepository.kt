@@ -384,7 +384,7 @@ class ScmsRepositoryImpl(
         listOf(
             ApqpStage(1, "Intake & Opportunity", "SOR intake, preliminary mNDA, RFQ evaluation", "Approved"),
             ApqpStage(2, "Feasibility & Contract Review", "6 HOD multi-dept review, HLPL/F/MKT/01 sign-off", "Approved"),
-            ApqpStage(3, "Requirement & Commercial Lock", "Dual freeze: PRS-01 (Tech) & QUO-01 (Commercial)", "Approved"),
+            ApqpStage(3, "Requirement & Commercial Lock", "Triple freeze: HR/OPS Competency (CRS-01), Commercial (QUO-01) & Technical (PRS-01)", "Approved"),
             ApqpStage(4, "Engineering Design & Schematics", "EHW-SCH-01 Schematics review & ECAD layout", "In Progress"),
             ApqpStage(
                 5,
@@ -1062,7 +1062,9 @@ class ScmsRepositoryImpl(
             ControlledDoc("HLPL-AI4T-01-HROPS-CRS-01", "Competency & Safety Requirement Freeze (HR-OPS)", "HR", "Stage 3", "Taylor Quinn", "Rev 01", "Approved", storagePath = "01_Governance/HROPS-CRS-01.pdf"),
             ControlledDoc("HLPL-AI4T-01-EHW-SCH-01", "Hardware Schematic Diagram & ECAD Netlist", "EHW", "Stage 4", "Avery Vale", "Rev 02", "Under Review", storagePath = "03_Hardware/EHW-SCH-01.pdf"),
             ControlledDoc("HLPL-AI4T-01-QA-DVP-01", "Design Verification Plan and Report (DVP&R)", "QA", "Stage 6", "Jordan Blake", "Rev 01", "In Progress", storagePath = "06_Quality/QA-DVP-01.pdf"),
-            ControlledDoc("HLPL-AI4T-01-ENC-MECH-01", "IP67 Enclosure 3D CAD & Thermal Simulation", "MECH", "Stage 4", "Samira Holt", "Rev 01", "Approved", storagePath = "04_Mechanical/ENC-MECH-01.stp")
+            ControlledDoc("HLPL-AI4T-01-ENC-MECH-01", "IP67 Enclosure 3D CAD & Thermal Simulation", "MECH", "Stage 4", "Samira Holt", "Rev 01", "Approved", storagePath = "04_Mechanical/ENC-MECH-01.stp"),
+            ControlledDoc("HLPL-SW-01-SW-SAD-01", "Software Architecture Document & Microservices Spec", "SW", "Stage 4", "Devon Lane", "Rev 01", "Approved", storagePath = "02_Software/SW-SAD-01.pdf"),
+            ControlledDoc("HLPL-SW-01-QA-SVT-01", "System Verification & Cloud Concurrency Test Plan", "QA", "Stage 5", "Jordan Blake", "Rev 01", "In Progress", storagePath = "06_Quality/QA-SVT-01.pdf")
         )
     )
     override val documents: StateFlow<List<ControlledDoc>> = _documents.asStateFlow()
