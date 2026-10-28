@@ -101,6 +101,16 @@ class CanonicalLifecycleTest {
         val projects = samples.filter { !it.isDeclinedEnquiry }
         assertEquals(8, projects.size)
 
+        val p01 = samples.find { it.sampleId == "LC2-P01" }!!
+        assertEquals("PRJ-INT-001", p01.projectCode)
+        assertEquals(CanonicalProjectTrack.CUSTOM_HARDWARE, p01.track)
+        assertEquals("Internal Harness & EOL Test Jig", p01.projectName)
+
+        val p08 = samples.find { it.sampleId == "LC2-P08" }!!
+        assertEquals("PRJ-RM-001", p08.projectCode)
+        assertEquals(CanonicalProjectTrack.READY_MADE, p08.track)
+        assertEquals("Commercial Catalog OBD Tracker Rollout", p08.projectName)
+
         val declinedEnquiry = samples.find { it.isDeclinedEnquiry }!!
         assertEquals("LC2-E02", declinedEnquiry.sampleId)
         assertNull(declinedEnquiry.projectCode)

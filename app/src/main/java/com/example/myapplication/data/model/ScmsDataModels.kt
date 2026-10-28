@@ -1350,15 +1350,15 @@ data class CanonicalSampleProject(
 
 object CanonicalLifecycleEngine {
     val SAMPLES = listOf(
-        CanonicalSampleProject("LC2-P01", CanonicalProjectTrack.READY_MADE, "Tata Motors Limited · Parts Division", "HLPL-LC2-RM01", "TEST Ready-Made AIS-140 Sourcing"),
-        CanonicalSampleProject("LC2-P02", CanonicalProjectTrack.CUSTOM_HARDWARE, "Select Motors India Private Limited", "HLPL-LC2-HW01", "TEST Custom ECU Power Stage"),
-        CanonicalSampleProject("LC2-P03", CanonicalProjectTrack.FIRMWARE_ONLY, "Bharat Fleet Telematics Limited", "HLPL-LC2-FW01", "TEST Dual-CAN Bootloader Firmware"),
-        CanonicalSampleProject("LC2-P04", CanonicalProjectTrack.SOFTWARE_ONLY, "TransFresh Cold Chain Solutions", "HLPL-LC2-SW01", "TEST Cold-Chain Telemetry Cloud"),
-        CanonicalSampleProject("LC2-P05", CanonicalProjectTrack.HARDWARE_FIRMWARE, "Ashok Leyland Limited · Commercial Trucks", "HLPL-LC2-HF01", "TEST Vehicle Gateway HW+FW Integration"),
-        CanonicalSampleProject("LC2-P06", CanonicalProjectTrack.FIRMWARE_SOFTWARE, "Commercial Connected Fleets India", "HLPL-LC2-FS01", "TEST Edge FOTA & Cloud Pipeline"),
-        CanonicalSampleProject("LC2-P07", CanonicalProjectTrack.FULL_SYSTEM, "Tata Motors Limited · EV Fleet Division", "HLPL-LC2-FSYS01", "TEST Full System Fleet Telematics"),
-        CanonicalSampleProject("LC2-P08", CanonicalProjectTrack.FULL_SYSTEM, "Hexense Labs Internal Demonstration", "HLPL-LC2-DEMO01", "TEST Enterprise Fleet Telematics Showcase"),
-        CanonicalSampleProject("LC2-E02", CanonicalProjectTrack.CUSTOM_HARDWARE, "Nordic Fleet Logistics AB", null, "TEST Extended-Temperature Tracker Enquiry", isDeclinedEnquiry = true)
+        CanonicalSampleProject("LC2-P01", CanonicalProjectTrack.CUSTOM_HARDWARE, "Internal Hexense Labs — Plant Tooling Division", "PRJ-INT-001", "Internal Harness & EOL Test Jig"),
+        CanonicalSampleProject("LC2-E02", CanonicalProjectTrack.HARDWARE_FIRMWARE, "Nordic Fleet Logistics AB", null, "Declined Extended-Temperature Tracker Enquiry", isDeclinedEnquiry = true),
+        CanonicalSampleProject("LC2-P03", CanonicalProjectTrack.HARDWARE_FIRMWARE, "Tata Motors Limited · EV Fleet Division", "PRJ-POC-001", "Fleet OBD Tracker PoC (10 units)"),
+        CanonicalSampleProject("LC2-P04", CanonicalProjectTrack.FULL_SYSTEM, "Apex Logistics Solutions", "PRJ-GW-001", "Commercial Vehicle Gateway Pilot"),
+        CanonicalSampleProject("LC2-P05", CanonicalProjectTrack.FIRMWARE_ONLY, "PharmaCold Express Ltd", "PRJ-CC-001", "Cold-Chain Tracker Firmware Refinement"),
+        CanonicalSampleProject("LC2-P06", CanonicalProjectTrack.HARDWARE_FIRMWARE, "Bharat Heavy Logistics Ltd", "PRJ-PROD-001", "Rugged Fleet Tracker Bulk Production"),
+        CanonicalSampleProject("LC2-P07", CanonicalProjectTrack.SOFTWARE_ONLY, "Hexense Internal IT & Service", "PRJ-APP-001", "Internal Service Diagnostics Portal"),
+        CanonicalSampleProject("LC2-P08", CanonicalProjectTrack.READY_MADE, "City Delivery Express", "PRJ-RM-001", "Commercial Catalog OBD Tracker Rollout"),
+        CanonicalSampleProject("LC2-P09", CanonicalProjectTrack.FIRMWARE_SOFTWARE, "FastCargo Logistics", "PRJ-UPG-001", "Telematics Payload Compression Upgrade")
     )
 
     fun resolvePrerequisites(stageCode: String, track: CanonicalProjectTrack): List<String> {
