@@ -68,9 +68,18 @@ fun SharedTestScreen(vm: MainViewModel, onBack: () -> Unit) {
             if (tab == "Projects" && (role == "admin" || (role == "department_lead" && member?.text("department_code") == "SAL"))) {
                 OutlinedTextField(title, { title = it }, label = { Text("New TEST project title") })
                 OutlinedTextField(reference, { reference = it }, label = { Text("Project reference (HLPL-...)") })
-                Button(enabled = !busy && title.isNotBlank() && reference.isNotBlank(), onClick = {
-                    vm.mutateSharedWorkspace("create_project", buildJsonObject { put("title", title); put("reference", reference) })
-                }) { Text("Create shared project") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(enabled = !busy && title.isNotBlank() && reference.isNotBlank(), onClick = {
+                        vm.mutateSharedWorkspace("create_project", buildJsonObject { put("title", title); put("reference", reference) })
+                    }) { Text("Create shared project") }
+                    if (role == "admin") {
+                        Button(enabled = !busy, onClick = {
+                            vm.mutateSharedWorkspace("sync_canonical_sample_pack", buildJsonObject {
+                                put("p_run_id", "LC2-2026-10-28")
+                            })
+                        }) { Text("Load Canonical Samples") }
+                    }
+                }
             }
             if (tab == "Tasks" && role != "viewer") {
                 Text("Project for new task")
@@ -156,13 +165,32 @@ fun SharedTestScreen(vm: MainViewModel, onBack: () -> Unit) {
                         Text(row.text("title").ifBlank { row.text("action") }, style = MaterialTheme.typography.titleMedium)
                         Text(listOf("reference", "record_type", "stage", "status", "outcome", "document_type", "created_at").map { row.text(it) }.filter { it.isNotBlank() }.joinToString(" | "))
                         if (tab == "Tasks" && com.example.myapplication.data.model.SharedAccess.canUpdateTask(snapshot, row)) {
-                            FlowRow { listOf("Open", "In Progress", "Complete").forEach { status ->
-                                OutlinedButton(enabled = !busy && row.text("status") != status, onClick = {
-                                    vm.mutateSharedWorkspace("update_task", buildJsonObject {
-                                        put("id", row.text("id")); put("status", status); put("expected_updated_at", row.text("updated_at"))
-                                    })
-                                }) { Text(status) }
-                            } }
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                listOf("Open", "In Progress", "Complete").forEach { status ->
+                                    OutlinedButton(enabled = !busy && row.text("status") != status, onClick = {
+                                        vm.mutateSharedWorkspace("update_task", buildJsonObject {
+                                            put("id", row.text("id")); put("status", status); put("expected_updated_at", row.text("updated_at"))
+                                        })
+                                    }) { Text(status) }
+                                }
+                                if ((role == "admin" || role == "department_lead") && row.text("status") != "Cancelled") {
+                                    OutlinedButton(enabled = !busy, onClick = {
+                                        vm.mutateSharedWorkspace("cancel_task", buildJsonObject {
+                                            put("id", row.text("id"))
+                                            put("reason", "Cancelled from Android test client")
+                                            put("expected_updated_at", row.text("updated_at"))
+                                        })
+                                    }) { Text("Cancel") }
+                                }
+                                if ((role == "admin" || role == "department_lead") && row.text("assignee_id").isBlank() && row.text("status") == "Open") {
+                                    OutlinedButton(enabled = !busy, onClick = {
+                                        vm.mutateSharedWorkspace("delete_task", buildJsonObject {
+                                            put("id", row.text("id"))
+                                            put("expected_updated_at", row.text("updated_at"))
+                                        })
+                                    }) { Text("Del") }
+                                }
+                            }
                         }
                         if (tab == "Approvals") {
                             Text("Evidence revision: ${row.text("evidence_revision")}")

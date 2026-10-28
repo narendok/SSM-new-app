@@ -1267,3 +1267,148 @@ object LifecycleScenarios {
         return all.find { it.id == idOrKey || it.fixtureKey == idOrKey || it.projectCode == idOrKey }
     }
 }
+
+
+/**
+ * Canonical Project Track per SCMS Master Plan §16.11 and §16.12.
+ * Exactly 7 tracks: ready_made, custom_hardware, firmware_only, software_only,
+ * hardware_firmware, firmware_software, full_system.
+ */
+@Serializable
+enum class CanonicalProjectTrack(val trackCode: String, val displayName: String) {
+    READY_MADE("ready_made", "Ready-made / Off-the-shelf"),
+    CUSTOM_HARDWARE("custom_hardware", "Custom Hardware Only"),
+    FIRMWARE_ONLY("firmware_only", "Firmware Only"),
+    SOFTWARE_ONLY("software_only", "Software Only"),
+    HARDWARE_FIRMWARE("hardware_firmware", "Hardware + Firmware"),
+    FIRMWARE_SOFTWARE("firmware_software", "Firmware + Software"),
+    FULL_SYSTEM("full_system", "Full System (HW + FW + SW)");
+
+    companion object {
+        fun normalize(raw: String?): CanonicalProjectTrack {
+            val v = raw?.trim()?.lowercase() ?: return FULL_SYSTEM
+            return when (v) {
+                "ready_made", "off_the_shelf", "readymade" -> READY_MADE
+                "custom_hardware", "hw_only", "hardware_only" -> CUSTOM_HARDWARE
+                "firmware_only", "fw_only" -> FIRMWARE_ONLY
+                "software_only", "sw_only", "cloud_only" -> SOFTWARE_ONLY
+                "hardware_firmware", "hw_fw", "hw+fw" -> HARDWARE_FIRMWARE
+                "firmware_software", "fw_sw", "fw+sw" -> FIRMWARE_SOFTWARE
+                "full_system", "full", "hw+fw+sw", "complete" -> FULL_SYSTEM
+                else -> FULL_SYSTEM
+            }
+        }
+    }
+}
+
+/**
+ * Progressive Canonical Stage Representation matching web canonical-lifecycle.ts
+ */
+@Serializable
+data class CanonicalProgressiveStage(
+    val stageCode: String,
+    val stageNumber: Int,
+    val name: String,
+    val track: CanonicalProjectTrack,
+    val status: String, // "planned", "ready", "in_progress", "completed", "blocked"
+    val prerequisites: List<String> = emptyList()
+) {
+    val isReady: Boolean get() = status == "ready"
+    val isCompleted: Boolean get() = status == "completed"
+    val isPlanned: Boolean get() = status == "planned"
+    val isBlocked: Boolean get() = status == "blocked"
+}
+
+/**
+ * Progressive Task Representation supporting standard generated tasks and custom tasks.
+ */
+@Serializable
+data class CanonicalProgressiveTask(
+    val id: String,
+    val stageCode: String,
+    val title: String,
+    val department: String,
+    val assignee: String? = null,
+    val isCustom: Boolean = false,
+    val status: String = "Open", // "Open", "In Progress", "In review", "Complete", "Cancelled"
+    val orderIndex: Int = 0,
+    val cancellationReason: String? = null
+)
+
+/**
+ * Canonical Sample Definition representation for Section 16.11 / Patch 5.
+ */
+@Serializable
+data class CanonicalSampleProject(
+    val sampleId: String,
+    val track: CanonicalProjectTrack,
+    val clientName: String,
+    val projectCode: String?,
+    val projectName: String,
+    val isDeclinedEnquiry: Boolean = false
+)
+
+object CanonicalLifecycleEngine {
+    val SAMPLES = listOf(
+        CanonicalSampleProject("LC2-P01", CanonicalProjectTrack.READY_MADE, "Tata Motors Limited · Parts Division", "HLPL-LC2-RM01", "TEST Ready-Made AIS-140 Sourcing"),
+        CanonicalSampleProject("LC2-P02", CanonicalProjectTrack.CUSTOM_HARDWARE, "Select Motors India Private Limited", "HLPL-LC2-HW01", "TEST Custom ECU Power Stage"),
+        CanonicalSampleProject("LC2-P03", CanonicalProjectTrack.FIRMWARE_ONLY, "Bharat Fleet Telematics Limited", "HLPL-LC2-FW01", "TEST Dual-CAN Bootloader Firmware"),
+        CanonicalSampleProject("LC2-P04", CanonicalProjectTrack.SOFTWARE_ONLY, "TransFresh Cold Chain Solutions", "HLPL-LC2-SW01", "TEST Cold-Chain Telemetry Cloud"),
+        CanonicalSampleProject("LC2-P05", CanonicalProjectTrack.HARDWARE_FIRMWARE, "Ashok Leyland Limited · Commercial Trucks", "HLPL-LC2-HF01", "TEST Vehicle Gateway HW+FW Integration"),
+        CanonicalSampleProject("LC2-P06", CanonicalProjectTrack.FIRMWARE_SOFTWARE, "Commercial Connected Fleets India", "HLPL-LC2-FS01", "TEST Edge FOTA & Cloud Pipeline"),
+        CanonicalSampleProject("LC2-P07", CanonicalProjectTrack.FULL_SYSTEM, "Tata Motors Limited · EV Fleet Division", "HLPL-LC2-FSYS01", "TEST Full System Fleet Telematics"),
+        CanonicalSampleProject("LC2-P08", CanonicalProjectTrack.FULL_SYSTEM, "Hexense Labs Internal Demonstration", "HLPL-LC2-DEMO01", "TEST Enterprise Fleet Telematics Showcase"),
+        CanonicalSampleProject("LC2-E02", CanonicalProjectTrack.CUSTOM_HARDWARE, "Nordic Fleet Logistics AB", null, "TEST Extended-Temperature Tracker Enquiry", isDeclinedEnquiry = true)
+    )
+
+    fun resolvePrerequisites(stageCode: String, track: CanonicalProjectTrack): List<String> {
+        return when (stageCode) {
+            "CM_01" -> emptyList()
+            "CM_02" -> listOf("CM_01")
+            "CM_03" -> listOf("CM_02")
+            "CM_04" -> listOf("CM_03")
+            "HW_01", "FW_01", "SW_01" -> listOf("CM_01") // Pre-project technical feasibility entry
+            "HW_02" -> listOf("CM_04", "HW_01")
+            "HW_09" -> listOf("HW_02")
+            "HW_32" -> listOf("HW_09")
+            "FW_02" -> listOf("CM_04", "FW_01")
+            "FW_11" -> listOf("FW_02")
+            "SW_02" -> listOf("CM_04", "SW_01")
+            "SW_09" -> listOf("SW_02")
+            "RM_01" -> listOf("CM_04")
+            "RM_02" -> listOf("RM_01")
+            "INT_01" -> when (track) {
+                CanonicalProjectTrack.HARDWARE_FIRMWARE -> listOf("HW_09", "FW_02")
+                CanonicalProjectTrack.FIRMWARE_SOFTWARE -> listOf("FW_02", "SW_02")
+                CanonicalProjectTrack.FULL_SYSTEM -> listOf("HW_09", "FW_02", "SW_02")
+                else -> listOf("CM_04")
+            }
+            "INT_02" -> listOf("INT_01")
+            "CL_01" -> when (track) {
+                CanonicalProjectTrack.READY_MADE -> listOf("RM_02")
+                CanonicalProjectTrack.SOFTWARE_ONLY -> listOf("SW_09")
+                CanonicalProjectTrack.FIRMWARE_ONLY -> listOf("FW_11")
+                CanonicalProjectTrack.CUSTOM_HARDWARE -> listOf("HW_32")
+                else -> listOf("INT_02")
+            }
+            "CL_02" -> listOf("CL_01")
+            "CL_03" -> listOf("CL_02")
+            "CL_04" -> listOf("CL_03")
+            else -> listOf("CM_01")
+        }
+    }
+
+    fun computeStageState(
+        stageCode: String,
+        track: CanonicalProjectTrack,
+        completedStages: Set<String>,
+        inProgressStages: Set<String> = emptySet()
+    ): String {
+        if (completedStages.contains(stageCode)) return "completed"
+        val prereqs = resolvePrerequisites(stageCode, track)
+        val prereqsMet = prereqs.all { completedStages.contains(it) }
+        if (!prereqsMet) return "planned"
+        if (inProgressStages.contains(stageCode)) return "in_progress"
+        return "ready"
+    }
+}
