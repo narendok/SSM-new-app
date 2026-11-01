@@ -1,13 +1,14 @@
 # SSM One — Android Mobile Managing Portal Master Plan
 
-**Document Version:** 2.2 (Unified Demo Auth, Fast Inventory Search & Mobile vs. Web Architecture Parity)
+**Document Version:** 2.3 (Multi-Track Lifecycle View & Backend Contract Status Reconciliation)
 
-**Date:** 20 October 2026
+**Date:** 31 October 2026
 
 **Target Repository:** `C:/Users/Admin/AndroidStudioProjects/SSM-new/SSM-new-app`
 
 **Cross-platform Master Plan Reference:** [SSM-new root master plan](../../../SSM_ONE_MASTER_PLAN.md). The [detailed web implementation plan](../../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md) is a subordinate web handoff; Android-local copies are historical references.
-**Authoritative Backend Contracts:** [`docs/backend-handoff/mobile_backend_contract.json`](../backend-handoff/mobile_backend_contract.json), [`docs/backend-handoff/MOBILE_BACKEND_CONTRACT.md`](../backend-handoff/MOBILE_BACKEND_CONTRACT.md), [`docs/backend-handoff/ANDROID_BACKEND_HANDOFF.md`](../backend-handoff/ANDROID_BACKEND_HANDOFF.md)
+**Product lifecycle reference:** [Electronics Multi-Track Lifecycle and APQP Roadmap](../../../SSM_ONE_PLANNING_LIBRARY/Electronics%20Multi-Track%20Lifecycle%20and%20APQP%20Roadmap.md); consume the same project-pinned lifecycle/template and responsibility-matrix versions as web.
+**Backend handoff authority:** [`mobile_backend_contract.json`](../backend-handoff/mobile_backend_contract.json) records verified status and must be checked against the current deployed environment. [`stage5-remediation-20260924154357.sql.txt`](../backend-handoff/evidence/stage5-remediation-20260924154357.sql.txt) is source evidence only; it does not establish deployment. The former `MOBILE_BACKEND_CONTRACT.md`, `ANDROID_BACKEND_HANDOFF.md`, and `VERIFIED_MATERIAL_ISSUE_RETURN_CONTRACT_2026-09-27.md` links are stale/missing and are not authoritative.
 
 ---
 
@@ -66,6 +67,9 @@ The mobile application is deliberately designed as an agile operational companio
 1. **1-Tap Daily Task Approvals & Rejections**: Instant triage of pending operational assignments without traversing complex multi-level menus.
 2. **Deal & Feasibility Review Sign-Off**: Sales and technical leads can review high-level feasibility criteria and provide decisive sign-offs from anywhere.
 3. **Stage Gate Overview & APQP Freeze Reviews**: Real-time visibility into the 9-stage APQP lifecycle, active stage bottlenecks, and gate prerequisite completion.
+   - Provide a graphical, project-aware workflow view from the shared lifecycle and responsibility-matrix contract. Show the signed-in user's authorized department stages, subtasks, dependencies, cross-department handoffs, approval states, and rework routes; Admin may see the complete authorized project flow.
+   - Render progress only from persisted backend state. Use accessible labels and lightweight transitions/animation; never imply an unrecorded task completion, handoff, approval, or synchronization.
+   - Android is a mobile viewer and contract-approved action surface. Workflow template editing, department/RACI routing, dependency configuration, versioning, and impact review remain web-authoritative. Do not add a second Android workflow model or infer permission from a visual assignment.
 4. **Fast QR / Barcode Scan & Instant Part Lookup**: High-performance CameraX scanner resolving MPN barcodes, reels, storage bins, lots, asset tags, and employee badges in milliseconds.
 5. **Real-Time Inventory Search**: Instant multi-field component filtering by MPN, description, manufacturer, category, and bin coordinate.
 6. **Receiving Draft Creation & Photo Proof**: Rapid receiving voucher capture with camera photo attachment directly at the goods receiving dock.
@@ -173,14 +177,18 @@ The Android app provides operational mobile clients for all enterprise departmen
 
 ```mermaid
 graph TD
-    DEPT1["1. Sales & Customer Intake"]
-    DEPT2["2. Hardware & R&D (Engineering)"]
-    DEPT3["3. Procurement & Stores"]
-    DEPT4["4. Production & Quality"]
-    DEPT5["5. Facility, Assets & Maintenance"]
-    DEPT6["6. Security & Workplace"]
-    DEPT7["7. HR, Training & Management"]
-    DEPT8["8. Operations & QMS"]
+    SAL["SAL · Sales & Business Development"]
+    EHW["EHW · Embedded Hardware"]
+    FW["FW · Firmware"]
+    SW["SW · Cloud & Application Software"]
+    MECH["MECH · Mechanical Engineering"]
+    PUR["PUR · Purchasing & SCM"]
+    QA["QA · Quality Assurance & APQP"]
+    EMF["EMF · Electronics Manufacturing"]
+    MMF["MMF · Mechanical Manufacturing"]
+    FIN["FIN · Accounts & Finance"]
+    SIT["SIT · Service & IT"]
+    HR["HR/OPS · HR & Operations"]
 ```
 
 ### 3.1 Sales & Customer Intake
@@ -198,8 +206,19 @@ graph TD
     * Revision comparison between Draft/Tentative engineering BOMs and Released production BOMs (`project_boms`).
   - Engineering Changes: Review active ECR/ECO records, linked tasks, and impacted parts.
 
+#### Project Lifecycle & Multi-Track Stage View
+
+- Present a project-scoped overview phase timeline with applicable EHW, FW, SW, MECH, QA/certification, EMF/MMF, and shared-function gates. Multiple tracks may be active in parallel; do not force one serial all-department queue.
+- Show the four-level hierarchy (project phase → track gate → substage/work package → task/checklist), multi-predecessor dependencies, blocked-by reason, pending handoff, evidence and authorized decision status.
+- The department workspace shows that department's applicable stages and subtasks for the selected project; authorized Executive Admin sees the full project view. The selector uses stable project identity and respects record-level permissions.
+- An animated stepper may aid navigation but must have an equivalent accessible text/table view and reduced-motion support. Progress and gate state derive from shared records, never from the animation or a local demo task.
+- Pin the lifecycle and responsibility-matrix versions used by the project. A later configuration change cannot silently rewrite historical gates or approvals.
+- **Backend gate:** this view is read-only until a verified shared lifecycle projection and authenticated authorization contract exist. Deployment and authorization must be verified per environment; the current Stage 5 inventory foundation is absent. Show an explicit unavailable state instead of sample status presented as live.
+
 ### 3.3 Procurement & Stores (Stage 5 Detailed Delivery)
 Procurement and Stores follow the strict staged execution sequence (5A through 5G):
+
+> **Deployment gate (2026-10-31):** Stage 5 is a product scope/implementation plan, not a claim of backend readiness. A read-only Lovable audit on Android's configured TEST target `rzskhndweihuczbdhoxk` reports the five stock RPCs and two receiving views absent. Its preflight also reports all 13 required procurement/inventory base tables and four permission/numbering helper functions absent, so the archived September SQL cannot be applied as-is. The archive also permits a null `create_grn` idempotency key and defines a `SECURITY DEFINER` request-result helper without an explicit PUBLIC/anon execute revocation or caller authorization check; require a security review and corrected contract. The separate Supabase management connector lacks access to this project; the stale handoff still names `yyrvduosyyaluifqvwkr`. Android posting methods remain disabled. Establish/restore the canonical base schema and migration ownership, then deploy reviewed contracts through a supported migration path, verify signatures/grants/RLS, and pass authenticated-session tests before implementation. See [`mobile_backend_contract.json`](../backend-handoff/mobile_backend_contract.json).
 
 - **5A — Procurement Read-Only**:
   - Safe operational projections: `operational_purchase_requests`, `operational_purchase_request_items`, `operational_rfqs`, `operational_po_shipments`, `operational_vendors`.
@@ -362,11 +381,11 @@ The Android client directly implements data structures and calls corresponding t
 | Backend Contract Artifact | Purpose & Android Mapping |
 |---|---|
 | [`mobile_backend_contract.json`](../backend-handoff/mobile_backend_contract.json) | Complete machine-readable catalog of all 180+ tables, foreign keys, columns, RPC signatures, and bucket paths. |
-| [`MOBILE_BACKEND_CONTRACT.md`](../backend-handoff/MOBILE_BACKEND_CONTRACT.md) | Object classification matrix: `MOBILE_READ_SAFE`, `ONLINE_REQUIRED`, `WEB_ONLY`. |
-| [`ANDROID_BACKEND_HANDOFF.md`](../backend-handoff/ANDROID_BACKEND_HANDOFF.md) | Safe configuration boundaries, operational projection specifications, RLS rules. |
+| [`mobile_backend_contract.json`](../backend-handoff/mobile_backend_contract.json) | Machine-readable schema inventory and current source/deployment/Android status; catalog entries alone do not prove live signatures or permissions. |
+| [`stage5-remediation-20260924154357.sql.txt`](../backend-handoff/evidence/stage5-remediation-20260924154357.sql.txt) | Archived source SQL for Stage 5. It is not deployment proof or a verified live contract. |
 | [`LIFECYCLE_ANDROID_READ_CONTRACT_2026-10-02.md`](../backend-handoff/LIFECYCLE_ANDROID_READ_CONTRACT_RENDERED_2026-10-03.txt) | Specification for displaying HW_01–HW_37 stages, department templates, and dependency chains. |
 | [`VERIFIED_SAFE_PROCUREMENT_CONTRACT_2026-09-26.md`](../backend-handoff/VERIFIED_SAFE_PROCUREMENT_CONTRACT_2026-09-26.md) | Contract for `operational_*` safe views omitting financial/commercial data. |
-| [`VERIFIED_MATERIAL_ISSUE_RETURN_CONTRACT_2026-09-27.md`](../backend-handoff/VERIFIED_MATERIAL_ISSUE_RETURN_CONTRACT_2026-09-27.md) | Signatures and idempotency rules for `post_material_issue` and `post_material_return`. |
+| [`SSM_ONE_WEB_TO_MOBILE_BACKEND_HANDOFF_REPORT.md`](../evidence/SSM_ONE_WEB_TO_MOBILE_BACKEND_HANDOFF_REPORT.md) | Historical handoff report, superseded where it conflicts with the current backend snapshot. |
 
 ---
 
@@ -415,12 +434,13 @@ flowchart TD
 - Engineering Change Requests (ECR) and ECO impact review.
 
 ### Stage 5: Procurement, Stores & Receiving (STRICT 5A–5G SEQUENCE)
+- **Current delivery status:** Planned scope only. The 2026-10-31 read-only backend audit plus project-info check confirmed that the required Stage 5 stock RPCs and receiving views are absent from Android's configured TEST backend. Keep Android posting and receiving-view calls disabled until live deployment and session acceptance are evidenced in `mobile_backend_contract.json`.
 - **5A (Procurement Read-Only)**: PR, RFQ, PO, ASN, Vendor list using `operational_*` safe projections.
 - **5B (Receiving Draft)**: PO/ASN selection, CameraX barcode scan matching, lot/batch/reel capture, draft voucher storage.
 - **5C (Inventory Read-Only)**: MPN stock search, bin location lookup, stock freshness timestamps.
 - **5D (Material Issue & Return)**: Online posting via `post_material_issue` and `post_material_return`.
 - **5E (Cycle Counts & Picking)**: Blind count execution, pick lists with line-by-line verification.
-- **5F (Final GRN & Critical Stock)**: `create_grn`, `post_stock_transfer`, `post_stock_adjustment` with UUID idempotency.
+- **5F (Final GRN & Critical Stock)**: Target online-only flows are `create_grn`, `post_stock_transfer`, and `post_stock_adjustment`; archived SQL is not a deployed contract, and the archived `create_grn` signature permits a null idempotency key.
 - **5G (Integration & Acceptance)**: End-to-end scanner, notifications, and regression test suite.
 
 ### Stage 6: Production & Quality Assurance
@@ -506,13 +526,49 @@ Live Lovable inspection found no enabled sign-in method and no organization/user
 4. Run compile, unit tests and debug packaging after source changes; verify on device/emulator. Capture per-role results and negative tests under docs/evidence. Historical test counts are not evidence of this new run.
 5. Complete an authenticated web/mobile lifecycle round trip with actual persisted records and source-backed documents. Final acceptance remains pending until this evidence exists; neither a plan update nor a working web demo closes Android release gates.
 
+#### 9.3.1 Current source checkpoint — 30 October 2026
+
+This is a source audit, not device acceptance. The existing checkout is at `b572ba7` and includes uncommitted S10 model/test changes. `AppShell` routes authenticated Team & Chat and several authenticated department record sections through the generic `SharedBusinessScreen`; unauthenticated mode uses the original Compose screen. Two misleading demo cues were removed: the shell no longer says “Synced” without a successful shared-workspace read, and the authenticated workspace no longer labels itself “Shared TEST.” The status now distinguishes local demo, sign-in, loading cloud data, successful cloud read, failed cloud read and not-connected states; it does not claim live network monitoring. A1 still needs to restore original Compose presentation through typed adapters; data scope, account roles, device navigation, offline recovery and web/mobile round trips remain unaccepted. Preserve the active signer and app data; current device access must be restored before in-place installation can be confirmed.
+
+#### 9.3.2 Contract-backed project review increment
+
+Android now exposes a read-only project coordination review in the Shared TEST workspace, backed by the web-used `get_project_coordination()` source contract and typed response models. It shows authorized project/lifecycle records, related task status and linked document metadata; it does not author engineering records or retrieve document files. Malformed responses fail explicitly rather than appearing as empty data. The RPC requires authenticated non-viewer shared TEST membership, so it is not a general production organization endpoint. Its entry in `mobile_backend_contract.json` is explicitly source-defined; deployment must be verified in the target environment before live acceptance. The authenticated dashboard also no longer falls back to local demo tasks or exposes its local lifecycle-scenario cards as server records. Unauthenticated demo behavior remains separate. Unit tests and debug APK packaging passed for this increment; an emulator is available but was not installed to or used for live account/backend acceptance. XLC parity, the remaining approved mobile workflows, role/denial coverage and persisted web-to-Android round trips remain open.
+
+#### 9.3.3 XLC reference mapping — 31 October 2026
+
+These XLC examples are reference material only; current Android support is judged against the shared web/backend contract, not the presence of a sample file. The project coordination projection above does not implement any XLC-specific authoring, review, evidence-upload, or approval workflow.
+
+| XLC example | Android status | Verified gap / mobile boundary |
+|---|---|---|
+| 4M change request | Partial | No typed 4M-specific record, signer, or review-action contract is connected. |
+| Hardware verification checklist (`CLK` filename / `CKL` inside) | Partial | No checklist-specific Android adapter; resolve the identifier mismatch from the registered backend record, not its filename. |
+| DFMEA | Partial | Web document family D12 exists, but no shared structured risk/action/closure review is connected to Android. |
+| DVP&R | Partial | A local DVP&R screen is not evidence of shared persistence; no typed execution/review status and evidence contract is connected. |
+| ECN | Partial | Web ECR/ECO family D14 exists, but no typed ECN review/release path is connected; resolve sample naming discrepancies against canonical records. |
+| HSI signal/pin details | Partial | Web HSI family D09 exists, but Android has no verified shared pin/signal model; only an authorized registered revision could be reviewed. |
+| KPA | Missing | No canonical subtype or mobile contract was identified; do not invent a local schema. |
+| PRS | Partial | Web PRS family exists, but Android has no verified shared-record adapter; mobile review/status only, not authoring or baseline freeze. |
+| SAR | Missing | No canonical subtype or mobile contract was identified; backend/web must define it before mobile support. |
+
+Archive-only web CSVs can inform schema-shape and acceptance scenarios, but their customer, BOM, and project rows are not operational data and must not be imported directly. The canonical Sample Data and Test Plan remains authoritative for any shared non-production sample operation. The archived MP4 and WebM lifecycle walkthroughs have identical SHA-256 hashes and are duplicate evidence; neither is copied. The archived schematic PDF and STEP file are placeholders, not engineering artifacts.
+
+#### 9.3.4 Shared TEST task and approval decision behavior — 31 October 2026
+
+The Android shared TEST workspace now offers the source-defined task status `In review` in addition to the previously exposed status choices. It prevents marking a task complete while it is in review and directs the user to resolve its linked review first, matching the backend guard. Eligible-looking shared TEST record cards expose a review-request dialog with an active reviewer-department selection; actual requester authority, target-department validity, duplicate requests, and record scope are checked by the server, not inferred from the UI. Pending review-request and decision dialogs are cleared when the authentication state changes so a stale row or rationale cannot carry across an account switch. The TEST approval action presents approved, rejected, and returned outcomes; it submits the server-projected `updated_at` as the concurrency token and keeps the decision dialog open when the request fails. Rejections and returns require a rationale; approval notes are optional. The Android presentation check allows a non-viewer in the assigned reviewer department to submit, matching the latest source RPC's role/department check; the backend remains authoritative and rechecks permission, pending outcome, and current version.
+
+These are shared TEST contract operations only, not a deployed production approvals capability. Migration source defines the RPC behavior, but target-environment deployment and live authorization remain unverified. No review request or decision was sent during this implementation. The full operational approval/rework notification workflow, mobile evidence capture/upload, and XLC-specific signer/evidence rules remain unimplemented until versioned production contracts and deployment evidence are supplied.
+
+#### 9.3.5 Android build and emulator smoke check — 31 October 2026
+
+The latest implementation passed `:app:testDebugUnitTest` (73 tests, zero failures/errors) and `:app:assembleDebug`. The debug APK was installed as an in-place update on the available emulator without clearing app data, then `MainActivity` was confirmed as the resumed activity. A screenshot showed the app opening in its explicitly labeled Local demo state. The emulator reports validated Wi-Fi connectivity and the latest APK was reinstalled/launched without a sampled fatal exception or ANR; however, no authorized shared-workspace account was used, so authentication, deployed RPC availability, shared persistence, and any web-to-Android round trip remain unverified. Connectivity does not establish backend deployment or application-level acceptance. Android release and cross-platform acceptance remain pending.
+
 ### 9.4 Standard task board parity — 19 October 2026
 
 Web now uses one shared task board for all twelve department roles in My Tasks and department workspaces: Today / In Progress left, Review middle, To Do right, Completed collapsed by default with an expand arrow/count. Mobile should adopt the same task grouping and action semantics when verified task contracts are available. A task must occupy only one lane; approved/released and review take precedence over due-today/progress. Preserve assignee, project and due-date fields on updates; retain guarded approval completion. Web browser-local workStatus is not a newly verified backend column or Android contract. No Android source/build/device work is included in this board update.
 
 ### 9.5 Department project workspace parity — 19 October 2026
 
-Web consolidates department home/summary and project navigation into one page controlled by an All projects / department-linked project dropdown. Android parity should apply one trusted project selection to task queue, project details/progress, document/reference links, approvals, department records and recorded owners. Use explicit project IDs/codes/source links, clear empty states and preserved selection when opening/returning from details. Unlinked documents must not be attributed by filename/title. This is a mobile planning requirement pending verified backend contracts and device tests, not a Kotlin/APK change.
+Web consolidates department home/summary and project navigation into one page controlled by an All projects / department-linked project dropdown. Android now builds the authenticated task-board picker from Project records in the server-authorized shared workspace snapshot and filters that queue only through explicit project IDs or linked-record project fields. Unresolved links remain outside a selected-project view; no title or filename matching is used. The Shared TEST Project Review separately uses the typed coordination projection to scope lifecycle records, tasks, and linked documents. A unified selector that scopes every mobile tab (including operational documents, approvals, and department records) is still pending because those tabs do not all have a verified project-link contract. Local demo project choices remain separate from authenticated project records.
 
 ### 9.6 Antigravity continuation plan
 
@@ -551,3 +607,330 @@ Shared functions such as HR/OPS, Finance, SIT, and QA can contribute horizontall
    - Android APK Build: `assembleDebug` PASS (BUILD SUCCESSFUL, 0 errors).
    - Web Suite: `npm run test:department` PASS (82/82 PASS).
    - Synchronized with remote repository `SSM-new-app` on branch `main` at commit `b57665b`.
+
+
+### 9.10 Cross-platform blocker verification checkpoint — 31 October 2026
+
+This checkpoint records fresh verification of the current source, build, live TEST backend, and authenticated Pixel 7 AVD. It closes the project-coordination decoding blocker, but it does not certify all Android release gates.
+
+1. **Shared read contract and runtime:** `public.get_project_coordination()` is installed as a no-argument `jsonb` RPC. Its active membership gate requires authenticated active TEST membership and rejects viewers. The returned `records`, `tasks`, and `documents` projection preserves restricted-record masking. Both the Android EHW Lead and EHW Employee sessions loaded cloud data and Project Review successfully. Project Review displayed the same shared project `HLPL-GEN-EHW-P10` and title/status as the Lovable web workspace. A different shared project displayed four lifecycle records. On the PoC, both EHW clients show zero authorized lifecycle records, tasks, and documents; a broader read-only lookup found two task rows linked by `tasks.record_id` to the PoC UUID, but they are not present in the EHW-permitted projection. Do not treat those globally linked rows as missing mobile data until their department/assignment authorization is confirmed.
+2. **Null-linked document correction:** The one live document with nullable `documents.record_id` had been serialized by the RPC as `linkedRecordRefs: [null]`, which broke Kotlin decoding. The installed projection was corrected with a guarded, function-only migration: null links now serialize as `[]`; Lovable confirmed the authenticated active-membership guard, document scope, and grants were preserved, and no operational/document rows were written. The correction is recorded in `drizzle.__drizzle_migrations` row 17. Android now uses a null-safe list serializer and a regression fixture containing both `null` and a valid reference; `testDebugUnitTest` passes. The matching source migration is present as `ssm-new-web/supabase/migrations/20261031152000_null_safe_project_coordination_references.sql` in the working tree. Runtime correction is confirmed; migration-ledger provenance still needs reconciliation through an authorized standard migration owner/tool.
+3. **Pre-project Sales writer correction:** Enquiry and Opportunity allow `project_id = null` only to an authenticated, non-client Sales lead or admin; other record types retain the project requirement. Lovable read-only verification confirmed the guard and no verification writes. The function correction is recorded in Drizzle row 16 (hash `6113b1cdba8f3702b5d8a2c0df0463f1b15ffd03775303975c943b91bf1d6d17`); version `20261029120000` is not present in `supabase_migrations.schema_migrations`. The authorized migration-management connector does not expose a safe reconciliation path. Do not hand-edit the ledger or describe migration histories as reconciled. The local web source migration remains untracked and must be preserved until ownership is reconciled.
+4. **Fresh automated and device checks:** Android `testDebugUnitTest` passed 73 tests and `assembleDebug` succeeded after the parser change. The rebuilt APK was installed in place on the connected Pixel 7 AVD with `adb install -r`; app data was not cleared. The authenticated EHW Lead session and Project Review loaded from the live backend. A Client Viewer session received the explicit `COORDINATION_ACCESS_DENIED` RPC response and no project records, confirming the viewer denial path; the emulator was then restored to EHW Lead. A transient connection-abort message during account switching recovered after refresh. The app briefly showed an initial launch ANR earlier in this session, then recovered after closing the hung process; after the latest in-place update it launched, cloud data loaded, and Project Review displayed the shared project list and linked records without the JSON decode error. Web `npm run test:department` passed 211 tests and `npm run build` succeeded with existing deprecation/large-chunk warnings. `git diff --check` is clean in both repositories.
+5. **Acceptance still open:** The project shell parity was verified by reading the same project from web, Android, then web. The TEST PoC remains `Draft / CM_01`; a scoped read-only lookup found no approval/review linked to it, so the previously reported feasibility sign-off is not persisted in this backend. No engineer/lead sign-off was performed by this verification. A complete persisted lifecycle write/read round trip was not performed. Only viewer denial was runtime-tested; other department-boundary negative cases, broad department parity, offline/cache isolation, production approval/evidence/document operations, and XLC acceptance remain open wherever a verified contract and authorized identity are not available. Android release and full cross-platform acceptance are **not complete**.
+
+### 9.11 Authenticated project picker and task-board parity increment — 31 October 2026
+
+The authenticated mobile task board now takes project choices only from Project records returned by the authorized shared workspace snapshot; demo catalog entries are used only while unauthenticated. Project selection filters shared tasks through explicit project IDs or explicit linked-record project fields. Tasks with no resolvable link appear in All permitted projects and are excluded from a specific project selection. The board maps server task states to Today / In Progress, Review, To Do, and Completed (collapsed by default). Task movement uses the existing guarded task-status mutation with the server `updated_at` token; a task in review cannot be completed from the task card, and the UI does not describe task completion as approval sign-off. Authenticated local-only task creation and delegation controls are hidden rather than writing demo state or implying an unsupported backend operation.
+
+Fresh verification after this increment: `:app:testDebugUnitTest` passed **75 tests** with zero failures/errors, `:app:assembleDebug` succeeded, the backend contract JSON parsed, and `git diff --check` passed (the plan file retains the existing LF/CRLF warning only). The new APK is at `app/build/outputs/apk/debug/app-debug.apk`. Android Studio's Run action installed the APK successfully on the Pixel_7 AVD and started its run session; the emulator window could not be captured for a visual screen check in this run, and standalone ADB commands remained unavailable after IDE install. This closes the authenticated project-source and task-lane UI gap in the main task board; all-tab project scoping, release signing, backend authorization coverage, and the broader acceptance items in 9.10 remain open.
+
+### 9.12 Local staging profile and data-parity gate — 1 November 2026
+
+The restored database copy is the separate active Supabase staging project `jiqbxcqlywvvmhbgirzl`; the primary Lovable backend remains `rzskhndweihuczbdhoxk`. Android's normal build remains pinned to production. Local staging builds require `-PssmBackend=staging`, use `SUPABASE_STAGING_URL` and `SUPABASE_STAGING_PUBLISHABLE_KEY` from ignored `local.properties`, append `.staging` to the app ID, and fail for release tasks. No privileged key is placed in the APK.
+
+**Verified this date:** `:app:assembleDebug -PssmBackend=staging` succeeded. The generated BuildConfig contains the staging URL, and the `.staging` package installed and launched on the emulator. The screen remained labeled **Local demo**; its TEST sign-in dialog says prototype screens remain local even after sign-in. The restored backend currently has 27 users/identities, 27 memberships, 13 departments, 36 operational records, 31 tasks, 21 approvals, and 2 documents. The user has not supplied credentials for a staging TEST login, and no authenticated app read was performed.
+
+**Acceptance remains open:** use an owner-provided TEST account locally, then verify `resolve_test_membership`, the authenticated shared workspace read, and whether the app's cloud-backed projection matches the web. Do not treat a successful build, installed APK, or local DEMO records as cloud synchronization. Keep prototype screens clearly labeled until their reads/writes use a verified authenticated contract. Never include account passwords in plans or chat.
+
+### 9.13 Multi-track and sample-flow source checkpoint — 1 November 2026
+
+This is local implementation/test evidence only; it does not mark Android or the portal complete. The following 9.14 checkpoint records the later staging migration application and current backend audit.
+
+**Implemented in source:**
+- Authenticated project choices come from the shared authorized workspace snapshot. The Records and task-board project selection now resolves a stale or unauthorized local project ID to “All permitted projects,” and task-project association follows explicit project IDs or linked-record project fields. An empty Records project catalog says no authorized projects rather than presenting a synthetic project.
+- The Shared TEST task surface can request/decide generic reviews, return a pending item for rework, and carries the server-projected revision/concurrency token. The project coordination surface is read-only. These use source-defined shared TEST mutations/projections; they are not confirmed deployed production APIs.
+- The admin sample-pack action calls the same `sync_canonical_sample_pack` RPC and run ID as web. It is labeled synthetic TEST data and explicitly not real customer work or proof of stage completion. No Android-only fixtures, local operational writes, or reset endpoint were added. Current staging audit found zero manifests for run `LC2-2026-10-28`, so the shared pack still needs an authenticated TEST admin/lead sync.
+
+**Verification (1 November 2026):**
+- `.\gradlew.bat :app:testDebugUnitTest :app:assembleDebug :app:compileDebugAndroidTestKotlin -PssmBackend=staging --no-daemon` — successful; 80 unit tests, zero failures/errors; instrumentation test Kotlin compiled.
+- APK: `app/build/outputs/apk/debug/app-debug.apk`; output metadata reports `com.example.myapplication.staging` (`debug`, `1.0-staging`).
+- At the 9.13 checkpoint, `adb devices` reported no connected devices. No instrumentation execution, screenshot, authenticated read, mutation, sample load, or cross-platform persisted round trip was performed. No database migration had yet been applied at that checkpoint; 9.14 records the later staging-only change.
+
+**Remaining blockers at the 9.13 checkpoint:** no owner-provided TEST login/device was available; lifecycle gate/dependency/handoff behavior and the shared sample load were not accepted as persisted operational flows. The typed customer change/feedback impact-and-revision loop had no verified end-to-end mobile contract. Stage 5 receiving/inventory remains blocked by the absent views/RPCs recorded in `mobile_backend_contract.json`. Current status and migration deployment are updated in 9.14; keep unsupported Android actions unavailable until authenticated cross-platform acceptance.
+
+### 9.14 Customer requirements-change contract checkpoint — 1 November 2026
+
+Android includes only serializable DTOs and a unit test for decoding the `get_customer_change_requests` projection. It adds no repository method, RPC call, authoring, review, or decision action. The additive web migration is applied to isolated staging as version `20261101023755`, and table grants/RPC exposure are verified; mobile must remain unavailable until role authorization and persisted records are checked with authenticated users across web and Android. Impact scope references are not canonical artifact links. No customer-change data or local mock fixtures were created.
+
+**Verification (1 November 2026):** Copilot's previous run of `:app:testDebugUnitTest :app:assembleDebug :app:compileDebugAndroidTestKotlin -PssmBackend=staging --no-daemon` passed 81 unit tests, assembled the APK, and compiled instrumentation sources. A fresh rerun during this pass could not write the wrapper lock under `C:\Users\Admin\.gradle`; the JSON handoff parsed successfully. `adb devices` could not reach its daemon, so no UI or authenticated device round trip was run. `CustomerChangeContractTest` validates projection decoding only and does not call either RPC.
+
+### 9.15 Stage review and customer-change mobile gate — 1 November 2026
+
+**Stage overview improvement:** the read-only Project Review groups returned lifecycle records by the backend-provided `lifecycleStage`/`stage` fields and displays each record's explicitly linked permitted tasks, including returned status, department, assignee, and due date. Tasks linked directly to the project are shown separately; linked document metadata remains read-only. No grouping is inferred from titles or sample templates. `ProjectCoordinationReviewTest` in `SharedTestRepositoryTest` covers explicit ID/code links, grouping, task associations, and isolation from unrelated records.
+
+**Contract boundary:** the verified `get_project_coordination` projection has records/tasks/documents only. It does not expose a typed project track registry, four-level subtask hierarchy, dependency edges/block reasons, cross-department handoff state, or stage-specific approval/evidence actions. Android therefore provides a grouped stage/record overview, not the full planned multi-track overview; those features remain blocked until the shared backend projection persists and returns those contracts.
+
+The customer change RPCs are reported deployed to isolated staging, but the mobile handoff explicitly still requires authenticated role-authorization and persisted web-to-Android round-trip acceptance. Android remains decoder-only and does not invoke either RPC. Do not enable customer-change visibility/actions until authenticated tests confirm requester/admin versus assigned-department projection scope, client/viewer denial, mutation role boundaries, stale request/impact/baseline versions, and persisted audit/revision behavior. No staging API call, customer fixture, write, or migration action was performed in this checkpoint.
+
+**Verification (1 November 2026):** `.\gradlew.bat :app:testDebugUnitTest :app:assembleDebug :app:compileDebugAndroidTestKotlin -PssmBackend=staging --no-daemon` succeeded; 82 unit tests passed with zero failures/errors, and instrumentation Kotlin compiled. APK `app/build/outputs/apk/debug/app-debug.apk` is `com.example.myapplication.staging` / `debug`. The APK was installed in place on the available emulator and `MainActivity` resumed; a screenshot confirmed the app launched in its explicitly labeled Local demo state. No authenticated account was used, so this is UI smoke verification only, not staging-workflow acceptance. Mobile contract JSON parsed and `git diff --check` passed (pre-existing line-ending warning only).
+
+### 9.16 Shared completed-task reopen routing — 1 November 2026
+
+The Completed task section now sends authenticated shared tasks through the existing guarded `onSharedTaskMove` path with status `Open`; it no longer calls the local demo repository for a shared task. The action is labeled “Reopen” for shared data and remains “Restore” for unauthenticated demo tasks. The callback checks task update capability and allowed status before invoking the shared TEST mutation with the server `updated_at` token. This is a source change only; no tests, build, emulator action, or backend call were run for this increment. Authenticated persistence remains unverified.
+
+
+### 9.17 Department-scoped document metadata and client-side project view filter increment — 1 November 2026
+
+**Contract and scope clarification:**
+- The checked-in backend contract (`supabase/migrations/20261020034857_shared_test_workspace.sql` lines 89-90 and line 157) authorizes and scopes documents strictly by TEST department membership (`private.shared_test_scope(organization_id, department_id)`).
+- There is no server policy, RPC parameter, or schema column (`documents` has no `project_id` column) that enforces project-level document access or isolation.
+- Consequently, project filtering on Android operates strictly as a client-side view filter over the department-scoped snapshot returned by `get_shared_test_workspace()`. It does not grant, restrict, or imply server-level project authorization.
+- "All" explicitly designates all documents returned within the user's authorized department scope.
+
+**Implemented in source:**
+- `ProjectDocumentsScreen` supports authenticated and local demo modes with explicit boundaries:
+- In authenticated mode (`authState is AuthState.Authenticated`):
+  - Uses the server-authorized `projectCatalog` from the `get_shared_test_workspace` snapshot via `ProjectFilterDropdown` as a client-side view filter; hard-coded demo project choices are removed.
+  - Displays only metadata for documents returned in the department-scoped `documents` array; local demo documents are completely hidden.
+  - Resolves document-to-project links client-side exclusively through explicit project IDs or explicit linked-record project fields via `SharedAccess.projectIdForDocument`; no relationships are inferred from titles, numbers, or filenames.
+  - When the project view filter is set to "ALL", it displays all documents returned within the user's department scope. When a specific project is selected, only documents explicitly linked to that project are displayed; unlinked documents appear only when the filter is "ALL".
+  - UI labels clearly describe the project selector as a client-side view filter ("PROJECT VIEW FILTER (CLIENT-SIDE):") and title "Department Documents · All Projects View" when unfiltered.
+  - Shows clear empty / unavailable states ("Shared document metadata unavailable" or "No department documents linked to this project") rather than falling back to demo records.
+  - Hides the local-only document drafting dialog.
+  - Suppresses mock signed storage URL generation and token notices; inspection displays server metadata fields only (title, documentType, department, linked record reference, linked project ID, ID, createdAt) with no byte retrieval, storage tokens, or pretend file paths.
+- In local demo mode (`!isAuthenticated`):
+  - Retains existing sample documents and hard-coded project choices, explicitly labeled with a "Local demo · Offline prototype" badge.
+- `AppShell` wires `isAuthenticated`, `projectCatalog`, `selectedProjectId`, and `sharedSnapshot` to `ProjectDocumentsScreen`.
+- `SharedAccessTest` adds unit tests covering `projectIdForDocument` resolution (direct and indirect), filter behavior by project ID, and unlinked document handling.
+
+**Verification (1 November 2026):**
+- `.\gradlew.bat :app:testDebugUnitTest --no-daemon`: 83 unit tests passed with zero failures/errors.
+
+
+### 9.18 Future Android Refinements and Contract-Boundary Roadmap — 1 November 2026
+
+This section establishes the forward-looking plan for mobile refinements while enforcing the non-negotiable architectural boundary between mobile companion presentation and web-authoritative governance. In accordance with the Root Master Plan, no UI filter enforces security, no preview visual constitutes a signature, and no build or emulator launch claims live authenticated acceptance.
+
+---
+
+#### 9.18.1 Boundary Classification
+
+To prevent unauthorized assumptions and local feature bloat, all planned mobile refinements are strictly audited against `docs/backend-handoff/mobile_backend_contract.json` and active Android source, and classified into three tiers:
+
+1. **Current Verified Behavior (Part A Coverage)**:
+   - Authenticated Documents displays department-scoped metadata returned by the verified `get_shared_test_workspace()` projection (`mobile_backend_contract.json:67-71`, `SharedAccess.kt:103-129`, `ProjectDocumentsScreen.kt:115-122`).
+   - Project selection is explicitly labeled as an in-memory client-side view filter (`"PROJECT VIEW FILTER (CLIENT-SIDE):"`, `"All projects (view filter)"`) that grants or implies no server authorization (`ProjectFilterDropdown.kt:61-72, 138`, `ProjectDocumentsScreen.kt:215-224`).
+   - When set to "ALL", the screen renders all documents returned within the caller's authorized department scope. When a specific project is selected, the list filters client-side to records with explicit project links (`SharedAccess.kt:86-101, 125-128`, `ProjectDocumentsScreenTest.kt:73-98`).
+   - Clear empty and unavailable states are displayed when the server snapshot is unavailable or when a project has no linked documents (`ProjectDocumentsScreen.kt:394-439`, `ProjectDocumentsScreenTest.kt:100-155`).
+   - Authenticated mode strictly hides local demo documents, draft dialogs, and mock 300s signed URL token banners (`ProjectDocumentsScreen.kt:198-210, 328-350`, `ProjectDocumentsScreenTest.kt:66-71`).
+   - **Verification**: Verified by 5 focused Compose UI tests in `ProjectDocumentsScreenTest.kt` passing on `emulator-5554` (API 35) and 83 unit tests passing in `:app:testDebugUnitTest`.
+   - **Classification**: `implemented+contracted` (for metadata viewing and client view filtering).
+
+2. **Safe UI Refinements (Client-Only / No Backend Authorization Changes)**:
+   - Ergonomic card compacting (reducing padding from 12–16dp to 8dp/6dp, tightening vertical rhythm, removing redundant full-width informational banners).
+   - In-memory search and filter text input within `ProjectFilterDropdown` operating over the already-returned server project catalog (`SharedAccess.projects(sharedSnapshot)`).
+   - Visually distinguishing auto-generated drafts from externally uploaded deliverables based on existing metadata fields (`document_type`, `metadata`).
+   - Compact one-tap approval triage card with expandable evidence and diff details.
+   - **Classification**: `planned/needed` (pure client UI presentation improvements).
+
+3. **Contract-Dependent Features (Blocked Pending Shared Backend Contracts)**:
+   - Binary document file downloads, private storage access, and multipart uploads.
+   - Document drafting mutations, version incrementing, comment threads, and lead/HOD review routing.
+   - Project RACI matrix assignments, cross-department handoff state tracking, and HW/FW/SW synchronization gates.
+   - Production approval mutations with audit event persistence and cryptographic legal signatures.
+   - Operational HR requisitions, skills assessments, and training records.
+   - Persistent team chat channels, mentions, unread badges, and user avatar/signature uploads.
+   - **Classification**: `absent/blocked` (no Android-callable RPCs, tables, or Realtime contracts exist).
+
+---
+
+#### 9.18.2 Detailed Refinement Areas and Contract Audit
+
+##### 1. Compact Mobile Ergonomics
+- **Current App Support & Source Evidence**:
+  - Implemented in `ProjectDocumentsScreen.kt` (lines 170–260), `CommandCenterScreen.kt` (lines 100–160), `DepartmentRecordsScreen.kt` (lines 200–260), and `ProjectFilterDropdown.kt` (lines 50–280).
+  - Cards currently feature large paddings (12–16dp), duplicate explanatory banners (`"Server Document Metadata..."`, `"PROJECT VIEW FILTER..."`), and tall tab headers.
+  - Dropdown catalog is backed by server-returned `records` (record_type = "Project") from `get_shared_test_workspace()` (`mobile_backend_contract.json:67-71`) via `SharedAccess.projects()` (`SharedAccess.kt:12-28`).
+- **Mobile Behavior & Priority**: **High Priority**. Tighten card padding to 8dp/6dp, replace full-width informational banners with compact status pills/badges, remove redundant header texts, and add a quick text search bar to `ProjectFilterDropdown` for catalogs with many projects. Explicitly maintain that project selection is a client-side view filter and grants no server access.
+- **Contract Evidence & Audit Finding**:
+  - Uses existing server-returned project records in the workspace snapshot. View filtering remains strictly client-side. No new backend contract is needed.
+- **Required Tests & Cross-Platform Acceptance**: Compose UI layout tests verifying no text clipping or overflow across standard phone (360–411dp) and tablet widths. Regression tests confirming project view filter behavior is preserved.
+- **Master Plan & Authority Boundary**: Aligns with Master Plan Section 1.3 C ("Mobile UI Uncluttering Rules") and Section 9.5 ("Department project workspace parity"). No desktop responsibilities are infringed.
+- **Classification**:
+  - Catalog-backed dropdown view filter: `implemented+contracted`.
+  - Searchable in-memory project text filter & card compacting: `planned/needed`.
+
+##### 2. Documents
+- **Current App Support & Source Evidence**:
+  - Read-only metadata viewing is implemented in `ProjectDocumentsScreen.kt` (lines 115–122, 359–512) and `SharedAccess.kt` (lines 103–129) backed by `get_shared_test_workspace()` (`mobile_backend_contract.json:67-71`).
+  - Local demo mode has a synthetic APQP dossier, mock signed storage URL (300s token), and draft document dialog (`ProjectDocumentsScreen.kt:198-210, 328-350`).
+- **Mobile Behavior & Priority**: **High Priority** for metadata presentation; **Deferred/Blocked** for file transfer. Split presentation into two tabs/sections:
+  1. *Uploaded Binary Deliverables*: Externally authored customer files, schematics, datasheets, test reports.
+  2. *Auto-Drafted Controlled Documents*: System-generated specifications, stage-gate checklists, and APQP forms.
+  Distinguish generated drafts from external uploads using `document_type` and `metadata`. Authenticated documents must remain strictly metadata-only.
+- **Contract Evidence & Audit Finding**:
+  - **Android-callable signed-URL / download contract**: `absent/blocked`. While `mobile_backend_contract.json` line 34 notes generic storage access policy (`"Permission-scoped private objects; signed URLs when download delivery requires it."`), there is **NO** Android-callable signed-URL RPC, download endpoint, or storage API defined in `functions` or `edge_routes`.
+  - **Document revision mutations**: `absent/blocked`. `mobile_backend_contract.json` lines 3012–3016 contains only `next_document_number` ("Central document-number allocator; do not call from mobile"). In `mutate_shared_test_workspace` (`20261028120000_lifecycle_and_sample_pack_sync.sql:1398`), only `create_document` exists (inserting an initial metadata row); there are **no** mobile endpoints for document revision freeze, revision history, or document updates.
+- **Required Tests & Cross-Platform Acceptance**: Negative UI tests asserting that no download token or byte retrieval is attempted without a verified contract. Cross-platform round-trip tests on staging verifying that authorized files uploaded on web render metadata in mobile.
+- **Master Plan & Authority Boundary**: Desktop/web remains authoritative for document authoring, template binding, revision freezing, and official numbering (Master Plan Section 1.1). Mobile is a metadata-first companion viewer.
+- **Classification**:
+  - Department-scoped document metadata viewing: `implemented+contracted`.
+  - Separate view for binary deliverables vs. auto-drafts: `planned/needed` (metadata-only).
+  - Android-callable signed-URL / file download contract: `absent/blocked`.
+  - Document revision mutations / authoring: `absent/blocked`.
+
+##### 3. Project RACI and Handoffs
+- **Current App Support & Source Evidence**:
+  - Read-only stage overview is implemented in `SharedTestScreen.kt` (lines 70–180) and `ProjectCoordinationReview.kt` (lines 20–80) backed by the `get_project_coordination` projection (`mobile_backend_contract.json:72-77`).
+  - Groups returned lifecycle records by stage and shows linked tasks and documents.
+- **Mobile Behavior & Priority**: **Medium Priority**. Provide a compact, project-filtered mobile view showing applicable lifecycle stages, cross-department handoffs (e.g., EHW schematic release to ESW/FW board bring-up), HW/FW and FW/SW sync gates, and QA milestones. Display clear R/A/C/I responsibility labels next to assigned departments. Show persisted, server-authorized state only; do not compute or synthesize unrecorded handoffs.
+- **Contract Evidence & Audit Finding**:
+  - **RACI matrix, handoff tokens, and sync gates**: `absent/blocked`. In `mobile_backend_contract.json:72-77`, `get_project_coordination` returns sanitized project/lifecycle records, tasks, and linked document metadata only. It exposes **no** RACI matrix, cross-department handoffs, dependency edges, or HW/FW/SW synchronization gates.
+- **Required Tests & Cross-Platform Acceptance**: Deserialization unit tests for RACI/handoff models; Compose UI tests asserting correct stage grouping and badge rendering; end-to-end verification that web lifecycle updates reflect in the mobile projection.
+- **Master Plan & Authority Boundary**: Workflow-template editing, dependency configuration, stage definition changes, and RACI routing are strictly web-authoritative desktop functions (Master Plan Section 3.0 & 9.8). Mobile is a read-only viewer.
+- **Classification**:
+  - Read-only stage grouping via `get_project_coordination`: `implemented+contracted`.
+  - Project RACI labels, handoff tracking, HW/FW/SW syncs: `absent/blocked` (needed backend contract).
+  - Template editing and RACI administration: web-authoritative desktop responsibility.
+
+##### 4. Approvals
+- **Current App Support & Source Evidence**:
+  - Shared TEST review request and approval decision flows are implemented in `SharedTestScreen.kt` (lines 250–380) with `updated_at` concurrency checks, and `SharedAccess.canDecide` (`SharedAccess.kt:76-83`).
+  - Backed by `mutate_shared_test_workspace` (`actions: request_approval, decide_approval`) in `20261028120000_lifecycle_and_sample_pack_sync.sql:1347, 1404` and `mobile_backend_contract.json:62-66`.
+- **Mobile Behavior & Priority**: **High Priority**. Reformat the pending approval item into a compact one-tap triage row with quick actions for authorized reviewers. An expand-for-details action will reveal evidence references, diff summaries, and decision notes. Visual signatures on mobile are UI previews only; do not treat visual previews as cryptographic or legal signatures unless backed by a registered backend signature record.
+- **Contract Evidence & Audit Finding**:
+  - **Shared TEST approval mutations**: `source-only/unverified`. In `mobile_backend_contract.json:62-66`, `mutate_shared_test_workspace` is defined as a source-defined shared TEST RPC, not a verified production approvals API.
+  - **Production approvals & cryptographic signatures**: `absent/blocked`. No production approvals RPC, multi-signature contract, or legal cryptographic signature verification exists in `mobile_backend_contract.json`.
+- **Required Tests & Cross-Platform Acceptance**: Negative tests verifying that non-reviewers or viewers cannot trigger approval actions; concurrency tests asserting rejection of stale tokens (`DECISION_ALREADY_SAVED`); web-to-mobile round trips verifying persisted approval state.
+- **Master Plan & Authority Boundary**: Desktop/web owns legal signature registration, multi-signatory policy configuration, and formal gate sign-off (Master Plan Section 1.3 B). Mobile provides fast triage for authorized department leads.
+- **Classification**:
+  - Shared TEST review request & decision flow: `source-only/unverified`.
+  - Compact triage row & expandable diff: `planned/needed`.
+  - Production approval workflow & cryptographic signatures: `absent/blocked`.
+
+##### 5. HR and Operations
+- **Current App Support & Source Evidence**:
+  - Prototype UI exists in `DepartmentRecordsScreen.kt` (lines 280–360) for HR/OPS (manpower requisitions, training logs, contractor badges) backed by local in-memory state.
+  - Profile metadata display exists in `SharedBusinessScreen.kt` (lines 67–73).
+- **Mobile Behavior & Priority**: **Medium / Low Priority**. Build compact views/forms for field-applicable HR and operational tasks: manpower requisition requests, skills/competency tracking, training check-ins, and onboarding checklists. Project selection may only scope records where a verified backend contract explicitly links the HR record to a `project_id`.
+- **Contract Evidence & Audit Finding**:
+  - **`ManpowerRequisition` and `TrainingRecord` operations**: `absent/blocked`. While `mobile_backend_contract.json` lists database table schemas for `hr_job_requisitions` (line 2176), `hr_training_programs` (line 2500), and `hr_training_enrollments` (line 2471), there are **NO** mobile-callable operational records contracts, RPCs, or mutation endpoints for manpower requisitions or training logs.
+  - **Confidential HR & Payroll Boundary**: Payroll authoring, compensation details, salary bands, performance gradings, and disciplinary records are strictly excluded from mobile by architecture (Master Plan Section 3.7 & 9.8).
+- **Required Tests & Cross-Platform Acceptance**: Negative unit tests asserting confidential fields are never serialized or requested; permission tests asserting non-HR users receive access denied.
+- **Master Plan & Authority Boundary**: Master Plan Section 3.7 & 9.8 restrict confidential personnel, compensation, and payroll governance to desktop web HR administrators. Mobile focuses on thumb-friendly training check-ins and manpower requests.
+- **Classification**:
+  - Read-only profile metadata display in SharedBusinessScreen: `implemented+contracted`.
+  - Local HR/OPS prototype: `source-only/unverified`.
+  - Manpower requisition & training mobile operations: `absent/blocked` (needed contract).
+  - Payroll authoring & confidential compensation: `absent/blocked` (forbidden by architecture).
+
+##### 6. Profile and Team Chat
+- **Current App Support & Source Evidence**:
+  - Profile display is implemented in `SharedBusinessScreen.kt` (lines 67–73) rendering `display_name`, `employeeCode`, `email`, `phone`, `roleTitle`, `joiningDate` from snapshot actor/profile records.
+  - `TeamAndChatScreen.kt` (lines 96–150) provides local mock chat channels (`general`, `engineering`, `quality`, `procurement`) using in-memory lists in `ScmsRepositoryImpl`.
+- **Mobile Behavior & Priority**: **Low Priority**.
+  - *Profile*: Read-only display of employee profile, assigned department, active role, and notification preferences. Editable profile fields (contact phone, avatar, signature preview) require explicit contract backing.
+  - *Team Chat*: Must strictly quarantine local demo chat from authenticated workspaces. Never present local mock messages as shared persisted communications. Mobile team chat is deferred until a verified backend messaging contract (channels, mentions, unread counters, task/document deep links) is delivered.
+- **Contract Evidence & Audit Finding**:
+  - **`update_my_profile` RPC**: `absent/blocked`. `update_my_profile` does **NOT** exist anywhere in `mobile_backend_contract.json`. The table `profiles` exists in identity tables (line 21) and schema definitions (line 3177), but no mobile mutation RPC is contracted.
+  - **Persisted chat / Realtime messaging**: `absent/blocked`. In `mobile_backend_contract.json`, there are **NO** chat tables, messaging RPCs, or Realtime channel subscriptions. Chat in `TeamAndChatScreen.kt` is purely client-side prototype code.
+- **Required Tests & Cross-Platform Acceptance**: Audit verification proving local mock messages are hidden when authenticated; persistence tests verifying messages sent on mobile appear on web and vice versa.
+- **Master Plan & Authority Boundary**: Presenting local demo chat as real team communications violates Master Plan Section 1.2 ("Never fake synchronization"). Shared chat requires production infrastructure before mobile deployment.
+- **Classification**:
+  - Profile read-only display in SharedBusinessScreen: `implemented+contracted`.
+  - Profile mutation (`update_my_profile`): `absent/blocked` (needed contract).
+  - Local demo chat in TeamAndChatScreen: `source-only/unverified` (quarantined prototype).
+  - Persistent team chat & real-time messaging: `absent/blocked` (needed contract).
+
+##### 7. Local Lifecycle Reference Fixtures & Connected Operational Test Workspace (Scenario S10 & Review Authenticity)
+- **Current App Support & Source Evidence**:
+  - `DEMO-PROJ-010` is registered in `AutomotiveProjects.all` (`ScmsDataModels.kt`) with natural, businesslike titles avoiding repetitive "DEMO ONLY" prefixes while preserving full simulation transparency:
+    - Title: `"Northstar Field Systems — Offline-Capable 4G/GNSS Telematics Tracker PoC"`
+    - Client: `"Northstar Field Systems (fictional client)"`
+    - Volume: `"10 units (PoC prototypes · preliminary)"`
+    - Total Value: `"₹4.85 Lakh (PoC budget estimate · unapproved)"`
+    - Stage: `"Stage 2: Feasibility & Requirements Review"`
+    - Status: `"Pending Feasibility"`
+    - Deliverable: `"Field Telematics Gateway (4G LTE Cat-1 / NavIC GNSS / LoRa Research · Unfrozen)"`
+  - Scenario S10 in `LifecycleScenarios.all` (`ScmsDataModels.kt`) models the pre-freeze gate with explicit test workspace assumptions (`TEST WORKSPACE ASSUMPTION: 4G Cat-1 connectivity, NavIC/IRNSS receiver integration, and local LoRa offline mesh/relay topology are candidate concepts under active feasibility evaluation. Architecture, band allocation, and power budgets are unapproved test-fixture assumptions...`), assigned named engineering roster leads (`Avery Vale`, `Siddharth Roy`, `Morgan Reed`, `Jordan Blake`).
+  - **S10 Review Authenticity & Unsigned Assessment**:
+    - Feasibility reviews for S10 (`DEMO-PROJ-010`) have synthetic signature hashes and timestamps removed (`signatureHash = null`, `signedAt = null`).
+    - Feasibility reviews are explicitly modeled as `UNSIGNED_DRAFT_ASSESSMENT` awaiting HOD review, with no approval, commitment, or baseline freeze implied.
+    - `CommandCenterScreen.kt` renders an `UNSIGNED DRAFT` status badge and `Signature: Unsigned Draft Assessment · Awaiting HOD Review` banner, avoiding any appearance of completed HOD sign-off.
+  - **Simulated Test Request Labeling**:
+    - Customer change ticket `tkt-10-01` (`TKT-2026-1010`) is explicitly labeled with prefix `[SIMULATED TEST REQUEST · NOT FROM REAL CUSTOMER]`, clearly stating in its description that it was created as a fictional simulation and was not received from a real customer.
+    - Internal engineering sizing, memory estimates, and power calculations are explicitly marked as editable, unapproved test assumptions.
+  - `ProjectFilterDropdown.kt` renders a prominent `TEST WORKSPACE · SIMULATION ENVIRONMENT` card with a functioning `Reset Workspace` button and an `ARCHITECTURE CANDIDATE EVALUATION (UNRESOLVED)` panel clarifying 4G Cat-1 vs 2G fallback and LoRa mesh trade-offs pending requirements freeze.
+  - `CommandCenterScreen.kt` connects `onResetWorkspace` to `scmsRepository.resetSampleWorkspace()`.
+  - `ScmsRepositoryImpl` in `ScmsRepository.kt` connects:
+    - 8 connected tasks across 4 lifecycle lanes (`Completed`, `Today`, `Review`, `Tomorrow` / Blocked) reflecting an active operational company: `TSK-10-01` (SAL enquiry intake), `TSK-10-02` (EHW power budget), `TSK-10-03` (EHW NavIC/GPS RF matching), `TSK-10-04` (SW LoRa data-flow research), `TSK-10-05` (FW cellular backhaul fallback), `TSK-10-06` (PUR component lead times), `TSK-10-07` (EHW Rev A schematic netlist, BLOCKED on freeze gate), and `TSK-10-08` (FW flash partitioning, BLOCKED on packet schema freeze).
+    - 4 cross-department handoffs (`HND-10-01` SAL -> EHW, `HND-10-02` EHW -> SW, `HND-10-03` PUR -> EHW, `HND-10-04` QA -> EHW).
+    - Client feedback ticket `tkt-10-01` (`TKT-2026-1010`) with internal engineering calculations from Avery Vale (16MB NOR flash, 48k packets, 42 uA standby) and client explanation from Siddharth Roy.
+    - 4 unsigned draft feasibility reviews for EHW, SW, PUR, QA loaded dynamically upon project selection.
+    - `resetSampleWorkspace()` implementation restoring initial tasks, handoffs, tickets, reviews, and selecting `DEMO-PROJ-010`.
+  - Strict quarantine: authenticated mode in `AppShell.kt` derives project metadata solely from `SharedAccess.projects(sharedSnapshot)`, and `resolveProjectSelection` safely defaults unknown selections to `"ALL"`.
+- **Mobile Behavior & Priority**: **Local Simulation / Test Workspace Only**.
+  - Provides a realistic, operational-looking environment demonstrating how multi-department workflows operate before an authorized freeze gate.
+  - Interactive actions (moving lanes, toggling completion, accepting handoffs, updating tickets) update local state immediately; `Reset Workspace` restores baseline state at any time.
+- **Contract Evidence & Quarantine Boundary**:
+  - **Shared backend S10 persistence**: `absent/blocked`. S10 and `DEMO-PROJ-010` are synthetic local-demo simulation fixtures only; no shared backend record exists in `get_shared_test_workspace` or `get_project_coordination`.
+  - **Quarantine enforcement**: Authenticated mode completely isolates shared snapshot data from local simulation records.
+- **Required Tests & Verification**:
+  - `S10LifecycleScenarioTest.kt`: Unit tests verifying (1) enquiry/project/stage identity consistency; (2) departmental dependency scoping; (3) pending feasibility / pre-freeze gating blocking downstream production; (4) project selection as a client-side view filter; (5) strict isolation from authenticated shared state; (6) linked sample records across lifecycle with unsigned draft assessments (`signedAt == null`, `signatureHash == null`, `verdict == "UNSIGNED_DRAFT_ASSESSMENT"`); (7) `resetSampleWorkspace()` simulation state reset; (8) simulated customer-change ticket explicitly labeled not received from a real customer with editable unapproved test calculations; (9) local portfolio covering 6 distinct lifecycle situations and track combinations; (10) hardware master-data view supporting feasibility, modular assets, tentative BOM lines linked to inventory items, and budget analysis while separating component certification from configuration certification and marking binary deliverables as absent metadata.
+  - `S10ProjectSelectionUiTest.kt`: Compose UI test verifying dropdown selection of `DEMO-PROJ-010`, display of the `TEST WORKSPACE` banner and `Reset Workspace` action, and strict quarantine in authenticated mode.
+- **Classification**:
+  - Connected test workspace & operational simulation: `implemented+contracted` (local reference / test workspace scope).
+  - State reset / reload (`resetSampleWorkspace`): `implemented+contracted` (local simulation scope).
+  - Shared backend persistence for S10 / offline telematics: `absent/blocked` (synthetic reference scenario only).
+
+##### 8. Coherent Local Test Portfolio (6 Distinct Lifecycle Situations & Track Combinations)
+- **Current App Support & Source Evidence**:
+  - `AutomotiveProjects.all` in `ScmsDataModels.kt` defines a small, coherent local test portfolio covering 6 distinct lifecycle situations across multi-track electronics developments:
+    1. **Stage 1 (Enquiry only)**: `DEMO-PORT-01-ENQ` — Smart Irrigation Sensor Node (Track: Hardware only, Stage 1: Customer Inquiry & Concept Definition).
+    2. **Stage 2 (Active Feasibility / Requirements Review, Unfrozen)**: `DEMO-PROJ-010` — Northstar Offline-Capable 4G/GNSS Field Telematics Tracker PoC (Tracks: Hardware + Firmware + Software research, Stage 2: Feasibility & Requirements Review).
+    3. **Stage 3/4 (Requirements Frozen, HW Development Kickoff)**: `DEMO-PORT-03-FRZ` — AIS-140 Two-Wheeler Telematics Unit (Track: Hardware + Firmware, Stage 3: Architecture & High-Level Design).
+    4. **Stage 4 (HW + FW Integration)**: `DEMO-PORT-04-HF` — High-Voltage BMS Telemetry Module (Track: Hardware + Firmware, Stage 4: Detailed Engineering & Prototyping).
+    5. **Stage 4/5 (HW + FW + SW Integration)**: `HLPL-AI4T-01` — Tata Ace EV 4G Telematics Gateway (Track: Hardware + Firmware + Software cloud integration, Stage 4: Detailed Engineering & Prototyping).
+    6. **Stage 6 (QA / PoC Validation & Field RMA Feedback Loop)**: `DEMO-PORT-06-QA` — Cold-Chain Temperature Logger & Telematics (Track: Hardware + Firmware + Quality RMA loop, Stage 6: Pilot Run & Customer Validation).
+  - Distinct stable test IDs, stage-appropriate tasks in varied lanes (`Completed`, `Today`, `Review`, `Tomorrow`/Blocked), and cross-department handoffs are populated in `ScmsRepositoryImpl` (`buildInitialTasks()`, `buildInitialHandoffs()`).
+- **Mobile Behavior & Priority**: **Local Simulation / Test Portfolio Only**.
+  - Provides realistic coverage across all APQP stages and track combinations for offline testing, UI verification, and ergonomics validation.
+  - Strict local/demo quarantine from authenticated project lists and snapshots; selection operates as a local client-side view filter.
+- **Contract Evidence & Quarantine Boundary**:
+  - **Shared backend portfolio persistence**: `absent/blocked`. Portfolio projects are local simulation models only; authenticated mode derives project lists strictly from `SharedAccess.projects(sharedSnapshot)`.
+- **Required Tests & Verification**:
+  - `S10LifecycleScenarioTest.kt` (`test9_portfolioCoversDistinctLifecycleSituationsAndTrackCombinations`): Unit test verifying all 6 projects exist with distinct stable test IDs, unique stage assignments, valid stage titles, and stage-appropriate task distributions.
+- **Classification**:
+  - Local test portfolio coverage: `implemented+contracted` (local simulation scope).
+  - Shared backend persistence for portfolio items: `absent/blocked` (synthetic reference scenario only).
+
+##### 9. Project-Specific Hardware Documents & Master Data View
+- **Current App Support & Source Evidence**:
+  - `ScmsDataModels.kt` defines structured hardware master-data models:
+    - `HardwareMasterData`: top-level container linking project ID to requirements provenance, assets, BOM lines, budget summary, and deliverables.
+    - `HardwareRequirementsProvenance`: documents customer requirements reference (strictly labeled as local draft reference, not customer-issued), engineering specification ID, and requirements baseline status.
+    - `HardwareAssetItem`: modular reusable PCB, enclosure, antenna, and wiring harness assets with revision codes and certification statuses.
+    - `HardwareBomLineItem`: tentative engineering BOM items with internal MPN, supplier name, lead times (weeks), estimated unit cost (USD), and catalog-linked MPN.
+    - `HardwareBudgetSummary`: prototype lot size, estimated BOM cost per unit (USD/INR) dynamically reconciled with line arithmetic, NRE and tooling estimate, target mass-production BOM cost, partial status flag (`isPartial`), explicit exclusion enumeration (`excludedItemsNote`), and disclaimer that numbers are editable unapproved test assumptions.
+    - `HardwareBinaryDeliverable`: metadata for uploaded design artifacts (schematic `.kicad_sch`, Gerber `.zip`, CAD/STEP `.step`, firmware `.bin`, 2D drawings `.dwg`, test certificates `.pdf`).
+  - `ProjectDocumentsScreen.kt` integrates a `"Hardware Master Data"` sub-tab into the demo-mode document workspace rendering `HardwareMasterDataView`:
+    - Displays requirements provenance with customer reference explicitly labeled: `"Local TEST draft reference — not customer-issued (Draft preliminary SOR-010)"`.
+    - Displays a prominent amber **Configuration Certification Warning Banner**: `"Component-level qualification (e.g. AEC-Q100, UL94-V0, USCAR-2) does NOT constitute certification of the complete vehicle/system project configuration."`
+    - Displays reusable modular hardware assets with unsupported pass/qualified claims removed: items are displayed as `"Proposed test / result pending (Target: ... — no test evidence attached)"` and system configuration as `"System Configuration: Not verified — no evidence attached"`. Component qualification is clearly separated from complete-project certification and displayed in neutral styling rather than misleading passing green.
+    - Displays tentative engineering BOM table resolving inventory links against the existing `mouserCatalog` using exact stable MPNs (`EG915N-EU`, `STM32G0B1VCT6`). No aliases or invented catalog rows are created; items without an exact catalog match display `"No catalogue match"` with link left unset (`null`).
+    - Reconciles displayed BOM subtotal from quantity × unit cost for included lines ($31.10 for S10; $32.30 for fallback), distinctly labeled as `(Partial)` alongside explicit enumeration of exclusions (passives, connectors, 4-layer FR4 PCB fabrication, enclosure tooling, antenna, and wiring harness).
+    - Separates editable generated drafts (requirements synthesis, tentative BOM, budget spreadsheet) from uploaded binary deliverables.
+    - Uploaded binary deliverables are strictly displayed as `"Absent Metadata / File Not Uploaded"` unless real metadata exists; no fake upload state, fabricated local files, or signed download tokens are generated.
+  - `ScmsRepository.kt` defines `getHardwareMasterData(projectId: String): HardwareMasterData` providing project-specific hardware master data for `DEMO-PROJ-010` and fallback portfolio projects.
+- **Mobile Behavior & Priority**: **High Priority for Field/Hardware Ergonomics (Local Simulation View)**.
+  - Enables field engineers, hardware leads, and sourcing specialists to inspect hardware provenance, modular assets, lead times, and tentative BOM costs on mobile without conflating component qualification with full system approval.
+  - Authenticated documents path strictly excludes all local fixtures; local test data is never added to authenticated catalogs.
+- **Contract Evidence & Quarantine Boundary**:
+  - **Shared backend hardware documents contract**: `absent/blocked`. Shared authenticated documents (`get_shared_test_workspace`) provide only general document metadata (`DocumentMetadata`). Hardware-specific BOM and engineering master-data RPCs do not exist in `mobile_backend_contract.json`. The Hardware Master Data view is strictly scoped to local demo mode.
+- **Required Tests & Verification**:
+  - `S10LifecycleScenarioTest.kt`:
+    - `test10_hardwareMasterDataSupportsFeasibilityAndBudgetAnalysis`: Unit test verifying hardware master data retrieval, requirements provenance labeled as local draft reference, removal of unsupported pass/qualified claims with proposed test / pending evidence status, exact inventory matching against registered parts with unset link for non-matches, reconciled subtotal arithmetic matching line sums, partial BOM labeling with exclusions, and absence of fabricated binary download URLs for both S10 and fallback portfolio projects.
+    - `test11_authenticatedDocumentsPathQuarantinesLocalHardwareFixtures`: Unit test asserting all 6 local test portfolio fixtures and local hardware master data records are strictly quarantined from authenticated snapshots and project catalogs.
+  - `ProjectDocumentsScreenTest.kt`: Compose UI test verifying that in authenticated mode `"Hardware Master Data"` is hidden, and in demo mode displays unverified evidence statuses, exact inventory matches / "No catalogue match", and reconciled subtotal with partial exclusions.
+- **Classification**:
+  - Local Hardware Master Data view and models: `implemented+contracted` (local simulation scope).
+  - Shared backend hardware BOM/master-data mutations & storage downloads: `absent/blocked` (needed contract).
+
+### 9.19 Project documents and stage-exit verification on Pixel 7 — 2 November 2026
+
+The local TEST Documents flow now scopes the register, stage-exit checklist, and client deliverables to the selected project. Department filtering defaults from the local role mapping; only the local Admin role can select All. Draft editing remains local and does not approve or release a document. File-picker selections are recorded as `local://` references with status `Local file attached (not uploaded)` and an explicit on-device-only warning. Authenticated mode remains limited to department-authorized metadata from `get_shared_test_workspace()` and hides local fixtures and local edit/upload actions.
+
+**Verification reported by Antigravity:** `:app:connectedDebugAndroidTest --no-daemon` passed 11/11 on `emulator-5554` (Pixel_7, Android 15/API 35), including 6 `ProjectDocumentsScreenTest`, 2 `S10ProjectSelectionUiTest`, 2 `Stage5ReceivingScreenTest`, and 1 context test. `:app:testDebugUnitTest --no-daemon` also passed, including `test12_documentsPageVerificationScope`; `git diff --check` passed. The report corrected an earlier “no device attached” status: the Pixel 7 emulator was subsequently started and the full connected suite executed. These are local UI/unit checks, not authenticated staging acceptance.
+
+**Limits:** the mobile contract has no binary-upload or signed-URL operation. Project document filtering is a client-side view over department-authorized metadata; it does not establish project-level RLS. Local file references are not synced or shared, and no remote storage or database was touched.
