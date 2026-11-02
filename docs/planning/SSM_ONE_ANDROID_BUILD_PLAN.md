@@ -1018,3 +1018,11 @@ The device-local preview clearly labels its fictional draft and missing evidence
 **Coverage note:** the all-project advisory is now verified separately from the main class. Earlier test attempts exposed that long advisory text could fall below the visible header area; it was shortened and placed above the tabs to keep the instruction visible on phone layouts.
 
 **Boundaries:** no backend or production writes occurred. Mobile has no verified binary-upload or signed-URL endpoint; selected files remain device-local and authenticated documents remain metadata-only. Local UI checks do not establish backend authorization, server-side project RLS, shared uploads, or customer acceptance.
+
+### 9.23 Shared fictional TEST portfolio target and reset contract gap — 2 November 2026
+
+The user confirmed that the fictional active-company-like sample portfolio should be common to web and Android and resettable before finalization. Android currently has two distinct paths: device-local demo fixtures (reset locally only) and the authenticated Shared TEST workspace. `SharedTestScreen.kt` invokes the same `sync_canonical_sample_pack` action/run ID (`LC2-2026-10-28`) as web and reads `get_shared_test_workspace`; this is source-level contract parity, not proof that a shared pack is populated or that either local demo is shared.
+
+No shared reset RPC/action exists in the current contract. The existing shared seed contains legacy example identities and approval/production-style values that must be revised into clearly fictional, active/in-review sample states before use for this requirement. Next Android work should expose a guarded shared reset/reseed action only after a versioned run-scoped backend contract and reset-scope tests exist. Keep the current device-local reset explicitly local; do not label it as resetting web or server records. No Android source/tests were changed or run for this follow-up, and no shared TEST RPC or backend was invoked.
+
+**Acceptance gate:** verify admin/authorized TEST membership, exact run-ID scoping and unrelated-record preservation, a deterministic reset-and-reseed cycle in isolated PostgreSQL tests, then web-to-Android and Android-to-web readback on an authorized non-production TEST environment. Until those pass, report shared sample availability and reset as unverified.
