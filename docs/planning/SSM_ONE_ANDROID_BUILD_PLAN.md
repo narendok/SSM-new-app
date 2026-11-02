@@ -934,3 +934,87 @@ The local TEST Documents flow now scopes the register, stage-exit checklist, and
 **Verification reported by Antigravity:** `:app:connectedDebugAndroidTest --no-daemon` passed 11/11 on `emulator-5554` (Pixel_7, Android 15/API 35), including 6 `ProjectDocumentsScreenTest`, 2 `S10ProjectSelectionUiTest`, 2 `Stage5ReceivingScreenTest`, and 1 context test. `:app:testDebugUnitTest --no-daemon` also passed, including `test12_documentsPageVerificationScope`; `git diff --check` passed. The report corrected an earlier “no device attached” status: the Pixel 7 emulator was subsequently started and the full connected suite executed. These are local UI/unit checks, not authenticated staging acceptance.
 
 **Limits:** the mobile contract has no binary-upload or signed-URL operation. Project document filtering is a client-side view over department-authorized metadata; it does not establish project-level RLS. Local file references are not synced or shared, and no remote storage or database was touched.
+
+### 9.20 Canonical Multi-Track Lifecycle Portfolio and Local TEST Documents Coverage — 2 November 2026
+
+To align the local TEST Workspace with the canonical company lifecycle scenarios while preserving strict isolation from authenticated backend snapshots, the Android local simulation model maps 1:1 to the web's canonical test scenarios without project duplication:
+
+1. **Web `LC2-E02` ↔ Android `DEMO-PORT-01-ENQ`**: Northstar Agritech, Smart Irrigation Sensor Node (Track: Hardware only, Stage 1: Customer Inquiry & Concept Definition). Unapproved opportunity brief, solar harvesting sizing, IP67 enclosure constraints.
+2. **Web `DEMO-PROJ-010` ↔ Android `DEMO-PROJ-010`**: Northstar Field Systems, Offline 4G/GNSS Field Telematics Tracker PoC (Track: Hardware + Firmware + Software research, Stage 2: Feasibility & Requirements Review, Unfrozen). 4 unsigned draft assessments awaiting review (no approval implied), simulated test ticket, tentative BOM ($31.10 partial), local test draft SOR reference.
+3. **Web `LC2-P01` ↔ Android `DEMO-PORT-03-FRZ`**: Select Motors, Two-Wheeler Telematics Unit (Track: Hardware only, Stage 3: Architecture & High-Level Design). Requirements frozen; PRS locked; kick-off schematic capture.
+4. **Web `LC2-P03` ↔ Android `DEMO-PORT-04-HF`**: Bharat E-Mobility, High-Voltage BMS Telemetry Module (Track: Hardware + Firmware, Stage 4: Detailed Engineering & Prototyping). CAN-FD transceiver validation, isolated power supply schematics, FreeRTOS bootloader.
+5. **Web `LC2-P04` ↔ Android `HLPL-AI4T-01`**: Tata Motors, Tata Ace EV 4G Telematics Gateway (Track: Hardware + Firmware + Software cloud integration, Stage 4: Detailed Engineering & Prototyping). 6 signed HOD reviews, multi-track MQTT telemetry ingestion, line 2 pilot build preparation.
+6. **Web `LC2-P05` ↔ Android `DEMO-PORT-06-QA`**: TransFresh Logistics, Cold-Chain Temperature Logger & Telematics (Track: Hardware + Firmware + Quality RMA loop, Stage 6: Pilot Run & Customer Validation). Stage 6 DVP&R environmental chamber testing linked to Stage 9 field RMA thermal drift feedback loop.
+
+**Operational Data & Documents Implementation:**
+- `ScmsRepositoryImpl` populates connected tasks across all APQP stages with explicit dependency blocker markers (`[BLOCKED BY ...]`), cross-department handoffs for every portfolio project, scoped feasibility reviews, and tailored client deliverables.
+- `resetSampleWorkspace()` resets all simulation collections (tasks, handoffs, deliverables, reviews, documents) deterministically back to initial canonical state.
+- Stage-exit checklist distinguishes auto-drafted records (`AUTO_DRAFT`, Edit button / local draft modal) from externally authored binary files (`UPLOAD_BINARY`, Upload button / device file picker).
+- File references are strictly device-local (`local://`) with an explicit on-device warning banner; no mock storage tokens or fabricated binary files are generated.
+- Saving a draft updates local test state only and never marks a document approved, released, frozen, or gate-passed.
+- Department and project selections operate as client-side view filters; selecting "All" displays an explicit advisory that stage-exit checklists require selecting a specific project.
+- Authenticated mode remains strictly metadata-only from `get_shared_test_workspace()`, quarantining all local fixtures and hiding local edit/upload actions.
+
+**Verification Results:**
+- Unit suite (`:app:testDebugUnitTest --rerun-tasks --no-daemon`): **99/99 tests passed (100% green, 0 failures, 0 skipped)**, including `CanonicalLifecycleTest` (all 4 tests verifying web-to-Android ID mapping, task/handoff integrity, doc kind separation, and workspace reset), `S10LifecycleScenarioTest` (12 tests), `ScmsRepositoryTest`, `SharedAccessTest`, and `SharedTestRepositoryTest`.
+- Connected instrumentation on Pixel 7 emulator (`emulator-5554`, Android 15 / API 35):
+  - Verified `ProjectDocumentsScreenTest`: department-authorized metadata, client-side project filtering, unavailable snapshot empty state, empty project filter state, demo hardware master data with unverified statuses and reconciled BOM subtotal, "All projects" checklist advisory, and stage-exit deliverable Edit/Upload distinctions.
+  - Verified `S10ProjectSelectionUiTest` and `Stage5ReceivingScreenTest` on `emulator-5554`.
+- Formatting & Hygiene: `git diff --check` passed with zero errors or trailing whitespace issues.
+
+**Contract Boundaries & Remaining Limits:**
+- The mobile Supabase contract (`mobile_backend_contract.json`) has no binary upload RPC or storage signed-URL generation RPC.
+- Document and project filtering remain client-side view filters over department-authorized metadata; project-level RLS does not exist on the mobile backend.
+- Local file selections remain strictly device-local (`local://`) and are never sent to remote storage or shared across devices.
+
+### 9.21 Pixel 7 Resumed Verification and Orchestration Diagnosis — 2 November 2026
+
+**Orchestration Root Cause Analysis:**
+- The prior orphaned wait on `connectedDebugAndroidTest` was diagnosed through device process inspection and logcat logs (`/data/anr/anr_2026-11-02-06-55-54-214`): on `emulator-5554` (Pixel 7, Android 15 / API 35), the cold runtime encountered an uncompiled dex verification stall compounded by background emulator HAL load (86% CPU, sensor multihal taking 75% kernel CPU), exceeding the Android process startup timeout and causing `ActivityManager` to terminate the process before instrumentation attached (`INSTRUMENTATION_RESULT: shortMsg=failed to attach` / `Reason: Process failed to complete startup`).
+- Resolution: Ran dex2oat pre-compilation (`cmd package compile -m speed -f com.example.myapplication` and `com.example.myapplication.test`). Both compiled with `Success`.
+
+**Pixel 7 Connected Compose Instrumentation Verification:**
+- Executed `ProjectDocumentsScreenTest` via direct Android instrumentation on `emulator-5554`: **8/8 tests passed (OK, Time: 182.698s)**:
+  1. `authenticatedDocumentsDisplaysDepartmentMetadataAndClientSideViewFilter`: PASSED (department metadata, view filter header, and quarantine of demo docs verified).
+  2. `unavailableSnapshotAndEmptyProjectFilterShowClearStates`: PASSED (null snapshot displays clear unavailable advisory; hides demo records/actions).
+  3. `projectWithNoLinkedDocumentsShowsEmptyFilterState`: PASSED (unlinked project displays clear notice; hides unrelated department documents).
+  4. `clickingAuthenticatedDocumentOpensMetadataOnlySheet`: PASSED (metadata inspection bottom sheet shows record link without binary paths/tokens).
+  5. `localDemoPortfolioProjectSelectionDisplaysStageExitDeliverablesAndActions`: PASSED (stage-exit checklist renders AUTO_DRAFT Edit vs UPLOAD_BINARY Upload distinctions, and displays device-local warning banner).
+  6. `demoModeHardwareMasterDataDisplaysUnverifiedStatusAndReconciledBom`: PASSED (reconciled BOM subtotal arithmetic, partial labeling with exclusions, exact inventory links, unverified configuration banner).
+  7. `localDemoAllProjectsSelectionShowsSpecificProjectChecklistNotice`: PASSED (All projects selection presents explicit advisory requiring project selection).
+  8. `projectSelectionFiltersAlreadyReturnedListClientSide`: PASSED (client-side filtering isolates project documents without touching network).
+- Additional connected suite execution: **4/4 tests passed (Time: 157.533s)**:
+  - `Stage5ReceivingScreenTest`: 2/2 passed (`receivingTabShowsUnavailableStateWithoutLocalSampleRecords`, `projectDropdownSelectsCatalogProject`).
+  - `S10ProjectSelectionUiTest`: 2/2 passed (`authenticatedModeStrictlyExcludesDemoProj010FromProjectCatalog`, `selectingDemoProj010RetainsProjectAndDisplaysTestWorkspaceBannerAndResetAction`).
+- Total connected instrumentation: **12/12 passed (100% green on Pixel 7 / Android 15)**.
+
+**Unit Test Suite Parity:**
+- Executed `:app:testDebugUnitTest`: **99/99 tests passed (100% green across 12 test suites)**:
+  - `CanonicalLifecycleTest`: 10/10 passed (7 tracks normalization, stage invariants, pre-project feasibility, release readiness, sample catalogue, web-to-Android ID crosswalk, task/handoff integrity, doc kind separation, workspace reset).
+  - `S10LifecycleScenarioTest`: 12/12 passed (S10 identity, isolated dependencies, unapproved draft reviews, demo ticket, local draft SOR reference, quarantined hardware master data).
+  - `ScmsRepositoryTest`: 48/48 passed.
+  - `SharedAccessTest`: 8/8 passed.
+  - `SharedTestRepositoryTest`: 8/8 passed.
+  - `ProjectFilterDropdownTest`: 4/4 passed.
+  - `SharedBusinessRepositoryTest`: 3/3 passed.
+  - `TestAccountsTest`: 2/2 passed.
+  - `CustomerChangeContractTest`: 1/1 passed.
+  - `Stage5ReceivingAvailabilityTest`: 1/1 passed.
+  - `SessionExpiryTest`: 1/1 passed.
+  - `ExampleUnitTest`: 1/1 passed.
+
+**Explicit Operational Limits Reaffirmed:**
+- No remote storage upload, binary file mutation, or signed download URL exists in `mobile_backend_contract.json`.
+- File attachments remain strictly device-local (`local://`) with on-device warning and are never shared.
+- Draft saving updates local in-memory/test state only and never approves, freezes, or advances APQP gates.
+- Authenticated mode strictly enforces metadata-only quarantine from `get_shared_test_workspace()`.
+
+### 9.22 Final local TEST Documents verification — 2 November 2026
+
+The device-local preview clearly labels its fictional draft and missing evidence; the local portfolio and hardware examples remain unverified and cannot signify customer acceptance or certification. In the Documents screen, the all-project stage-exit advisory was moved out of the lazy list so the checklist limitation stays in the fixed visible area when a project-specific checklist cannot be shown. Generated drafts retain Edit/Save Draft behavior; externally authored schematic, manufacturing, test, and certification artifacts remain file-picker entries with device-local metadata only.
+
+**Independent verification:** `:app:connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.class=com.example.myapplication.ProjectDocumentsScreenTest` passed **8/8 on Pixel_7 (Android 15/API 35)** after the final screen layout change. A dedicated `allProjectsViewExplainsThatChecklistNeedsSpecificProject` run also passed **1/1**, verifying the concise fixed-area advisory after switching the local view to All projects. The eight class checks covered authenticated metadata-only inspection and project filtering, empty/unavailable states, the local warning banner, stage-exit Edit versus Upload actions, hardware master-data unverified status and inventory-linked partial BOM, and the generated preview's fictional/unverified wording. The final unit suite passed **99/99**, and `git diff --check` passed for this tree (Git emitted CRLF normalization notices only).
+
+**Coverage note:** the all-project advisory is now verified separately from the main class. Earlier test attempts exposed that long advisory text could fall below the visible header area; it was shortened and placed above the tabs to keep the instruction visible on phone layouts.
+
+**Boundaries:** no backend or production writes occurred. Mobile has no verified binary-upload or signed-URL endpoint; selected files remain device-local and authenticated documents remain metadata-only. Local UI checks do not establish backend authorization, server-side project RLS, shared uploads, or customer acceptance.
