@@ -6,6 +6,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SharedBusinessRepositoryTest {
+ @Test fun expenseCategoriesComeFromTheSharedAuthenticatedCatalogue() = runBlocking {
+  var method="";var args=buildJsonObject{}
+  val repository=SharedBusinessRepository { name,body,_ -> method=name;args=Json.parseToJsonElement(body).jsonObject;Result.success("""{"categories":["Travel & Transport","Software & Subscriptions"],"services":[{"id":"github","name":"GitHub subscription","category":"Software & Subscriptions","provider":"GitHub","cycle":"Monthly","owner":"Software lead"}]}""") }
+  val result=repository.loadExpenseCatalogue("test-token","department-uuid")
+  assertEquals("get_expense_catalogue",method);assertEquals("department-uuid",args["p_department"]?.jsonPrimitive?.content)
+  assertEquals(listOf("Travel & Transport","Software & Subscriptions"),result["categories"]?.jsonArray?.map{it.jsonPrimitive.content})
+  assertEquals("GitHub subscription",result["services"]?.jsonArray?.first()?.jsonObject?.get("name")?.jsonPrimitive?.content)
+ }
  @Test fun readFailureNeverSubstitutesLocalExamples() = runBlocking {
   val repository=SharedBusinessRepository { _,_,_->Result.failure(IllegalStateException("Denied")) }
   try { repository.load("token");fail("Expected authorization failure") } catch(e:IllegalStateException){assertEquals("Denied",e.message)}

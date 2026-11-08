@@ -103,9 +103,11 @@ import com.example.myapplication.data.model.MaterialAllocation
 import com.example.myapplication.data.model.PartComponent
 import com.example.myapplication.data.model.PickingItem
 import com.example.myapplication.data.model.ReceivingDraftVoucher
+import com.example.myapplication.data.model.Stage5ReceivingAvailability
 import com.example.myapplication.data.model.VisitorLogEntry
 import com.example.myapplication.data.model.WireHarness
 import com.example.myapplication.data.repository.ScmsRepository
+import com.example.myapplication.ui.components.Stage5ReceivingUnavailableCard
 
 enum class InventoryPreset(val label: String, val targetDept: String) {
     UNIVERSAL("Universal", "All"),
@@ -141,7 +143,6 @@ fun GovernedInventoryScreen(
     var selectedPartForDetail by remember { mutableStateOf<PartComponent?>(null) }
     var showRegisterModal by remember { mutableStateOf(false) }
     var showIssueModal by remember { mutableStateOf(false) }
-    var showReceivingModal by remember { mutableStateOf(false) }
     var showMaintenanceModal by remember { mutableStateOf(false) }
     var showVisitorModal by remember { mutableStateOf(false) }
 
@@ -191,7 +192,8 @@ fun GovernedInventoryScreen(
                 Spacer(modifier = Modifier.width(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     FilledTonalButton(
-                        onClick = { showReceivingModal = true },
+                        onClick = {},
+                        enabled = Stage5ReceivingAvailability.isAvailable,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(32.dp)
@@ -278,7 +280,7 @@ fun GovernedInventoryScreen(
                 )
                 5 -> ReceivingDraftsTab(
                     receivingDrafts = receivingDrafts,
-                    onOpenNewDraft = { showReceivingModal = true }
+                    onOpenNewDraft = {}
                 )
                 6 -> PlantAndMaintenanceTab(
                     assets = assets,
@@ -331,15 +333,6 @@ fun GovernedInventoryScreen(
             scmsRepository = scmsRepository,
             issuer = currentRole.leadName,
             onDismiss = { showIssueModal = false }
-        )
-    }
-
-    // Stage 5B Receiving Draft Modal
-    if (showReceivingModal) {
-        ReceivingDraftModal(
-            scmsRepository = scmsRepository,
-            inspectorName = currentRole.leadName,
-            onDismiss = { showReceivingModal = false }
         )
     }
 
@@ -2448,6 +2441,11 @@ fun ReceivingDraftsTab(
     receivingDrafts: List<ReceivingDraftVoucher>,
     onOpenNewDraft: () -> Unit
 ) {
+    if (!Stage5ReceivingAvailability.isAvailable) {
+        Stage5ReceivingUnavailableCard()
+        return
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -2472,7 +2470,7 @@ fun ReceivingDraftsTab(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Offline-safe vouchers for incoming shipments. Official GRN numbering and quarantine staging are finalized upon online server synchronization.",
+                            text = "Drafts are in-memory only. Expected-PO verification, server sync, and official GRN finalization are unavailable on the confirmed TEST backend.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp
@@ -2741,5 +2739,3 @@ fun GovernedInventoryScreenPreview() {
         )
     }
 }
-
-

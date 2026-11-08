@@ -12,17 +12,32 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 
-val supabaseUrl = localProperties.getProperty("SUPABASE_URL")
-    ?.takeIf { it.isNotBlank() }
-    ?: "https://rzskhndweihuczbdhoxk.supabase.co"
-require(supabaseUrl.trimEnd('/') == "https://rzskhndweihuczbdhoxk.supabase.co") {
-    "Android must use the SSM-new-web portal Supabase project; configured SUPABASE_URL does not match the approved authority."
+val ssmBackend = providers.gradleProperty("ssmBackend").orElse("production").get().lowercase()
+require(ssmBackend == "production" || ssmBackend == "staging") {
+    "ssmBackend must be either 'production' or 'staging'."
 }
-val supabaseAnonKey = localProperties.getProperty("SUPABASE_ANON_KEY")
+val stagingBuild = ssmBackend == "staging"
+val expectedSupabaseUrl = if (stagingBuild) {
+    "https://jiqbxcqlywvvmhbgirzl.supabase.co"
+} else {
+    "https://rzskhndweihuczbdhoxk.supabase.co"
+}
+val configuredSupabaseUrl = localProperties.getProperty(if (stagingBuild) "SUPABASE_STAGING_URL" else "SUPABASE_URL")
+    ?.takeIf { it.isNotBlank() }
+val supabaseUrl = configuredSupabaseUrl ?: expectedSupabaseUrl
+require(supabaseUrl.trimEnd('/') == expectedSupabaseUrl) {
+    "Android SUPABASE_URL does not match the explicitly selected $ssmBackend backend."
+}
+val supabaseAnonKey = localProperties.getProperty(
+    if (stagingBuild) "SUPABASE_STAGING_PUBLISHABLE_KEY" else "SUPABASE_ANON_KEY",
+)
     ?.takeIf { it.isNotBlank() }
     ?: ""
 require(supabaseAnonKey.isNotBlank()) {
-    "SUPABASE_ANON_KEY must be provided in ignored local.properties or the secure build environment."
+    "The selected backend's publishable/anon key must be provided in ignored local.properties or the secure build environment."
+}
+require(!stagingBuild || gradle.startParameter.taskNames.none { it.contains("release", ignoreCase = true) }) {
+    "Staging backend builds are restricted to local debug tasks; release builds must use production."
 }
 
 android {
@@ -31,6 +46,10 @@ android {
 
     defaultConfig {
         applicationId = "com.example.myapplication"
+        if (stagingBuild) {
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+        }
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -40,6 +59,7 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+        buildConfigField("String", "SCMS_BACKEND", "\"$ssmBackend\"")
     }
 
     buildTypes {

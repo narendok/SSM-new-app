@@ -1,6 +1,6 @@
 {
-  "contract_version": "2026-09-24-stage5-remediated",
-  "source_of_truth": "Lovable Cloud backend and generated src/integrations/supabase/types.ts",
+  "contract_version": "2026-11-01-android-workflow-status-reconciled",
+  "source_of_truth": "This file is a repository schema inventory, not proof of deployed contracts. The active backend and its grants/RLS are authoritative; current deployment status is recorded in backend_verification_snapshot.",
   "environment": {
     "mobile_config": [
       "SUPABASE_URL",
@@ -88,7 +88,7 @@
     },
     {
       "name": "create_grn",
-      "description": "Atomic, server-numbered GRN posting with opaque UUID idempotency and payload binding."
+      "description": "Source SQL is present in evidence/stage5-remediation-20260924154357.sql.txt; the 2026-10-31 Lovable TEST catalog audit reported this RPC absent. Do not call from Android until deployed signature, grants, and authorization are re-verified."
     },
     {
       "name": "create_phase6_quotation",
@@ -167,6 +167,14 @@
       "description": "See generated type signature; server/database function."
     },
     {
+      "name": "get_shared_test_workspace",
+      "description": "Source-defined authenticated shared TEST projection. Requires active TEST membership; returns permission-scoped membership, department, project/record, task, approval, document-metadata, and audit data. It is not a production organization API. Deployment status must be verified per environment."
+    },
+    {
+      "name": "get_project_coordination",
+      "description": "Authenticated read-only coordination projection for active shared TEST membership; viewers are denied. Android runtime evidence in SSM_ONE_ANDROID_BUILD_PLAN.md section 9.10 records EHW Lead/Employee reads and viewer denial on the then-current TEST backend. Returns sanitized project/lifecycle records, tasks, and linked document metadata only, not document files. This is not evidence of deployment on every environment; the Android stage overview groups only returned stage fields and explicit links, not tracks, handoffs, dependencies, or subtask hierarchies."
+    },
+    {
       "name": "get_public_application_status",
       "description": "See generated type signature; server/database function."
     },
@@ -177,6 +185,22 @@
     {
       "name": "has_permission",
       "description": "See generated type signature; server/database function."
+    },
+    {
+      "name": "mutate_shared_test_workspace",
+      "description": "Source-defined authenticated shared TEST mutation RPC with UUID request idempotency, stale-version checks, server-side authorization, audit writes, and scoped task, lifecycle, sample-pack, document-metadata, and approval operations. Approval requests name a reviewer department; the server validates requester authority, target department, record scope, and guards. Decisions accept approved, rejected, or returned and are re-authorized server-side. This is not a production workflow API; migration presence does not verify deployment."
+    },
+    {
+      "name": "register_test_controlled_original",
+      "description": "Staging-only authenticated RPC added by web migration 20261106060000_register_test_controlled_original.sql. It derives organization and department from the signed-in TEST membership, checks document scope, binds immutable file metadata to a checksum and idempotency key, and returns a controlled storage path. Anonymous execution is revoked. Android uploads the selected bytes to that registered path and calls the existing byte-verification function. This is not a production contract; do not use outside the isolated TEST project without a separately reviewed deployment."
+    },
+    {
+      "name": "get_customer_change_requests",
+      "description": "Read-only staging catalog/grant exposure is reported for isolated project jiqbxcqlywvvmhbgirzl by migration 20261101023755_customer_requirement_change_workflow.sql. The projection is intended to include project-input-linked requests, department-scoped impact rows, and requester/admin audit events. Android must not invoke until the deployed signature/decoder and role-specific authorized results/denials are verified with authenticated staging identities and a persisted web-to-mobile round trip."
+    },
+    {
+      "name": "mutate_customer_change_request",
+      "description": "Mutation RPC is reported deployed to isolated staging project jiqbxcqlywvvmhbgirzl by migration 20261101023755_customer_requirement_change_workflow.sql, with request, return/rework, department assessment, and non-self admin decision actions; approval is intended to open the next project-input revision atomically. Android must not invoke until each server-side permission boundary, stale-version behavior, persisted audit/revision result, and cross-platform round trip are verified with authenticated staging identities."
     },
     {
       "name": "has_role",
@@ -260,19 +284,19 @@
     },
     {
       "name": "post_material_issue",
-      "description": "Atomic numbered material issue posting with request-key idempotency."
+      "description": "Source SQL is present in evidence/stage5-remediation-20260924154357.sql.txt; the 2026-10-31 Lovable TEST catalog audit reported this RPC absent. Do not call from Android until deployed signature, grants, and authorization are re-verified."
     },
     {
       "name": "post_material_return",
-      "description": "Atomic partial-return-safe posting with request-key idempotency."
+      "description": "Source SQL is present in evidence/stage5-remediation-20260924154357.sql.txt; the 2026-10-31 Lovable TEST catalog audit reported this RPC absent. Do not call from Android until deployed signature, grants, and authorization are re-verified."
     },
     {
       "name": "post_stock_transfer",
-      "description": "Atomic balance-neutral transfer with request-key idempotency."
+      "description": "Source SQL is present in evidence/stage5-remediation-20260924154357.sql.txt; the 2026-10-31 Lovable TEST catalog audit reported this RPC absent. Do not call from Android until deployed signature, grants, and authorization are re-verified."
     },
     {
       "name": "post_stock_adjustment",
-      "description": "Atomic reason-required adjustment with request-key idempotency."
+      "description": "Source SQL is present in evidence/stage5-remediation-20260924154357.sql.txt; the 2026-10-31 Lovable TEST catalog audit reported this RPC absent. Do not call from Android until deployed signature, grants, and authorization are re-verified."
     }
   ],
   "inventories": {
@@ -4616,41 +4640,81 @@
       "mobile_status": "MOBILE_READ_SAFE"
     }
   ],
+  "backend_verification_snapshot": {
+    "checked_at": "2026-10-31",
+    "target_project_ref": "rzskhndweihuczbdhoxk",
+    "target_host": "rzskhndweihuczbdhoxk.supabase.co",
+    "checked_by": "Lovable read-only catalog audit for the current SSM-new TEST backend; a follow-up project-info check confirmed ref rzskhndweihuczbdhoxk (host rzskhndweihuczbdhoxk.supabase.co), matching Android configuration. The separate connected Supabase management account cannot access this project, so it was not used for inspection.",
+    "stage_5_source_evidence": "The archived SQL evidence file defines Stage 5 transaction tables, helper functions, five stock RPCs, and two receiving views. It assumes existing procurement/inventory base tables and permission/numbering helpers, so it is not a self-contained migration.",
+    "stage_5_test_backend": "NOT_DEPLOYED in confirmed Android target per Lovable read-only catalog/preflight: all five RPCs and both receiving views are absent. The preflight also reports all 13 required base tables (purchase_orders, purchase_order_items, vendors, goods_receipt_notes, goods_receipt_items, locations, inventory_lots, incoming_inspections, stock_history, components, assignments, assignment_batches, rd_members) and the four prerequisite helpers (can_inward, has_any_permission, has_role, next_document_number) absent. The archived SQL cannot be applied as-is; deployed signatures, grants, SECURITY DEFINER properties, and runtime safeguards do not exist to verify.",
+    "stage_5_android": "DISABLED: Android repository methods return UnsupportedOperationException; do not enable or invent RPC calls until backend deployment and authenticated-session acceptance are verified.",
+    "stage_5_source_review_findings": [
+      "Archived create_grn declares _idempotency_key DEFAULT NULL and skips the idempotency ledger when NULL; make the key mandatory and test retries before accepting this contract.",
+      "Archived inventory_request_result() is SECURITY DEFINER and the SQL snapshot contains no explicit REVOKE EXECUTE from PUBLIC/anon or caller authorization check. Review and harden its execute grants and request ownership before any deployment.",
+      "Archived Stage 5 SQL uses CREATE TABLE/POLICY statements without a complete baseline migration and assumes missing base tables/helpers; it is not safe to apply directly to the checked project."
+    ],
+    "migration_history": {
+      "20260924154357": "Absent from the checked Supabase migration ledger and no matching Drizzle row was found.",
+      "20261029120000": "Absent from supabase_migrations.schema_migrations; Drizzle row 16 exists with hash 6113b1cdba8f3702b5d8a2c0df0463f1b15ffd03775303975c943b91bf1d6d17.",
+      "20261031152000": "Absent from supabase_migrations.schema_migrations; Drizzle row 17 exists with hash 8e9ffe1d1cdbc94f0aea9fd2f21988ccb5193a4ec63717f712eddc7b151c90d0."
+    },
+    "safety": "Do not insert ledger rows manually. The target identity is confirmed, but the connected Supabase management account is not authorized for this project. Do not deploy the archived SQL as-is: its prerequisite schema/helpers are absent, and create_grn permits a NULL idempotency key. First restore/establish the canonical base schema and migration ownership, then deploy reviewed idempotent contracts through the supported migration workflow and verify authenticated behavior."
+  },
+  "staging_document_original_registration_verification": {
+    "checked_at": "2026-11-06",
+    "target_project_ref": "jiqbxcqlywvvmhbgirzl",
+    "migration": "20261106060000_register_test_controlled_original.sql",
+    "rpc": "public.register_test_controlled_original(jsonb, uuid)",
+    "deployed": true,
+    "security_definer": true,
+    "anonymous_execute": false,
+    "authenticated_execute": true,
+    "behavior_verified": "Catalog and grants only. A valid authenticated TEST identity is still required to exercise department binding and create/upload/read back a sample file.",
+    "production_touched": false
+  },
   "limitations": [
     "No dedicated Android API surface is implemented. Android must use the existing RLS-governed database contract and authenticated server routes/functions only.",
-    "Final GRN is a server-side RPC but idempotency is not evidenced.",
-    "Material issue, return, transfer, and adjustment posting contracts are not evidenced as dedicated atomic server transactions.",
+    "The customer requirements-change workflow is reported deployed to isolated staging project jiqbxcqlywvvmhbgirzl by migration 20261101023755_customer_requirement_change_workflow.sql. Android remains decoder-only: migration/catalog exposure does not verify deployed argument/result compatibility, role-specific allowed/denied reads and mutations, stale-version handling, or a persisted web/Android round trip. Do not invoke either RPC or claim mobile availability until those checks pass with authenticated staging identities.",
+    "Customer change scope values are department-declared references (tracks, stages, documents, BOM, reusable assets); this source contract does not establish foreign-key links to canonical artifact registries. No notification contract is wired.",
+    "Stage 5 transaction and receiving SQL exists as an archived source artifact, but the current TEST catalog audit reported the associated functions/views absent; deployment and live contracts are not verified.",
+    "The archived create_grn signature permits a NULL idempotency key; source artifact wording must not imply idempotency is mandatory unless the deployed SQL is corrected and verified.",
     "No separate DEV/UAT/PROD strategy is evidenced.",
     "No outbound webhook dispatch/retry worker is evidenced."
   ],
   "stage_5": {
     "final_grn": {
-      "status": "READY",
-      "contract": "create_grn with idempotency UUID",
+      "status": "BLOCKED_RPC_ABSENT_IN_CONFIRMED_TEST_BACKEND",
+      "source_contract": "create_grn(_po_id uuid, _vendor_invoice_number text, _vendor_invoice_date date, _storage_notes text, _items jsonb, _idempotency_key uuid DEFAULT NULL); source SQL permits a null idempotency key.",
+      "android_status": "DISABLED",
       "offline": "draft-only; final posting online-required"
     },
     "material_issue": {
-      "status": "READY",
-      "contract": "post_material_issue",
+      "status": "BLOCKED_RPC_ABSENT_IN_CONFIRMED_TEST_BACKEND",
+      "source_contract": "post_material_issue(uuid,uuid,text,text,jsonb,uuid)",
+      "android_status": "DISABLED",
       "offline": "online-required"
     },
     "material_return": {
-      "status": "READY",
-      "contract": "post_material_return",
+      "status": "BLOCKED_RPC_ABSENT_IN_CONFIRMED_TEST_BACKEND",
+      "source_contract": "post_material_return(uuid,integer,uuid)",
+      "android_status": "DISABLED",
       "offline": "online-required"
     },
     "stock_transfer": {
-      "status": "READY",
-      "contract": "post_stock_transfer",
+      "status": "BLOCKED_RPC_ABSENT_IN_CONFIRMED_TEST_BACKEND",
+      "source_contract": "post_stock_transfer(uuid,uuid,uuid,integer,text,uuid)",
+      "android_status": "DISABLED",
       "offline": "online-required"
     },
     "stock_adjustment": {
-      "status": "READY",
-      "contract": "post_stock_adjustment",
+      "status": "BLOCKED_RPC_ABSENT_IN_CONFIRMED_TEST_BACKEND",
+      "source_contract": "post_stock_adjustment(uuid,uuid,integer,text,uuid)",
+      "android_status": "DISABLED",
       "offline": "online-required"
     },
     "operational_receiving_reads": {
-      "status": "READY",
+      "status": "BLOCKED_VIEWS_ABSENT_IN_CONFIRMED_TEST_BACKEND",
+      "android_status": "DISABLED_UNTIL_LIVE_SCHEMA_VERIFIED",
       "views": [
         "operational_receiving_purchase_orders",
         "operational_receiving_purchase_order_items"
@@ -4667,7 +4731,7 @@
     },
     "session_acceptance_tests": {
       "status": "BLOCKED",
-      "reason": "Dedicated live-session RLS and concurrency acceptance evidence is not yet available."
+      "reason": "The checked TEST backend lacks the required RPCs/views; exact runtime contracts and dedicated authenticated-session RLS/concurrency acceptance are unavailable."
     }
   }
 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -21,13 +22,16 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderShared
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,10 +55,26 @@ import com.example.myapplication.data.model.ProjectMetadata
 fun ProjectFilterDropdown(
     selectedProjectId: String,
     onProjectSelected: (String) -> Unit,
+    projects: List<ProjectMetadata> = AutomotiveProjects.all,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val currentProject = AutomotiveProjects.findById(selectedProjectId)
+    val projectCatalog = remember(projects) {
+        projects.filterNot { it.id == "ALL" }
+    }
+    val effectiveProjectId = resolveProjectSelection(selectedProjectId, projectCatalog)
+    val allProjects = ProjectMetadata(
+        "ALL",
+        "All projects (view filter)",
+        "Show all projects in this list",
+        "",
+        "",
+        "",
+        "",
+        "View filter only",
+        ""
+    )
+    val currentProject = projectCatalog.firstOrNull { it.id == effectiveProjectId } ?: allProjects
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -71,8 +91,26 @@ fun ProjectFilterDropdown(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Dropdown Clickable Trigger
-            Box {
+            if (projectCatalog.isEmpty()) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FolderShared,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "PROJECT: No authorized projects",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else Box {
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -87,7 +125,7 @@ fun ProjectFilterDropdown(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = if (selectedProjectId == "ALL") Icons.Default.FolderShared else Icons.Default.Folder,
+                        imageVector = if (effectiveProjectId == "ALL") Icons.Default.FolderShared else Icons.Default.Folder,
                         contentDescription = "Project Selector",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp)
@@ -102,7 +140,7 @@ fun ProjectFilterDropdown(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = currentProject.reference,
+                        text = if (effectiveProjectId == "ALL") "All projects (view filter)" else currentProject.reference,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -122,8 +160,8 @@ fun ProjectFilterDropdown(
                     onDismissRequest = { expanded = false },
                     modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                 ) {
-                    AutomotiveProjects.all.forEach { proj ->
-                        val isSelected = proj.id == selectedProjectId
+                    projectCatalog.forEach { proj ->
+                        val isSelected = proj.id == effectiveProjectId
                         DropdownMenuItem(
                             text = {
                                 Column(modifier = Modifier.padding(vertical = 4.dp)) {
@@ -158,7 +196,7 @@ fun ProjectFilterDropdown(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "${proj.volume} · ${proj.totalValue} · ${proj.stage}",
+                                        text = listOf(proj.stage, proj.status).filter(String::isNotBlank).joinToString(" · "),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 10.sp
@@ -181,6 +219,36 @@ fun ProjectFilterDropdown(
                             }
                         )
                     }
+                    DropdownMenuItem(
+                        text = {
+                            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                Text(
+                                    text = allProjects.reference,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = allProjects.title,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        trailingIcon = {
+                            if (effectiveProjectId == "ALL") {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        },
+                        onClick = {
+                            onProjectSelected("ALL")
+                            expanded = false
+                        }
+                    )
                 }
             }
 
@@ -205,7 +273,9 @@ fun ProjectFilterDropdown(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (selectedProjectId == "ALL") "All Stages (1-9)" else currentProject.stage.substringBefore(":"),
+                        text = if (projectCatalog.isEmpty()) "No projects"
+                            else if (effectiveProjectId == "ALL") "View filter only"
+                            else currentProject.stage.substringBefore(":"),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (currentProject.status == "Active") Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSecondaryContainer
@@ -216,6 +286,15 @@ fun ProjectFilterDropdown(
     }
 }
 
+internal fun resolveProjectSelection(
+    selectedProjectId: String,
+    projects: List<ProjectMetadata>
+): String = when {
+    selectedProjectId == "ALL" -> "ALL"
+    projects.any { it.id == selectedProjectId } -> selectedProjectId
+    else -> "ALL"
+}
+
 /**
  * Compact Project Overview Banner rendered on top of the Cockpit when a specific project is selected.
  * Matches web DepartmentProjectWorkspace project overview.
@@ -223,10 +302,13 @@ fun ProjectFilterDropdown(
 @Composable
 fun ProjectOverviewBanner(
     projectId: String,
-    modifier: Modifier = Modifier
+    projects: List<ProjectMetadata> = AutomotiveProjects.all,
+    modifier: Modifier = Modifier,
+    onResetWorkspace: (() -> Unit)? = null
 ) {
     if (projectId == "ALL") return
-    val project = AutomotiveProjects.findById(projectId)
+    val project = projects.firstOrNull { it.id == projectId } ?: AutomotiveProjects.findById(projectId)
+    val isTestWorkspace = projectId == "DEMO-PROJ-010"
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -235,6 +317,61 @@ fun ProjectOverviewBanner(
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
+            if (isTestWorkspace) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Test Workspace",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "TEST WORKSPACE · SIMULATION ENVIRONMENT",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "Fictional telematics tracker reference project. All parameters are test-fixture assumptions (unapproved and editable).",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+                        if (onResetWorkspace != null) {
+                            TextButton(
+                                onClick = onResetWorkspace,
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Reset Test Workspace",
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Reset Workspace", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -256,13 +393,13 @@ fun ProjectOverviewBanner(
                     Spacer(modifier = Modifier.width(6.dp))
                     Surface(
                         shape = RoundedCornerShape(4.dp),
-                        color = Color(0xFFE8F5E9)
+                        color = if (project.status.contains("Pending")) Color(0xFFFFF3E0) else Color(0xFFE8F5E9)
                     ) {
                         Text(
                             text = project.status,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E7D32),
+                            color = if (project.status.contains("Pending")) Color(0xFFE65100) else Color(0xFF2E7D32),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -314,6 +451,31 @@ fun ProjectOverviewBanner(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 10.sp
                     )
+                }
+            }
+
+            if (isTestWorkspace) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Text(
+                            text = "ARCHITECTURE CANDIDATE EVALUATION (UNRESOLVED):",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 9.5.sp
+                        )
+                        Text(
+                            text = "4G LTE Cat-1 cellular backhaul, NavIC L5 / GPS L1 dual-constellation fix, and sub-GHz LoRa mesh/relay for offline operation without public internet are under active engineering review. Prerequisite Stage 3 requirements freeze gate pending.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 10.sp
+                        )
+                    }
                 }
             }
         }

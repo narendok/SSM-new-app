@@ -208,7 +208,7 @@ class ScmsRepositoryTest {
         val ehw = reviews.find { it.deptCode == "EHW" }!!
         assertEquals("Avery Vale", ehw.leadName)
         assertEquals("FEASIBLE", ehw.verdict)
-        assertTrue(ehw.signatureHash.startsWith("SHA256:"))
+        assertTrue(ehw.signatureHash?.startsWith("SHA256:") == true)
         assertTrue(ehw.keyParameters.containsKey("MCU Clock"))
 
         val pur = reviews.find { it.deptCode == "PUR" }!!
@@ -865,7 +865,7 @@ class ScmsRepositoryTest {
 
     @Test
     fun testLifecycleScenariosCountAndKeys() {
-        assertEquals(6, LifecycleScenarios.all.size)
+        assertEquals(7, LifecycleScenarios.all.size)
         val keys = LifecycleScenarios.all.map { it.fixtureKey }
         assertTrue(keys.contains("INTERNAL-JIG"))
         assertTrue(keys.contains("DECLINED-ENQUIRY"))
@@ -873,6 +873,7 @@ class ScmsRepositoryTest {
         assertTrue(keys.contains("SYSTEM-PILOT"))
         assertTrue(keys.contains("PILOT-REFINEMENT"))
         assertTrue(keys.contains("BULK-PRODUCTION"))
+        assertTrue(keys.contains("LC2-P10-OFFLINE-TELEMATICS"))
     }
 
     @Test
@@ -924,10 +925,24 @@ class ScmsRepositoryTest {
         assertNotNull(recon)
         assertEquals(500, recon?.totalPlannedUnits)
         assertEquals(200, recon?.lotQuantity)
-        assertEquals(150, recon?.acceptedUnits)
+        assertEquals(150, recon?.simulatedQaPassUnits)
         assertEquals(5, recon?.heldUnits)
         assertEquals(45, recon?.pendingInspectionUnits)
         assertEquals(300, recon?.remainingPlannedUnits)
         assertTrue("Lot parts must reconcile: 150 + 5 + 45 == 200", recon?.isReconciled ?: false)
+    }
+
+    @Test
+    fun testScenarioS10OfflineTelematicsIsFictionalAndPreFreeze() {
+        val s10 = LifecycleScenarios.get("LC2-P10-OFFLINE-TELEMATICS")
+        assertNotNull(s10)
+        assertEquals("S10", s10?.id)
+        assertEquals("DEMO-PROJ-010", s10?.projectCode)
+        assertEquals("DEMO-ENQ-010", s10?.enquiryCode)
+        assertTrue(s10?.isExternalClient ?: false)
+        assertEquals("Northstar Field Systems — Offline-Capable 4G/GNSS Field Telematics Tracker PoC", s10?.title)
+        assertTrue(s10?.stageRemark?.contains("TEST WORKSPACE ASSUMPTION") == true)
+        assertTrue(s10?.stageRemark?.contains("unapproved") == true)
+        assertEquals(4, s10?.dependencies?.size)
     }
 }

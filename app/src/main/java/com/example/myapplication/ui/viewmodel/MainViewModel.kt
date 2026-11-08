@@ -1,12 +1,14 @@
 package com.example.myapplication.ui.viewmodel
 
 import android.app.Application
+import com.example.myapplication.BuildConfig
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.cache.CacheManager
 import com.example.myapplication.data.model.AuthState
 import com.example.myapplication.data.model.DepartmentRole
 import com.example.myapplication.data.model.PartComponent
+import com.example.myapplication.data.model.ProjectCoordinationProjection
 import com.example.myapplication.data.remote.SupabaseClient
 import com.example.myapplication.data.repository.AuthRepository
 import com.example.myapplication.data.repository.AuthRepositoryImpl
@@ -58,14 +60,117 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val lastSyncTimestamp: StateFlow<Long> = _lastSyncTimestamp.asStateFlow()
 
     private val sharedRepository = SharedTestRepository(supabaseClient)
+    private val controlledOriginalRepository = com.example.myapplication.data.repository.ControlledOriginalRepository(supabaseClient)
+    suspend fun controlledOriginalRevisions(documentId: String): JsonArray {
+        val token = authRepository.validAccessToken()
+        return Json.parseToJsonElement(supabaseClient.listControlledOriginals(documentId, token).getOrThrow()).jsonArray
+    }
+    suspend fun controlledOriginalDownload(fileId: String): String =
+        controlledOriginalRepository.downloadUrl(authRepository.validAccessToken(), fileId)
+    suspend fun createSharedDocumentWithOriginal(
+        projectId: String, departmentId: String, title: String, documentType: String,
+        originalName: String, contentType: String, bytes: ByteArray
+    ): String {
+        require(BuildConfig.SCMS_BACKEND == "staging") { "Shared document creation is restricted to TEST staging" }
+        require(projectId.isNotBlank() && projectId != "ALL") { "Select a project first" }
+        require(title.isNotBlank() && documentType.isNotBlank()) { "Document title and type are required" }
+        val userId = (authState.value as? AuthState.Authenticated)?.session?.user?.id
+            ?: throw SecurityException("Sign in to the TEST workspace first")
+        val token = authRepository.validAccessToken()
+        val checksum = java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        val signature = "document-original:$projectId:$departmentId:$title:$documentType:$originalName:$checksum"
+        val documentRequestId = secureStorage.sharedRequestId(userId, signature)
+        val fileRequestId = secureStorage.sharedRequestId(userId, "$signature:original")
+        val receipt = sharedRepository.registerDocument(token, buildJsonObject {
+            put("scope", "internal")
+            put("projectId", projectId)
+            put("departmentId", departmentId)
+            put("title", title.trim())
+            put("documentType", documentType)
+        }, documentRequestId)
+        val documentId = receipt["id"]?.jsonPrimitive?.content
+            ?: throw IllegalStateException("Document registration returned no ID")
+        val fileId = supabaseClient.registerControlledOriginal(
+            documentId = documentId,
+            revision = "01",
+            originalName = originalName,
+            contentType = contentType,
+            bytes = bytes,
+            accessToken = token,
+            requestId = fileRequestId
+        ).getOrThrow()
+        secureStorage.completeSharedRequest(userId, signature)
+        secureStorage.completeSharedRequest(userId, "$signature:original")
+        _sharedSnapshot.value = sharedRepository.load(authRepository.validAccessToken())
+        return fileId
+    }
     private val _sharedSnapshot = MutableStateFlow<JsonObject?>(null)
     val sharedSnapshot: StateFlow<JsonObject?> = _sharedSnapshot.asStateFlow()
+    private val _lifecycleWorkspace = MutableStateFlow<JsonObject?>(null)
+    val lifecycleWorkspace: StateFlow<JsonObject?> = _lifecycleWorkspace.asStateFlow()
+    private val _lifecycleWorkspaceError = MutableStateFlow<String?>(null)
+    val lifecycleWorkspaceError: StateFlow<String?> = _lifecycleWorkspaceError.asStateFlow()
+    private val _lifecycleWorkspaceBusy = MutableStateFlow(false)
+    val lifecycleWorkspaceBusy: StateFlow<Boolean> = _lifecycleWorkspaceBusy.asStateFlow()
+    fun refreshLifecycleWorkspace() {
+        if (BuildConfig.SCMS_BACKEND != "staging" || authState.value !is AuthState.Authenticated || _lifecycleWorkspaceBusy.value) return
+        val epoch = sharedEpoch
+        _lifecycleWorkspaceBusy.value = true
+        _lifecycleWorkspaceError.value = null
+        viewModelScope.launch {
+            try {
+                val result = sharedRepository.loadLifecycleWorkspace(authRepository.validAccessToken())
+                if (epoch == sharedEpoch) _lifecycleWorkspace.value = result
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (epoch == sharedEpoch) { _lifecycleWorkspace.value = null; _lifecycleWorkspaceError.value = e.message ?: "Reusable revisions could not be loaded" }
+            } finally { if (epoch == sharedEpoch) _lifecycleWorkspaceBusy.value = false }
+        }
+    }
+    fun linkReusableAsset(projectId: String, assetRevisionId: String, assessment: String) {
+        if (BuildConfig.SCMS_BACKEND != "staging") { _lifecycleWorkspaceError.value = "Reusable asset linking is restricted to TEST"; return }
+        val userId = (authState.value as? AuthState.Authenticated)?.session?.user?.id ?: run {
+            _lifecycleWorkspaceError.value = "Sign in to the TEST workspace first"; return
+        }
+        if (_lifecycleWorkspaceBusy.value) return
+        val payload = buildJsonObject {
+            put("projectId", projectId)
+            put("assetRevisionId", assetRevisionId)
+            put("assessment", assessment.trim())
+        }
+        val signature = "lifecycle:link_asset:${payload}"
+        val requestId = try { secureStorage.sharedRequestId(userId, signature) } catch (e: Exception) {
+            _lifecycleWorkspaceError.value = "Cannot preserve retry identity. Nothing was sent."; return
+        }
+        val epoch = sharedEpoch
+        _lifecycleWorkspaceBusy.value = true
+        _lifecycleWorkspaceError.value = null
+        viewModelScope.launch {
+            try {
+                sharedRepository.linkReusableAsset(authRepository.validAccessToken(), payload, requestId)
+                if (epoch == sharedEpoch) {
+                    secureStorage.completeSharedRequest(userId, signature)
+                    _lifecycleWorkspace.value = sharedRepository.loadLifecycleWorkspace(authRepository.validAccessToken())
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (epoch == sharedEpoch) _lifecycleWorkspaceError.value = e.message ?: "Link failed; retry the same selection"
+            } finally { if (epoch == sharedEpoch) _lifecycleWorkspaceBusy.value = false }
+        }
+    }
     private val _sharedError = MutableStateFlow<String?>(null)
     val sharedError: StateFlow<String?> = _sharedError.asStateFlow()
     private val _sharedBusy = MutableStateFlow(false)
     val sharedBusy: StateFlow<Boolean> = _sharedBusy.asStateFlow()
     private val _sharedSaved = MutableStateFlow(0)
     val sharedSaved: StateFlow<Int> = _sharedSaved.asStateFlow()
+    private val _projectCoordination = MutableStateFlow<ProjectCoordinationProjection?>(null)
+    val projectCoordination: StateFlow<ProjectCoordinationProjection?> = _projectCoordination.asStateFlow()
+    private val _projectCoordinationError = MutableStateFlow<String?>(null)
+    val projectCoordinationError: StateFlow<String?> = _projectCoordinationError.asStateFlow()
+    private val _projectCoordinationBusy = MutableStateFlow(false)
+    val projectCoordinationBusy: StateFlow<Boolean> = _projectCoordinationBusy.asStateFlow()
     private val _viewDepartment = MutableStateFlow<String?>(null)
     val viewDepartment: StateFlow<String?> = _viewDepartment.asStateFlow()
     fun selectDepartment(id: String?) {
@@ -75,6 +180,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         else if (com.example.myapplication.data.model.SharedAccess.departments(snapshot).any { it["id"]?.jsonPrimitive?.content == id }) _viewDepartment.value = id
     }
     private val businessRepository = com.example.myapplication.data.repository.SharedBusinessRepository(supabaseClient)
+    private val _expenseCategories = MutableStateFlow<List<String>>(emptyList())
+    val expenseCategories: StateFlow<List<String>> = _expenseCategories.asStateFlow()
+    private val _expenseServices = MutableStateFlow<List<JsonObject>>(emptyList())
+    val expenseServices: StateFlow<List<JsonObject>> = _expenseServices.asStateFlow()
+    private var expenseOptionsScope: String? = null
+    fun refreshExpenseCategories(departmentId: String?, organizationId: String?) {
+        val scope = departmentId?.takeIf { it.isNotBlank() }
+        val requestScope = "${organizationId.orEmpty()}|${scope ?: "company"}"
+        if (_expenseCategories.value.isNotEmpty() && expenseOptionsScope == requestScope) return
+        if (authState.value !is AuthState.Authenticated) return
+        _expenseCategories.value = emptyList()
+        _expenseServices.value = emptyList()
+        expenseOptionsScope = requestScope
+        viewModelScope.launch {
+            try {
+                val result = businessRepository.loadExpenseCatalogue(authRepository.validAccessToken(), scope)
+                val categories = (result["categories"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }.orEmpty()
+                val services = (result["services"] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
+                if (expenseOptionsScope == requestScope) { _expenseCategories.value = categories; _expenseServices.value = services }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                _businessError.value = e.message ?: "Expense categories could not be loaded"
+            }
+        }
+    }
     private val _businessSnapshot = MutableStateFlow<JsonObject?>(null)
     val businessSnapshot: StateFlow<JsonObject?> = _businessSnapshot.asStateFlow()
     private val _businessError = MutableStateFlow<String?>(null)
@@ -134,6 +264,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun refreshProjectCoordination() {
+        if (authState.value !is AuthState.Authenticated || _projectCoordinationBusy.value) return
+        val epoch = sharedEpoch
+        _projectCoordinationBusy.value = true
+        _projectCoordinationError.value = null
+        viewModelScope.launch {
+            try {
+                val data = sharedRepository.loadProjectCoordination(authRepository.validAccessToken())
+                if (epoch == sharedEpoch) {
+                    _projectCoordination.value = data
+                    _projectCoordinationError.value = null
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (epoch == sharedEpoch) {
+                    _projectCoordination.value = null
+                    _projectCoordinationError.value = e.message ?: "Project coordination read failed"
+                }
+            } finally {
+                if (epoch == sharedEpoch) _projectCoordinationBusy.value = false
+            }
+        }
+    }
+
     fun mutateSharedWorkspace(action: String, payload: JsonObject) {
         val token = (authState.value as? AuthState.Authenticated)?.session?.accessToken ?: return
         if (_sharedBusy.value) return
@@ -169,9 +323,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 priorIdentity = identity
                 sharedEpoch++
                 _businessSnapshot.value = null; _businessError.value = null; _businessBusy.value = false; _businessSaved.value = 0
+                _expenseCategories.value = emptyList(); _expenseServices.value = emptyList(); expenseOptionsScope = null
                 _viewDepartment.value = null
                 _selectedTab.value = 0
                 _sharedSnapshot.value = null; _sharedError.value = null; _sharedBusy.value = false
+                _lifecycleWorkspace.value = null; _lifecycleWorkspaceError.value = null; _lifecycleWorkspaceBusy.value = false
+                _projectCoordination.value = null; _projectCoordinationError.value = null; _projectCoordinationBusy.value = false
                 if (state is AuthState.Authenticated) {
                     state.session.testMembership?.workspaceRole()?.let { scmsRepository.switchRole(it) }
                     refreshSharedWorkspace()

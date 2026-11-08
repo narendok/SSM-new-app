@@ -71,10 +71,18 @@ fun AppShell(viewModel: MainViewModel) {
     val selectedTab by viewModel.selectedTab.collectAsState()
     val authState by viewModel.authState.collectAsState()
     val sharedSnapshot by viewModel.sharedSnapshot.collectAsState()
+    val lifecycleWorkspace by viewModel.lifecycleWorkspace.collectAsState()
+    val lifecycleWorkspaceError by viewModel.lifecycleWorkspaceError.collectAsState()
+    val lifecycleWorkspaceBusy by viewModel.lifecycleWorkspaceBusy.collectAsState()
+    val sharedError by viewModel.sharedError.collectAsState()
+    val sharedBusy by viewModel.sharedBusy.collectAsState()
     val viewDepartment by viewModel.viewDepartment.collectAsState()
     val currentRole by viewModel.scmsRepository.currentRole.collectAsState()
     val approvals by viewModel.scmsRepository.approvals.collectAsState()
     val selectedProject by viewModel.scmsRepository.selectedProject.collectAsState()
+    val projectCatalog = if (authState is AuthState.Authenticated) {
+        com.example.myapplication.data.model.SharedAccess.projects(sharedSnapshot)
+    } else com.example.myapplication.data.model.AutomotiveProjects.all
     val pendingApprovalsCount = approvals.count { it.outcome == "Pending" }
 
     var showAuthDialog by remember { mutableStateOf(false) }
@@ -153,10 +161,23 @@ fun AppShell(viewModel: MainViewModel) {
                     }
                 },
                 actions = {
+                    val connectionLabel = when {
+                        authState is AuthState.Authenticating -> "Signing in"
+                        authState !is AuthState.Authenticated -> "Local demo"
+                        sharedBusy && sharedSnapshot == null -> "Loading cloud data"
+                        sharedError != null -> "Cloud read failed"
+                        sharedSnapshot != null -> "Cloud data loaded"
+                        else -> "Not connected"
+                    }
+                    val connectionColor = when (connectionLabel) {
+                        "Cloud data loaded" -> MaterialTheme.colorScheme.tertiary
+                        "Cloud read failed" -> MaterialTheme.colorScheme.error
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFE8F5E9),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC8E6C9))
+                        color = connectionColor.copy(alpha = 0.10f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, connectionColor.copy(alpha = 0.25f))
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
@@ -166,13 +187,13 @@ fun AppShell(viewModel: MainViewModel) {
                                 modifier = Modifier
                                     .size(6.dp)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
-                                    .background(Color(0xFF2E7D32))
+                                    .background(connectionColor)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Synced",
+                                text = connectionLabel,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF2E7D32),
+                                color = connectionColor,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp
                             )
@@ -287,11 +308,13 @@ fun AppShell(viewModel: MainViewModel) {
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            // Prominent Project Filter Dropdown Bar matching web DepartmentProjectWorkspace
-            if (selectedTab in listOf(0, 1, 3)) {
+            // The authenticated selector scopes the connected task board only. Other tabs
+            // retain their own source until a verified project-link contract is available.
+            if (selectedTab == 0) {
                 com.example.myapplication.ui.components.ProjectFilterDropdown(
                     selectedProjectId = selectedProject,
-                    onProjectSelected = { viewModel.scmsRepository.selectProject(it) }
+                    onProjectSelected = { viewModel.scmsRepository.selectProject(it) },
+                    projects = projectCatalog
                 )
             }
             Box(Modifier.weight(1f)) {
@@ -300,18 +323,42 @@ fun AppShell(viewModel: MainViewModel) {
                     scmsRepository = viewModel.scmsRepository,
                     onOpenRoleSwitcher = { showRoleSwitcherDialog = true },
                     authenticatedName = (authState as? AuthState.Authenticated)?.session?.testMembership?.displayName,
+                    isAuthenticated = authState is AuthState.Authenticated,
+                    projectCatalog = projectCatalog,
                     sharedTasks = if (authState is AuthState.Authenticated) com.example.myapplication.data.model.SharedAccess.rows(sharedSnapshot, "tasks")
                         .filter { viewDepartment == null || com.example.myapplication.data.model.SharedAccess.text(it, "department_id") == viewDepartment }
                         .map { task ->
                             fun t(key: String) = com.example.myapplication.data.model.SharedAccess.text(task, key)
-                            com.example.myapplication.data.model.DailyTaskItem(t("id"), t("title"), "", t("priority"), "", t("due_at"), t("status") == "Complete")
+                            val status = t("status")
+                            val projectId = com.example.myapplication.data.model.SharedAccess.projectIdForTask(sharedSnapshot, task)
+                            com.example.myapplication.data.model.DailyTaskItem(
+                                id = t("id"), title = t("title"), dept = t("department_code"), priority = t("priority"),
+                                assignee = t("assignee_name").ifBlank { t("assignee") }, dueDate = t("due_at"),
+                                isCompleted = status.equals("Complete", true) || status.equals("Completed", true),
+                                lane = com.example.myapplication.data.model.SharedAccess.taskLane(status),
+                                projectId = projectId
+                            )
                         } else null,
                     onSharedTaskToggle = { id ->
                         com.example.myapplication.data.model.SharedAccess.rows(sharedSnapshot, "tasks").find { com.example.myapplication.data.model.SharedAccess.text(it, "id") == id }?.let { task ->
-                            if (com.example.myapplication.data.model.SharedAccess.canUpdateTask(sharedSnapshot, task)) {
+                            val nextStatus = if (com.example.myapplication.data.model.SharedAccess.text(task, "status").equals("Complete", true)) "Open" else "Complete"
+                            if (com.example.myapplication.data.model.SharedAccess.canUpdateTask(sharedSnapshot, task) &&
+                                com.example.myapplication.data.model.SharedAccess.canSetTaskStatus(task, nextStatus)) {
                                 viewModel.mutateSharedWorkspace("update_task", kotlinx.serialization.json.buildJsonObject {
                                     put("id", kotlinx.serialization.json.JsonPrimitive(id))
-                                    put("status", kotlinx.serialization.json.JsonPrimitive(if (com.example.myapplication.data.model.SharedAccess.text(task, "status") == "Complete") "Open" else "Complete"))
+                                    put("status", kotlinx.serialization.json.JsonPrimitive(nextStatus))
+                                    put("expected_updated_at", kotlinx.serialization.json.JsonPrimitive(com.example.myapplication.data.model.SharedAccess.text(task, "updated_at")))
+                                })
+                            }
+                        }
+                    },
+                    onSharedTaskMove = { id, status ->
+                        com.example.myapplication.data.model.SharedAccess.rows(sharedSnapshot, "tasks").find { com.example.myapplication.data.model.SharedAccess.text(it, "id") == id }?.let { task ->
+                            if (com.example.myapplication.data.model.SharedAccess.canUpdateTask(sharedSnapshot, task) &&
+                                com.example.myapplication.data.model.SharedAccess.canSetTaskStatus(task, status)) {
+                                viewModel.mutateSharedWorkspace("update_task", kotlinx.serialization.json.buildJsonObject {
+                                    put("id", kotlinx.serialization.json.JsonPrimitive(id))
+                                    put("status", kotlinx.serialization.json.JsonPrimitive(status))
                                     put("expected_updated_at", kotlinx.serialization.json.JsonPrimitive(com.example.myapplication.data.model.SharedAccess.text(task, "updated_at")))
                                 })
                             }
@@ -321,14 +368,27 @@ fun AppShell(viewModel: MainViewModel) {
                 1 -> DepartmentRecordsScreen(
                     scmsRepository = viewModel.scmsRepository,
                     onOpenRoleSwitcher = { showRoleSwitcherDialog = true },
-                    sharedBusinessContent = if(authState is AuthState.Authenticated) { section -> SharedBusinessScreen(viewModel, section) } else null
+                    sharedBusinessContent = if(authState is AuthState.Authenticated) { section -> SharedBusinessScreen(viewModel, section) } else null,
+                    projectCatalog = projectCatalog
                 )
                 2 -> UnifiedSearchScreen(
                     scmsRepository = viewModel.scmsRepository
                 )
                 3 -> ProjectDocumentsScreen(
                     scmsRepository = viewModel.scmsRepository,
-                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true }
+                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true },
+                    isAuthenticated = authState is AuthState.Authenticated,
+                    projectCatalog = projectCatalog,
+                    selectedProjectId = selectedProject,
+                    sharedSnapshot = sharedSnapshot,
+                    lifecycleWorkspace = lifecycleWorkspace,
+                    lifecycleWorkspaceError = lifecycleWorkspaceError,
+                    lifecycleWorkspaceBusy = lifecycleWorkspaceBusy,
+                    onRefreshLifecycleWorkspace = viewModel::refreshLifecycleWorkspace,
+                    onLinkReusableAsset = viewModel::linkReusableAsset,
+                    loadOriginalRevisions = viewModel::controlledOriginalRevisions,
+                    originalDownload = viewModel::controlledOriginalDownload,
+                    createSharedDocument = viewModel::createSharedDocumentWithOriginal
                 )
                 4 -> if(authState is AuthState.Authenticated) SharedBusinessScreen(viewModel, "communication") else TeamAndChatScreen(
                     scmsRepository = viewModel.scmsRepository,

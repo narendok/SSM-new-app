@@ -113,7 +113,7 @@ class SupabaseClient {
 
             val response = httpClient.newCall(request).execute()
             val responseBody = response.body?.string() ?: ""
-            android.util.Log.d("SupabaseClient", "exchangePkceCode response code: ${response.code}, body: ${responseBody.take(200)}")
+            android.util.Log.d("SupabaseClient", "PKCE response code: ${response.code}")
 
             if (!response.isSuccessful) {
                 return@withContext Result.failure(
@@ -147,21 +147,18 @@ class SupabaseClient {
                 .post(jsonBody)
                 .build()
 
-            android.util.Log.d("SupabaseClient", "Calling ${url} for ${email}")
             val response = httpClient.newCall(request).execute()
             val responseBody = response.body?.string() ?: ""
-            android.util.Log.d("SupabaseClient", "Response code: ${response.code}, body: ${responseBody.take(200)}")
+            android.util.Log.d("SupabaseClient", "Sign-in response code: ${response.code}")
 
             if (!response.isSuccessful) {
-                val err = IOException("Sign-in failed: HTTP ${response.code} - $responseBody")
-                android.util.Log.e("SupabaseClient", "HTTP error", err)
+                val err = IOException("Sign-in failed: HTTP ${response.code}. Check your account details and retry.")
                 return@withContext Result.failure(err)
             }
 
             val session = json.decodeFromString<AuthSession>(responseBody)
             Result.success(session)
         } catch (e: Exception) {
-            android.util.Log.e("SupabaseClient", "Exception in signInWithPassword: ${e.javaClass.name}: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -234,6 +231,112 @@ class SupabaseClient {
         }
     }
 
+    /** Upload only to an already-authorized immutable TEST file registration. */
+    suspend fun uploadControlledOriginal(fileId: String, bytes: ByteArray, contentType: String, accessToken: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            require(BuildConfig.SCMS_BACKEND == "staging") { "Original upload rollout is restricted to staging" }
+            require(accessToken.isNotBlank()) { "Authentication required" }
+            require(bytes.isNotEmpty() && bytes.size <= 25 * 1024 * 1024) { "File must be between 1 byte and 25 MB" }
+            val registered = com.example.myapplication.data.repository.SharedTestRepository(this@SupabaseClient)
+                .controlledFileAccess(accessToken, fileId)
+            val checksum = java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+                .joinToString("") { "%02x".format(it.toInt() and 255) }
+            require(registered["checksum"]?.jsonPrimitive?.content?.equals(checksum, true) == true &&
+                registered["size_bytes"]?.jsonPrimitive?.content?.toLongOrNull() == bytes.size.toLong()) {
+                "Selected file differs from the registered original"
+            }
+            val path = registered["storage_path"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
+                ?: throw SecurityException("Original unavailable")
+            val request = Request.Builder().url("$baseUrl/storage/v1/object/controlled-documents/$path")
+                .header("apikey", anonKey).header("Authorization", "Bearer $accessToken")
+                .header("x-upsert", "false").post(bytes.toRequestBody(contentType.toMediaType())).build()
+            val uploadStatus = httpClient.newCall(request).execute().use { it.code }
+            // Storage duplicate responses vary by version. Only the server's
+            // actual-byte verification can turn an interrupted retry into success.
+            val verification = verifyControlledOriginal(fileId, accessToken)
+            if (verification.isFailure) {
+                if (uploadStatus !in 200..299)
+                    throw IOException("Original upload failed (HTTP $uploadStatus). Retry the same registered revision.")
+                verification.getOrThrow()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Result.failure(e)
+        }
+    }
+
+    /** Register an immutable, department-scoped original for an existing TEST document. */
+    suspend fun registerControlledOriginal(documentId: String, revision: String, originalName: String,
+        contentType: String, bytes: ByteArray, accessToken: String, requestId: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            require(BuildConfig.SCMS_BACKEND == "staging") { "Original registration is restricted to staging" }
+            require(accessToken.isNotBlank()) { "Authentication required" }
+            require(java.util.UUID.fromString(documentId).toString() == documentId.lowercase()) { "Canonical document ID required" }
+            require(revision.isNotBlank() && revision.length <= 80) { "Revision is required" }
+            require(originalName.isNotBlank() && originalName.length <= 180) { "File name is required" }
+            require(bytes.isNotEmpty() && bytes.size <= 25 * 1024 * 1024) { "File must be between 1 byte and 25 MB" }
+            require(runCatching { java.util.UUID.fromString(requestId).toString() == requestId.lowercase() }.getOrDefault(false)) { "A stable retry identity is required" }
+            val checksum = java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+                .joinToString("") { "%02x".format(it.toInt() and 255) }
+            val payload = kotlinx.serialization.json.buildJsonObject {
+                put("documentId", kotlinx.serialization.json.JsonPrimitive(documentId))
+                put("revision", kotlinx.serialization.json.JsonPrimitive(revision))
+                put("originalName", kotlinx.serialization.json.JsonPrimitive(originalName))
+                put("contentType", kotlinx.serialization.json.JsonPrimitive(contentType))
+                put("sizeBytes", kotlinx.serialization.json.JsonPrimitive(bytes.size))
+                put("checksum", kotlinx.serialization.json.JsonPrimitive(checksum))
+            }
+            val registration = com.example.myapplication.data.repository.SharedTestRepository(this@SupabaseClient)
+                .registerOriginal(accessToken, payload, requestId)
+            val fileId = registration["id"]?.jsonPrimitive?.content
+                ?: throw IOException("Original registration returned no file ID")
+            uploadControlledOriginal(fileId, bytes, contentType, accessToken).getOrThrow()
+            Result.success(fileId)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Result.failure(e)
+        }
+    }
+
+    suspend fun listControlledOriginals(documentId: String, accessToken: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            require(accessToken.isNotBlank()) { "Authentication required" }
+            require(java.util.UUID.fromString(documentId).toString() == documentId.lowercase()) { "Canonical document ID required" }
+            val request = Request.Builder()
+                .url("$baseUrl/rest/v1/controlled_document_files?document_id=eq.$documentId&select=id,document_id,revision,original_name,content_type,size_bytes,checksum,uploaded_at,superseded_at&order=uploaded_at.desc")
+                .header("apikey", anonKey).header("Authorization", "Bearer $accessToken").get().build()
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Original revisions unavailable (HTTP ${response.code}).")
+                Result.success(response.body?.string() ?: throw IOException("Missing revision response"))
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Result.failure(e)
+        }
+    }
+
+    suspend fun verifyControlledOriginal(fileId: String, accessToken: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            require(accessToken.isNotBlank()) { "Authentication required" }
+            val payload = json.encodeToString(mapOf("fileId" to fileId))
+                .toRequestBody("application/json".toMediaType())
+            val request = Request.Builder().url("$baseUrl/functions/v1/verify-controlled-original")
+                .header("apikey", anonKey).header("Authorization", "Bearer $accessToken")
+                .post(payload).build()
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Original verification failed (HTTP ${response.code}).")
+                val result = json.decodeFromString<JsonObject>(response.body?.string().orEmpty())
+                if (result["verified"]?.jsonPrimitive?.content != "true")
+                    throw SecurityException("Original has not been verified")
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Result.failure(e)
+        }
+    }
+
     suspend fun invokeRpc(
         rpcName: String,
         payloadJson: String,
@@ -255,7 +358,7 @@ class SupabaseClient {
             val request = requestBuilder.build()
             val response = httpClient.newCall(request).execute()
             val responseBody = response.body?.string() ?: ""
-            android.util.Log.d("SupabaseClient", "invokeRpc: ${rpcName}, response code: ${response.code}, body: ${responseBody.take(200)}")
+            android.util.Log.d("SupabaseClient", "RPC response code: ${response.code}")
 
             if (!response.isSuccessful) {
                 if (response.code == 401 || response.code == 403) {

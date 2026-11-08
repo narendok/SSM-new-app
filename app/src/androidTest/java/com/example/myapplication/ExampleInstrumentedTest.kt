@@ -19,6 +19,17 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.example.myapplication", appContext.packageName)
+        val expectedPackage = if (BuildConfig.SCMS_BACKEND == "staging") {
+            "com.example.myapplication.staging"
+        } else {
+            "com.example.myapplication"
+        }
+        val expectedBackendRef = if (BuildConfig.SCMS_BACKEND == "staging") {
+            "jiqbxcqlywvvmhbgirzl"
+        } else {
+            "rzskhndweihuczbdhoxk"
+        }
+        assertEquals(expectedPackage, appContext.packageName)
+        assertTrue(BuildConfig.SUPABASE_URL.contains(expectedBackendRef))
     }
 }

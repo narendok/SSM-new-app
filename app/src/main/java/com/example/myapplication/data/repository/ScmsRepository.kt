@@ -203,6 +203,8 @@ interface ScmsRepository {
     fun submitTrainingQuiz(trainingId: String, scorePct: Int): Result<String>
     fun submitSurvey(surveyId: String): Result<String>
     fun castPollVote(messageId: String, optionId: String): Result<String>
+    fun resetSampleWorkspace()
+    fun getHardwareMasterData(projectId: String): com.example.myapplication.data.model.HardwareMasterData
 }
 
 data class WhatIfSimulationResult(
@@ -237,73 +239,135 @@ class ScmsRepositoryImpl(
     override val selectedProject: StateFlow<String> = _selectedProject.asStateFlow()
 
     // Service & Field Support Tickets (Consolidated Handoff §6 / Batch C)
-    private val _allTickets = MutableStateFlow(
-        listOf(
-            ServiceTicket(
-                id = "tkt-001",
-                reference = "TKT-2026-0101",
-                source = "Client",
-                requesterName = "Rohan Verma",
-                requesterEmail = "rohan.verma@tatamotors.com",
-                clientOrganization = "Tata Motors Limited",
-                subject = "AIS-140 GPS fix dropping intermittently on Ace EV Pilot Batch",
-                description = "During highway road trials between Pune and Mumbai, GPS NMEA fix drops for 3-5 seconds after aggressive regenerative braking.",
-                category = "Hardware Fault",
-                priority = "High",
-                projectId = "HLPL-AI4T-01",
-                assetId = "ast-yamaha-ys12",
-                assignedOwner = "Preeti Joshi (SIT)",
-                status = "In Progress",
-                slaDueHours = 24,
-                createdAt = "2026-10-20 09:30",
-                replies = listOf(
-                    TicketReply(
-                        id = "rep-001",
-                        authorName = "Preeti Joshi",
-                        authorRole = "Field RMA (SIT)",
-                        isInternalNote = true,
-                        message = "Internal RMA triage: EHW confirmed buck TVS diode clamp voltage is fine, but ground loop suspected.",
-                        createdAt = "2026-10-20 11:00"
-                    ),
-                    TicketReply(
-                        id = "rep-002",
-                        authorName = "Kai Morgan",
-                        authorRole = "SIT Lead",
-                        isInternalNote = false,
-                        message = "Diagnostic firmware patch v1.0.4 dispatched to Tata Motors test vehicles to capture CAN J1939 logs.",
-                        createdAt = "2026-10-20 14:15"
-                    )
+    private fun buildInitialTickets(): List<ServiceTicket> = listOf(
+        ServiceTicket(
+            id = "tkt-001",
+            reference = "TKT-2026-0101",
+            source = "Client",
+            requesterName = "Rohan Verma",
+            requesterEmail = "rohan.verma@tatamotors.com",
+            clientOrganization = "Tata Motors Limited",
+            subject = "AIS-140 GPS fix dropping intermittently on Ace EV Pilot Batch",
+            description = "During highway road trials between Pune and Mumbai, GPS NMEA fix drops for 3-5 seconds after aggressive regenerative braking.",
+            category = "Hardware Fault",
+            priority = "High",
+            projectId = "HLPL-AI4T-01",
+            assetId = "ast-yamaha-ys12",
+            assignedOwner = "Preeti Joshi (SIT)",
+            status = "In Progress",
+            slaDueHours = 24,
+            createdAt = "2026-10-20 09:30",
+            replies = listOf(
+                TicketReply(
+                    id = "rep-001",
+                    authorName = "Preeti Joshi",
+                    authorRole = "Field RMA (SIT)",
+                    isInternalNote = true,
+                    message = "Internal RMA triage: EHW confirmed buck TVS diode clamp voltage is fine, but ground loop suspected.",
+                    createdAt = "2026-10-20 11:00"
+                ),
+                TicketReply(
+                    id = "rep-002",
+                    authorName = "Kai Morgan",
+                    authorRole = "SIT Lead",
+                    isInternalNote = false,
+                    message = "Diagnostic firmware patch v1.0.4 dispatched to Tata Motors test vehicles to capture CAN J1939 logs.",
+                    createdAt = "2026-10-20 14:15"
                 )
-            ),
-            ServiceTicket(
-                id = "tkt-002",
-                reference = "TKT-2026-0102",
-                source = "Internal",
-                requesterName = "Avery Vale",
-                requesterEmail = "avery.vale@example.com",
-                requesterDepartment = "EHW",
-                subject = "CAD Workstation Dell Precision BSOD on Altium 3D DRC render",
-                description = "Dell Precision 5820 workstation crashes with MEMORY_MANAGEMENT BSOD when opening 8-layer rigid-flex board in Altium 24.",
-                category = "IT Workstation & Network",
-                priority = "High",
-                assetId = "ast-dell-ws-01",
-                assignedOwner = "Sameer Khan (SIT)",
-                status = "Assigned",
-                slaDueHours = 8,
-                createdAt = "2026-10-21 08:00",
-                replies = listOf(
-                    TicketReply(
-                        id = "rep-003",
-                        authorName = "Sameer Khan",
-                        authorRole = "IT Admin (SIT)",
-                        isInternalNote = true,
-                        message = "MemTest86 scheduled over lunch. Replacement 32GB ECC DIMM ready in IT stores.",
-                        createdAt = "2026-10-21 08:30"
-                    )
+            )
+        ),
+        ServiceTicket(
+            id = "tkt-002",
+            reference = "TKT-2026-0102",
+            source = "Internal",
+            requesterName = "Avery Vale",
+            requesterEmail = "avery.vale@example.com",
+            requesterDepartment = "EHW",
+            subject = "CAD Workstation Dell Precision BSOD on Altium 3D DRC render",
+            description = "Dell Precision 5820 workstation crashes with MEMORY_MANAGEMENT BSOD when opening 8-layer rigid-flex board in Altium 24.",
+            category = "IT Workstation & Network",
+            priority = "High",
+            assetId = "ast-dell-ws-01",
+            assignedOwner = "Sameer Khan (SIT)",
+            status = "Assigned",
+            slaDueHours = 8,
+            createdAt = "2026-10-21 08:00",
+            replies = listOf(
+                TicketReply(
+                    id = "rep-003",
+                    authorName = "Sameer Khan",
+                    authorRole = "IT Admin (SIT)",
+                    isInternalNote = true,
+                    message = "MemTest86 scheduled over lunch. Replacement 32GB ECC DIMM ready in IT stores.",
+                    createdAt = "2026-10-21 08:30"
+                )
+            )
+        ),
+        ServiceTicket(
+            id = "tkt-10-01",
+            reference = "TKT-2026-1010",
+            source = "Client",
+            requesterName = "Dr. Evelyn Vance (Simulated Persona)",
+            requesterEmail = "evelyn.vance@northstarfields.example.com",
+            clientOrganization = "Northstar Field Systems (fictional client)",
+            subject = "[SIMULATED TEST REQUEST · NOT FROM REAL CUSTOMER] Clarification on offline rural logging vs real-time 4G cellular upload",
+            description = "[SIMULATED TEST REQUEST — NOT received from a real customer] For our agricultural field trials, cellular backhaul may be unavailable for up to 5 consecutive days. In those zones, the tracker must buffer positions internally and transmit either via local LoRa gateway or upon re-entering 4G cell coverage. Please confirm buffer capacity and battery life assumptions.",
+            category = "Firmware / Telemetry",
+            priority = "High",
+            projectId = "DEMO-PROJ-010",
+            assignedOwner = "Siddharth Roy (SW)",
+            status = "In Progress",
+            slaDueHours = 48,
+            createdAt = "2026-10-30 10:15",
+            replies = listOf(
+                TicketReply(
+                    id = "rep-10-001",
+                    authorName = "Avery Vale",
+                    authorRole = "Lead HW Architect (EHW)",
+                    isInternalNote = true,
+                    message = "EDITABLE UNAPPROVED TEST ASSUMPTION (Subject to revision): Allocating 16MB SPI NOR flash models ~48,000 compressed telemetry packets (~40 bytes/packet, exceeding 5-day requirement at 30s intervals). Battery draw in deep sleep estimated at 42 uA under 3.7V LiPo assumption; bench measurements not yet conducted.",
+                    createdAt = "2026-10-30 13:20"
+                ),
+                TicketReply(
+                    id = "rep-10-002",
+                    authorName = "Siddharth Roy",
+                    authorRole = "Cloud & Telematics SW Lead (SW)",
+                    isInternalNote = false,
+                    message = "SIMULATED DRAFT RESPONSE (No customer commitment): Under review with engineering. We are designing a circular FIFO flash buffer with automatic batch upload upon LTE cellular handshake, with optional local LoRa beaconing for field technician handheld interrogation. Final architecture remains unfrozen.",
+                    createdAt = "2026-10-31 11:00"
+                )
+            )
+        ),
+        ServiceTicket(
+            id = "tkt-06-01",
+            reference = "TKT-2026-0201",
+            source = "Client",
+            requesterName = "Manoj Nair (Simulated Persona)",
+            requesterEmail = "manoj.nair@transfresh.example.com",
+            clientOrganization = "TransFresh Logistics (fictional client)",
+            subject = "[SIMULATED TEST REQUEST · NOT FROM REAL CUSTOMER] Cold-chain sensor probe reading drift under refrigeration humidity",
+            description = "Field telemetry units deployed in refrigerated vans exhibit ~1.8°C positive offset drift after 72 hours of high humidity exposure.",
+            category = "Field RMA & Replacement",
+            priority = "High",
+            projectId = "DEMO-PORT-06-QA",
+            assignedOwner = "Preeti Joshi (SIT)",
+            status = "In Progress",
+            slaDueHours = 24,
+            createdAt = "2026-10-31 08:30",
+            replies = listOf(
+                TicketReply(
+                    id = "rep-06-001",
+                    authorName = "Preeti Joshi",
+                    authorRole = "Service & IT Infrastructure Lead (SIT)",
+                    isInternalNote = true,
+                    message = "Investigated RMA unit: thermistor probe cable gland compression seal had micro-gaps allowing condensation ingress. Recommending molded IP68 probe replacement.",
+                    createdAt = "2026-10-31 11:45"
                 )
             )
         )
     )
+
+    private val _allTickets = MutableStateFlow(buildInitialTickets())
 
     private val _serviceTickets = MutableStateFlow<List<ServiceTicket>>(_allTickets.value)
     override val serviceTickets: StateFlow<List<ServiceTicket>> = _serviceTickets.asStateFlow()
@@ -339,6 +403,8 @@ class ScmsRepositoryImpl(
 
     override fun selectProject(projectId: String) {
         _selectedProject.value = projectId
+        refreshScopedTickets()
+        refreshScopedFeasibilityReviews()
     }
 
     override fun executeCrossDeptSync(): Result<String> {
@@ -1055,18 +1121,305 @@ class ScmsRepositoryImpl(
     override val purchasingBom: StateFlow<List<PurchasingBomReviewItem>> = _purchasingBom.asStateFlow()
 
     // 14. Controlled Documents
-    private val _documents = MutableStateFlow(
-        listOf(
-            ControlledDoc("HLPL-AI4T-01-EHW-PRS-01", "Product Requirement Specification (PRS) Rev 01", "EHW", "Stage 3", "Avery Vale", "Rev 01", "Approved", storagePath = "01_Governance/EHW-PRS-01.pdf"),
-            ControlledDoc("HLPL-AI4T-01-SAL-QUO-01", "Commercial Quotation & Volume Price Commitment", "SAL", "Stage 3", "Priya Sharma", "Rev 01", "Approved", storagePath = "01_Governance/SAL-QUO-01.pdf"),
-            ControlledDoc("HLPL-AI4T-01-HROPS-CRS-01", "Competency & Safety Requirement Freeze (HR-OPS)", "HR", "Stage 3", "Taylor Quinn", "Rev 01", "Approved", storagePath = "01_Governance/HROPS-CRS-01.pdf"),
-            ControlledDoc("HLPL-AI4T-01-EHW-SCH-01", "Hardware Schematic Diagram & ECAD Netlist", "EHW", "Stage 4", "Avery Vale", "Rev 02", "Under Review", storagePath = "03_Hardware/EHW-SCH-01.pdf"),
-            ControlledDoc("HLPL-AI4T-01-QA-DVP-01", "Design Verification Plan and Report (DVP&R)", "QA", "Stage 6", "Jordan Blake", "Rev 01", "In Progress", storagePath = "06_Quality/QA-DVP-01.pdf"),
-            ControlledDoc("HLPL-AI4T-01-ENC-MECH-01", "IP67 Enclosure 3D CAD & Thermal Simulation", "MECH", "Stage 4", "Samira Holt", "Rev 01", "Approved", storagePath = "04_Mechanical/ENC-MECH-01.stp"),
-            ControlledDoc("HLPL-SW-01-SW-SAD-01", "Software Architecture Document & Microservices Spec", "SW", "Stage 4", "Devon Lane", "Rev 01", "Approved", storagePath = "02_Software/SW-SAD-01.pdf"),
-            ControlledDoc("HLPL-SW-01-QA-SVT-01", "System Verification & Cloud Concurrency Test Plan", "QA", "Stage 5", "Jordan Blake", "Rev 01", "In Progress", storagePath = "06_Quality/QA-SVT-01.pdf")
+    private fun buildInitialDocuments(): List<ControlledDoc> = listOf(
+        ControlledDoc("HLPL-AI4T-01-EHW-PRS-01", "Product Requirement Specification (PRS) Rev 01", "EHW", "Stage 3", "Avery Vale", "Rev 01", "Draft", projectId = "HLPL-AI4T-01", documentKind = "AUTO_DRAFT"),
+        ControlledDoc("HLPL-AI4T-01-SAL-QUO-01", "Commercial Quotation & Volume Price Commitment", "SAL", "Stage 3", "Priya Sharma", "Rev 01", "Draft", projectId = "HLPL-AI4T-01", documentKind = "AUTO_DRAFT"),
+        ControlledDoc("HLPL-AI4T-01-HROPS-CRS-01", "Competency & Safety Requirement Plan", "HROPS", "Stage 3", "Taylor Quinn", "Rev 01", "Draft", projectId = "HLPL-AI4T-01", documentKind = "AUTO_DRAFT"),
+        ControlledDoc("HLPL-AI4T-01-EHW-SCH-01", "Hardware Schematic Diagram & ECAD Netlist", "EHW", "Stage 4", "Avery Vale", "Rev 02", "Awaiting upload", projectId = "HLPL-AI4T-01", documentKind = "UPLOAD_BINARY"),
+        ControlledDoc("HLPL-AI4T-01-EHW-GER-01", "PCB Fabrication Gerber Package", "EHW", "Stage 4", "Avery Vale", "Rev 01", "Awaiting upload", projectId = "HLPL-AI4T-01", documentKind = "UPLOAD_BINARY"),
+        ControlledDoc("HLPL-AI4T-01-FW-FWPKG-01", "Dual-Bank RTOS Firmware Release Package", "FW", "Stage 4", "Devon Lane", "v2.1.0-rc2", "Awaiting upload", projectId = "HLPL-AI4T-01", documentKind = "UPLOAD_BINARY"),
+        ControlledDoc(
+            docId = "HLPL-AI4T-01-SW-SAD-01",
+            title = "Edge Telemetry Software Architecture & MQTT Protocol Spec",
+            dept = "SW",
+            stage = "Stage 4",
+            owner = "Siddharth Roy",
+            revision = "Rev 02",
+            status = "Draft · local test",
+            projectId = "HLPL-AI4T-01",
+            documentKind = "AUTO_DRAFT",
+            draftContent = "Project: HLPL-AI4T-01\nEdge Telemetry Software Architecture\nBroker: AWS IoT Core / Mosquitto MQTT v3.1.1\nSecurity: TLS 1.3 mutual auth with hardware ATECC608B crypto element."
+        ),
+        ControlledDoc("HLPL-AI4T-01-QA-DVP-01", "Design Verification Plan and Report (DVP&R)", "QA", "Stage 6", "Jordan Blake", "Rev 01", "Draft", projectId = "HLPL-AI4T-01", documentKind = "AUTO_DRAFT"),
+        ControlledDoc("HLPL-AI4T-01-MECH-STEP-01", "Enclosure 3D CAD STEP Model", "MECH", "Stage 4", "Samira Holt", "Rev 01", "Awaiting upload", projectId = "HLPL-AI4T-01", documentKind = "UPLOAD_BINARY"),
+        ControlledDoc("HLPL-SW-01-SW-SAD-01", "Software Architecture Document", "SW", "Stage 4", "Devon Lane", "Rev 01", "Draft", projectId = "HLPL-SW-01", documentKind = "AUTO_DRAFT"),
+        ControlledDoc("HLPL-SW-01-QA-SVT-01", "System Verification & Cloud Concurrency Test Plan", "QA", "Stage 5", "Jordan Blake", "Rev 01", "Draft", projectId = "HLPL-SW-01", documentKind = "AUTO_DRAFT"),
+
+        // S10 (DEMO-PROJ-010) Local Simulation Documents (Stage 2 Feasibility)
+        ControlledDoc(
+            docId = "DEMO-PROJ-010-SAL-ENQ-01",
+            title = "Customer Enquiry Brief & Scope Definition",
+            dept = "SAL",
+            stage = "Stage 1",
+            owner = "Avery Vale",
+            revision = "Rev 01",
+            status = "Draft · local test",
+            projectId = "DEMO-PROJ-010",
+            documentKind = "AUTO_DRAFT",
+            draftContent = "Project: DEMO-PROJ-010\nStage 1 Enquiry Brief\nClient: Northstar Field Systems (fictional)\nScope: Offline-capable 4G/GNSS field telematics tracker PoC."
+        ),
+        ControlledDoc(
+            docId = "DEMO-PROJ-010-EHW-FEA-01",
+            title = "Hardware Feasibility Assessment & Architecture Concept",
+            dept = "EHW",
+            stage = "Stage 2",
+            owner = "Avery Vale",
+            revision = "Rev 01",
+            status = "Draft · local test",
+            projectId = "DEMO-PROJ-010",
+            documentKind = "AUTO_DRAFT",
+            draftContent = "Project: DEMO-PROJ-010\nStage 2 Hardware Feasibility\nAssumptions: 4G Cat-1 + NavIC + LoRa research.\nStatus: Unsigned draft assessment awaiting HOD review."
+        ),
+        ControlledDoc(
+            docId = "DEMO-PROJ-010-PUR-SOURCING-01",
+            title = "Critical Sourcing & Long-Lead Feasibility Review",
+            dept = "PUR",
+            stage = "Stage 2",
+            owner = "Marcus Vance",
+            revision = "Rev 01",
+            status = "Draft · local test",
+            projectId = "DEMO-PROJ-010",
+            documentKind = "AUTO_DRAFT",
+            draftContent = "Project: DEMO-PROJ-010\nStage 2 Purchasing Review\nLead times: Quectel EG915N-EU (6w), Allystar TAU1302 (12w)."
+        ),
+        ControlledDoc(
+            docId = "DEMO-PROJ-010-EHW-SCH-01",
+            title = "Candidate Schematic Diagram & ECAD Netlist",
+            dept = "EHW",
+            stage = "Stage 4",
+            owner = "Avery Vale",
+            revision = "Rev 0.1 Draft",
+            status = "Awaiting upload",
+            projectId = "DEMO-PROJ-010",
+            documentKind = "UPLOAD_BINARY"
+        ),
+        ControlledDoc(
+            docId = "DEMO-PROJ-010-EHW-GER-01",
+            title = "PCB Fabrication Gerber Package (Draft Netlist)",
+            dept = "EHW",
+            stage = "Stage 4",
+            owner = "Avery Vale",
+            revision = "Rev 0.1 Draft",
+            status = "Awaiting upload",
+            projectId = "DEMO-PROJ-010",
+            documentKind = "UPLOAD_BINARY"
+        ),
+        ControlledDoc(
+            docId = "DEMO-PROJ-010-QA-TEST-01",
+            title = "Pre-Compliance Chamber & Power Measurement Evidence",
+            dept = "QA",
+            stage = "Stage 6",
+            owner = "Jordan Blake",
+            revision = "Rev 01",
+            status = "Awaiting upload",
+            projectId = "DEMO-PROJ-010",
+            documentKind = "UPLOAD_BINARY"
+        ),
+        ControlledDoc(
+            docId = "DEMO-PROJ-010-QA-CERT-01",
+            title = "Configuration Certification Report (Target ARAI / AIS-140)",
+            dept = "QA",
+            stage = "Stage 7",
+            owner = "Jordan Blake",
+            revision = "Rev 01",
+            status = "Awaiting upload",
+            projectId = "DEMO-PROJ-010",
+            documentKind = "UPLOAD_BINARY"
+        ),
+
+        // Portfolio Stage 1: Enquiry Only (DEMO-PORT-01-ENQ)
+        ControlledDoc(
+            docId = "DEMO-PORT-01-ENQ-SAL-ENQ-01",
+            title = "Customer Enquiry Brief & Opportunity Assessment",
+            dept = "SAL",
+            stage = "Stage 1",
+            owner = "Priya Sharma",
+            revision = "Rev 01",
+            status = "Draft · local test",
+            projectId = "DEMO-PORT-01-ENQ",
+            documentKind = "AUTO_DRAFT",
+            draftContent = "Project: DEMO-PORT-01-ENQ\nStage 1 Enquiry Brief\nClient: Northstar Agritech (fictional client)\nScope: Solar-powered smart irrigation sensor node with soil moisture probe and microclimate reporting."
+        ),
+        ControlledDoc(
+            docId = "DEMO-PORT-01-ENQ-EHW-FEA-01",
+            title = "Preliminary Opportunity Feasibility Note",
+            dept = "EHW",
+            stage = "Stage 2",
+            owner = "Avery Vale",
+            revision = "Rev 01",
+            status = "Draft · local test",
+            projectId = "DEMO-PORT-01-ENQ",
+            documentKind = "AUTO_DRAFT",
+            draftContent = "Project: DEMO-PORT-01-ENQ\nPreliminary Hardware Feasibility\nEnclosure: IP68 solar enclosure envelope and low-power power management."
+        ),
+
+        // Portfolio Stage 3: Requirements Frozen · HW Kickoff (DEMO-PORT-03-FRZ)
+        ControlledDoc(
+            docId = "DEMO-PORT-03-FRZ-SAL-SOR-01",
+            title = "Customer SOR & Commercial Lock Baseline",
+            dept = "SAL",
+            stage = "Stage 3",
+            owner = "Priya Sharma",
+            revision = "Rev 01",
+            status = "Awaiting upload",
+            projectId = "DEMO-PORT-03-FRZ",
+            documentKind = "UPLOAD_BINARY"
+        ),
+        ControlledDoc(
+            docId = "DEMO-PORT-03-FRZ-EHW-PRS-01",
+            title = "Hardware Product Requirement Specification (PRS)",
+            dept = "EHW",
+            stage = "Stage 3",
+            owner = "Avery Vale",
+            revision = "Rev 01",
+            status = "Draft · local test",
+            projectId = "DEMO-PORT-03-FRZ",
+            documentKind = "AUTO_DRAFT",
+            draftContent = "Project: DEMO-PORT-03-FRZ\nStage 3 Hardware PRS\nScope: AIS-140 Rev B Two-Wheeler Telematics PCB layout and 50-ohm RF trace requirements."
+        ),
+        ControlledDoc(
+            docId = "DEMO-PORT-03-FRZ-EHW-SCH-01",
+            title = "Hardware Schematic Diagram & ECAD Netlist",
+            dept = "EHW",
+            stage = "Stage 4",
+            owner = "Rahul Sen",
+            revision = "Rev 0.1 Draft",
+            status = "Awaiting upload",
+            projectId = "DEMO-PORT-03-FRZ",
+            documentKind = "UPLOAD_BINARY"
+        ),
+        ControlledDoc(
+            docId = "DEMO-PORT-03-FRZ-EHW-GER-01",
+            title = "PCB Fabrication Gerber Package (Rev B)",
+            dept = "EHW",
+            stage = "Stage 4",
+            owner = "Rahul Sen",
+            revision = "Rev 0.1 Draft",
+            status = "Awaiting upload",
+            projectId = "DEMO-PORT-03-FRZ",
+            documentKind = "UPLOAD_BINARY"
+        ),
+        ControlledDoc(
+            docId = "DEMO-PORT-03-FRZ-EHW-EBOM-01",
+            title = "Tentative Hardware BOM Linked to Reusable Assets",
+            dept = "EHW",
+            stage = "Stage 4",
+            owner = "Avery Vale",
+            revision = "Rev 01",
+            status = "Draft · local test",
+            projectId = "DEMO-PORT-03-FRZ",
+            documentKind = "AUTO_DRAFT",
+            draftContent = "Project: DEMO-PORT-03-FRZ\nEBOM Revision 01\nLocked IC lines: STM32G0B1VCT6 MCU, EG915N-EU modem, TCAN1042VDRQ1 CAN transceiver."
+        ),
+
+        // Portfolio Stage 4: HW + FW Integration (DEMO-PORT-04-HF)
+        ControlledDoc(
+            docId = "DEMO-PORT-04-HF-EHW-PRS-01",
+            title = "High-Voltage Isolation & Creepage Requirements Specification",
+            dept = "EHW",
+            stage = "Stage 3",
+            owner = "Avery Vale",
+            revision = "Rev 01",
+            status = "Draft · local test",
+            projectId = "DEMO-PORT-04-HF",
+            documentKind = "AUTO_DRAFT",
+            draftContent = "Project: DEMO-PORT-04-HF\nPRS Rev 01\nGalvanic isolation rating: 2.5 kV RMS, reinforced insulation barrier."
+        ),
+        ControlledDoc(
+            docId = "DEMO-PORT-04-HF-EHW-SCH-01",
+            title = "Isolated CAN-FD Transceiver Schematic & ECAD",
+            dept = "EHW",
+            stage = "Stage 4",
+            owner = "Avery Vale",
+            revision = "Rev 01",
+            status = "Awaiting upload",
+            projectId = "DEMO-PORT-04-HF",
+            documentKind = "UPLOAD_BINARY"
+        ),
+        ControlledDoc(
+            docId = "DEMO-PORT-04-HF-EHW-GER-01",
+            title = "High-Voltage BMS PCB Gerber Package",
+            dept = "EHW",
+            stage = "Stage 4",
+            owner = "Rahul Sen",
+            revision = "Rev 01",
+            status = "Awaiting upload",
+            projectId = "DEMO-PORT-04-HF",
+            documentKind = "UPLOAD_BINARY"
+        ),
+        ControlledDoc(
+            docId = "DEMO-PORT-04-HF-FW-FWPKG-01",
+            title = "FreeRTOS Dual-Bank Bootloader Release Package",
+            dept = "FW",
+            stage = "Stage 4",
+            owner = "Devon Lane",
+            revision = "v1.0.0-rc1",
+            status = "Awaiting upload",
+            projectId = "DEMO-PORT-04-HF",
+            documentKind = "UPLOAD_BINARY"
+        ),
+        ControlledDoc(
+            docId = "DEMO-PORT-04-HF-FW-SAD-01",
+            title = "Firmware Architecture & CAN-FD Driver Spec",
+            dept = "FW",
+            stage = "Stage 4",
+            owner = "Devon Lane",
+            revision = "Rev 01",
+            status = "Draft · local test",
+            projectId = "DEMO-PORT-04-HF",
+            documentKind = "AUTO_DRAFT",
+            draftContent = "Project: DEMO-PORT-04-HF\nFirmware Architecture Document\nTarget: STM32G0B1 + FreeRTOS v10.5.\nProtocols: Isolated CAN-FD at 2 Mbps, dual-bank A/B firmware update."
+        ),
+
+        // Portfolio Stage 6: QA / PoC & Service Feedback Loop (DEMO-PORT-06-QA)
+        ControlledDoc(
+            docId = "DEMO-PORT-06-QA-QA-DVP-01",
+            title = "Cold-Chain Environmental DVP&R Plan and Results Register",
+            dept = "QA",
+            stage = "Stage 6",
+            owner = "Jordan Blake",
+            revision = "Rev 02",
+            status = "Draft · local test",
+            projectId = "DEMO-PORT-06-QA",
+            documentKind = "AUTO_DRAFT",
+            draftContent = "Project: DEMO-PORT-06-QA\nStage 6 DVP&R Register\nThermal cycle: -40°C to +85°C 48-hour chamber soak test in progress."
+        ),
+        ControlledDoc(
+            docId = "DEMO-PORT-06-QA-QA-TEST-01",
+            title = "Thermal Chamber Test Log & Sensor Calibration Evidence",
+            dept = "QA",
+            stage = "Stage 6",
+            owner = "Rohit Kulkarni",
+            revision = "Rev 01",
+            status = "Awaiting upload",
+            projectId = "DEMO-PORT-06-QA",
+            documentKind = "UPLOAD_BINARY"
+        ),
+        ControlledDoc(
+            docId = "DEMO-PORT-06-QA-QA-CERT-01",
+            title = "IATF 16949 / ISO 17025 Pre-Compliance Calibration Certificate",
+            dept = "QA",
+            stage = "Stage 7",
+            owner = "Jordan Blake",
+            revision = "Rev 01",
+            status = "Awaiting upload",
+            projectId = "DEMO-PORT-06-QA",
+            documentKind = "UPLOAD_BINARY"
+        ),
+        ControlledDoc(
+            docId = "DEMO-PORT-06-QA-SIT-FIELD-01",
+            title = "Field Service RMA TKT-2026-0201 Root Cause & Correction Record",
+            dept = "SIT",
+            stage = "Stage 9",
+            owner = "Preeti Joshi",
+            revision = "Rev 01",
+            status = "Draft · local test",
+            projectId = "DEMO-PORT-06-QA",
+            documentKind = "AUTO_DRAFT",
+            draftContent = "Project: DEMO-PORT-06-QA\nStage 9 Field Service Feedback\nTicket: TKT-2026-0201\nSymptom: Sensor drift in refrigerated van deployment.\nRoot cause: Thermistor probe gasket compression leakage.\nAction: Corrective replacement with IP68 molded probe."
         )
     )
+    private val _documents = MutableStateFlow(buildInitialDocuments())
     override val documents: StateFlow<List<ControlledDoc>> = _documents.asStateFlow()
 
     // 15. RACI Governance Matrix
@@ -1086,24 +1439,54 @@ class ScmsRepositoryImpl(
     override val raciMatrix: StateFlow<List<RaciRow>> = _raciMatrix.asStateFlow()
 
     // 16. Daily Tasks & Action Items with 3-lane structure
-    private val _tasks = MutableStateFlow(
-        listOf(
-            DailyTaskItem("TSK-01", "Complete ISO 7637-2 Transient Pulse 1 verification sign-off", "QA", "Critical", "Jordan Blake", "2026-03-20", isCompleted = true, lane = "Completed"),
-            DailyTaskItem("TSK-02", "Reconcile Mouser Order LOT-2026-MOU-0881 against PO-2026-042", "PUR", "High", "Morgan Reed", "2026-03-20", isCompleted = true, lane = "Completed"),
-            DailyTaskItem("TSK-03", "Review EHW-SCH-01 Schematics netlist for SMT Pilot Gate unlock", "EHW", "Critical", "Avery Vale", "Today", isCompleted = false, isOverdue = false, lane = "Today"),
-            DailyTaskItem("TSK-04", "Calibrate Chroma 8000 EOL test jig before Stage 5 pilot batch", "TST", "High", "Mina Cross", "Yesterday", isCompleted = false, isOverdue = true, lane = "Today"),
-            DailyTaskItem("TSK-05", "Inspect 16-Pin Wire Harness crimp pull force (USCAR-2 spec)", "MECH", "Normal", "Samira Holt", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-SLCT-01"),
-            DailyTaskItem("TSK-06", "CAN J1939 Telemetry bootloader bring-up & security token test", "FW", "Critical", "Devon Lane", "Today", isCompleted = false, isOverdue = false, lane = "Today"),
-            DailyTaskItem("TSK-07", "SMT Line 2 10-zone reflow profile validation with thermocouples", "EMF", "High", "Casey Rowan", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow"),
-            DailyTaskItem("TSK-08", "Review PPAP Level 3 documentation package for ARAI audit", "QA", "High", "Jordan Blake", "Friday", isCompleted = false, isOverdue = false, lane = "Review", projectId = "HLPL-SLCT-01"),
-            DailyTaskItem("TSK-09", "Finance milestone advance sign-off for EV Fleet delivery batch", "FIN", "Critical", "Priya Voss", "Thursday", isCompleted = false, isOverdue = false, lane = "Review"),
-            DailyTaskItem("TSK-10", "Issue component allocation for BMS prototype harness to Avery Vale", "PUR", "Normal", "Morgan Reed", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-XLINK-03"),
-            DailyTaskItem("TSK-11", "AIS-140 Annexure 3 GPS tracking firmware lock", "FW", "Critical", "Devon Lane", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "HLPL-SLCT-01"),
-            DailyTaskItem("TSK-12", "Select Motors vendor quote review for SOS button & buzzer", "PUR", "High", "Morgan Reed", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-SLCT-01"),
-            DailyTaskItem("TSK-13", "Dual-CAN transceiver thermal simulation report for Commercial Fleet", "MECH", "High", "Samira Holt", "Friday", isCompleted = false, isOverdue = false, lane = "Review", projectId = "HLPL-XLINK-03"),
-            DailyTaskItem("TSK-14", "OBD-II J1939 diagnostic protocol stack feasibility sign-off", "SW", "Critical", "Siddharth Roy", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "HLPL-XLINK-03")
-        )
+    private fun buildInitialTasks(): List<DailyTaskItem> = listOf(
+        DailyTaskItem("TSK-01", "Complete ISO 7637-2 Transient Pulse 1 verification sign-off", "QA", "Critical", "Jordan Blake", "2026-03-20", isCompleted = true, lane = "Completed"),
+        DailyTaskItem("TSK-02", "Reconcile Mouser Order LOT-2026-MOU-0881 against PO-2026-042", "PUR", "High", "Morgan Reed", "2026-03-20", isCompleted = true, lane = "Completed"),
+        DailyTaskItem("TSK-03", "Review EHW-SCH-01 Schematics netlist for SMT Pilot Gate unlock", "EHW", "Critical", "Avery Vale", "Today", isCompleted = false, isOverdue = false, lane = "Today"),
+        DailyTaskItem("TSK-04", "Calibrate Chroma 8000 EOL test jig before Stage 5 pilot batch", "TST", "High", "Mina Cross", "Yesterday", isCompleted = false, isOverdue = true, lane = "Today"),
+        DailyTaskItem("TSK-05", "Inspect 16-Pin Wire Harness crimp pull force (USCAR-2 spec)", "MECH", "Normal", "Samira Holt", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-SLCT-01"),
+        DailyTaskItem("TSK-06", "CAN J1939 Telemetry bootloader bring-up & security token test", "FW", "Critical", "Devon Lane", "Today", isCompleted = false, isOverdue = false, lane = "Today"),
+        DailyTaskItem("TSK-07", "SMT Line 2 10-zone reflow profile validation with thermocouples", "EMF", "High", "Casey Rowan", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow"),
+        DailyTaskItem("TSK-08", "Review PPAP Level 3 documentation package for ARAI audit", "QA", "High", "Jordan Blake", "Friday", isCompleted = false, isOverdue = false, lane = "Review", projectId = "HLPL-SLCT-01"),
+        DailyTaskItem("TSK-09", "Finance milestone advance sign-off for EV Fleet delivery batch", "FIN", "Critical", "Priya Voss", "Thursday", isCompleted = false, isOverdue = false, lane = "Review"),
+        DailyTaskItem("TSK-10", "Issue component allocation for BMS prototype harness to Avery Vale", "PUR", "Normal", "Morgan Reed", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-XLINK-03"),
+        DailyTaskItem("TSK-11", "AIS-140 Annexure 3 GPS tracking firmware lock", "FW", "Critical", "Devon Lane", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "HLPL-SLCT-01"),
+        DailyTaskItem("TSK-12", "Select Motors vendor quote review for SOS button & buzzer", "PUR", "High", "Morgan Reed", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-SLCT-01"),
+        DailyTaskItem("TSK-13", "Dual-CAN transceiver thermal simulation report for Commercial Fleet", "MECH", "High", "Samira Holt", "Friday", isCompleted = false, isOverdue = false, lane = "Review", projectId = "HLPL-XLINK-03"),
+        DailyTaskItem("TSK-14", "OBD-II J1939 diagnostic protocol stack feasibility sign-off", "SW", "Critical", "Siddharth Roy", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "HLPL-XLINK-03"),
+        // Connected DEMO-PROJ-010 Operational Tasks (Enquiry -> Feasibility -> Freeze -> Proto)
+        DailyTaskItem("TSK-10-01", "Log initial enquiry & statement of requirements from Northstar Field Systems", "SAL", "Normal", "Aakash Verma", "2026-10-28", isCompleted = true, lane = "Completed", projectId = "DEMO-PROJ-010"),
+        DailyTaskItem("TSK-10-02", "Draft initial power budget and battery capacity options (3.7V 2600mAh Li-ion)", "EHW", "High", "Avery Vale", "2026-10-29", isCompleted = true, lane = "Completed", projectId = "DEMO-PROJ-010"),
+        DailyTaskItem("TSK-10-03", "Assess candidate dual-constellation GPS + NavIC L5 receiver modules & RF matching", "EHW", "Critical", "Neha Gupta", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "DEMO-PROJ-010"),
+        DailyTaskItem("TSK-10-04", "Research offline data-flow topology: LoRa local peer relay vs gateway store-and-forward", "SW", "Critical", "Siddharth Roy", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "DEMO-PROJ-010"),
+        DailyTaskItem("TSK-10-05", "Draft cellular backhaul fallback matrix (4G Cat-1 vs 2G GSM vs offline buffer)", "FW", "High", "Devon Lane", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Review", projectId = "DEMO-PROJ-010"),
+        DailyTaskItem("TSK-10-06", "Review distributor lead-time sheet for candidate RF frontend components & LoRa SoC", "PUR", "High", "Morgan Reed", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Review", projectId = "DEMO-PROJ-010"),
+        DailyTaskItem("TSK-10-07", "Release Rev A schematic netlist for tracker baseboard (BLOCKED: awaiting Stage 3 freeze)", "EHW", "High", "Rahul Sen", "Next Week", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "DEMO-PROJ-010"),
+        DailyTaskItem("TSK-10-08", "Partition NOR flash storage for 30-day offline telemetry buffer (BLOCKED: packet schema freeze)", "FW", "Normal", "Arjun Patel", "Next Week", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "DEMO-PROJ-010"),
+        // Portfolio Stage 1: Enquiry Only (DEMO-PORT-01-ENQ)
+        DailyTaskItem("TSK-ENQ-01", "Log initial customer inquiry and preliminary requirements sheet", "SAL", "Normal", "Aakash Verma", "2026-10-25", isCompleted = true, lane = "Completed", projectId = "DEMO-PORT-01-ENQ"),
+        DailyTaskItem("TSK-ENQ-02", "Evaluate IP68 solar enclosure envelope and field antenna constraints", "EHW", "High", "Avery Vale", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "DEMO-PORT-01-ENQ"),
+        DailyTaskItem("TSK-ENQ-03", "Prepare commercial RFQ intake assessment and feasibility questionnaire", "SAL", "Normal", "Priya Sharma", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Review", projectId = "DEMO-PORT-01-ENQ"),
+        DailyTaskItem("TSK-ENQ-04", "Stage 1 intake sign-off gate review", "SAL", "High", "Aakash Verma", "Next Week", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "DEMO-PORT-01-ENQ"),
+        // Portfolio Stage 3/4: Requirements Frozen, HW Development (DEMO-PORT-03-FRZ)
+        DailyTaskItem("TSK-FRZ-01", "Execute formal requirements freeze & customer SOR sign-off", "SAL", "Critical", "Aakash Verma", "2026-10-20", isCompleted = true, lane = "Completed", projectId = "DEMO-PORT-03-FRZ"),
+        DailyTaskItem("TSK-FRZ-02", "Lock microcontroller & power IC BOM line selections", "EHW", "High", "Avery Vale", "2026-10-22", isCompleted = true, lane = "Completed", projectId = "DEMO-PORT-03-FRZ"),
+        DailyTaskItem("TSK-FRZ-03", "Route 4-layer rigid PCB Altium layout with 50-ohm RF trace matching", "EHW", "Critical", "Rahul Sen", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "DEMO-PORT-03-FRZ"),
+        DailyTaskItem("TSK-FRZ-04", "Hardware DRC simulation & thermal copper pour review", "EHW", "High", "Neha Gupta", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Review", projectId = "DEMO-PORT-03-FRZ"),
+        DailyTaskItem("TSK-FRZ-05", "SMT line stencil fabrication release (BLOCKED: awaiting Gerber sign-off)", "EMF", "Normal", "Casey Rowan", "Next Week", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "DEMO-PORT-03-FRZ"),
+        // Portfolio Stage 4: HW + FW Integration (DEMO-PORT-04-HF)
+        DailyTaskItem("TSK-HF-01", "SMT proto PCB assembly bring-up & power rail scope check", "EHW", "Critical", "Avery Vale", "2026-10-26", isCompleted = true, lane = "Completed", projectId = "DEMO-PORT-04-HF"),
+        DailyTaskItem("TSK-HF-02", "Flash FreeRTOS BSP and verify SPI flash driver DMA transfers", "FW", "High", "Devon Lane", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "DEMO-PORT-04-HF"),
+        DailyTaskItem("TSK-HF-03", "CAN-FD loopback transmission testing at 2 Mbps nominal rate", "FW", "Critical", "Priya Nair", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "DEMO-PORT-04-HF"),
+        DailyTaskItem("TSK-HF-04", "Oscilloscope waveform capture on 3.3V LDO transient ripple", "EHW", "Normal", "Rahul Sen", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Review", projectId = "DEMO-PORT-04-HF"),
+        DailyTaskItem("TSK-HF-05", "Cloud MQTT integration testing (BLOCKED: awaiting carrier APN activation)", "SW", "Normal", "Pooja Verma", "Next Week", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "DEMO-PORT-04-HF"),
+        // Portfolio Stage 6: QA / PoC & Service Feedback Loop (DEMO-PORT-06-QA)
+        DailyTaskItem("TSK-QA-01", "ISO 7637-2 electrical transient pulses 1, 2a, 3a/b pass report", "QA", "Critical", "Jordan Blake", "2026-10-24", isCompleted = true, lane = "Completed", projectId = "DEMO-PORT-06-QA"),
+        DailyTaskItem("TSK-QA-02", "Thermal chamber cycling (-40Â°C to +85Â°C) 48-hour soak test", "QA", "High", "Rohit Kulkarni", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "DEMO-PORT-06-QA"),
+        DailyTaskItem("TSK-QA-03", "Investigate Field RMA Ticket TKT-2026-0201 for sensor reading drift", "SIT", "High", "Preeti Joshi", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Review", projectId = "DEMO-PORT-06-QA"),
+        DailyTaskItem("TSK-QA-04", "PPAP Level 3 PSW sign-off (BLOCKED: awaiting thermal cycling completion)", "QA", "Critical", "Jordan Blake", "Next Week", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "DEMO-PORT-06-QA")
     )
+    private val _tasks = MutableStateFlow(buildInitialTasks())
     override val tasks: StateFlow<List<DailyTaskItem>> = _tasks.asStateFlow()
 
     // 16b. Department Team Workload & Roster
@@ -1132,62 +1515,165 @@ class ScmsRepositoryImpl(
     override val teamMembers: StateFlow<List<TeamMemberItem>> = _teamMembers.asStateFlow()
 
     // 16c. Cross-Department Handoff Protocol
-    private val _handoffs = MutableStateFlow(
-        listOf(
-            DepartmentHandoffItem(
-                id = "HND-01",
-                fromDept = "EHW",
-                toDept = "FW",
-                projectId = "HLPL-AI4T-01",
-                deliverableTitle = "EHW-SCH-01 Schematics & Pinout Definition for CAN-FD BSP Bring-up",
-                status = "Pending Acceptance",
-                initiatedBy = "Avery Vale (EHW Lead)",
-                targetLead = "Devon Lane (FW Lead)",
-                timestamp = "2026-03-20 09:30",
-                priority = "Critical",
-                notes = "GPIO assignments locked in Altium Designer Rev B. Pin 42 is CAN1_STBY."
-            ),
-            DepartmentHandoffItem(
-                id = "HND-02",
-                fromDept = "PUR",
-                toDept = "EMF",
-                projectId = "HLPL-AI4T-01",
-                deliverableTitle = "Quectel LTE Modem & STM32 Tape-and-Reel Batch Kit",
-                status = "Accepted",
-                initiatedBy = "Morgan Reed (PUR Lead)",
-                targetLead = "Casey Rowan (EMF Lead)",
-                timestamp = "2026-03-19 14:15",
-                priority = "High",
-                notes = "Allocated in Bin WH-04-A, MSL-3 baking verified before loading feeder carts."
-            ),
-            DepartmentHandoffItem(
-                id = "HND-03",
-                fromDept = "EMF",
-                toDept = "QA",
-                projectId = "HLPL-AI4T-01",
-                deliverableTitle = "SMT Pilot Batch 50 Pcs for Environmental Thermal Cycle Test",
-                status = "Under Review",
-                initiatedBy = "Casey Rowan (EMF Lead)",
-                targetLead = "Jordan Blake (QA Lead)",
-                timestamp = "2026-03-20 11:00",
-                priority = "Critical",
-                notes = "SPI 3D solder paste inspection reports attached. 0 bridging observed."
-            ),
-            DepartmentHandoffItem(
-                id = "HND-04",
-                fromDept = "QA",
-                toDept = "SAL",
-                projectId = "HLPL-AI4T-01",
-                deliverableTitle = "AIS-140 Annexure 3 & TAC ARAI Test Summary Report",
-                status = "Completed",
-                initiatedBy = "Jordan Blake (QA Lead)",
-                targetLead = "Priya Sharma (SAL Lead)",
-                timestamp = "2026-03-18 16:45",
-                priority = "Normal",
-                notes = "Ready for OEM client milestone submission and billing release."
-            )
+    private fun buildInitialHandoffs(): List<DepartmentHandoffItem> = listOf(
+        DepartmentHandoffItem(
+            id = "HND-01",
+            fromDept = "EHW",
+            toDept = "FW",
+            projectId = "HLPL-AI4T-01",
+            deliverableTitle = "EHW-SCH-01 Schematics & Pinout Definition for CAN-FD BSP Bring-up",
+            status = "Pending Acceptance",
+            initiatedBy = "Avery Vale (EHW Lead)",
+            targetLead = "Devon Lane (FW Lead)",
+            timestamp = "2026-03-20 09:30",
+            priority = "Critical",
+            notes = "GPIO assignments locked in Altium Designer Rev B. Pin 42 is CAN1_STBY."
+        ),
+        DepartmentHandoffItem(
+            id = "HND-02",
+            fromDept = "PUR",
+            toDept = "EMF",
+            projectId = "HLPL-AI4T-01",
+            deliverableTitle = "Quectel LTE Modem & STM32 Tape-and-Reel Batch Kit",
+            status = "Accepted",
+            initiatedBy = "Morgan Reed (PUR Lead)",
+            targetLead = "Casey Rowan (EMF Lead)",
+            timestamp = "2026-03-19 14:15",
+            priority = "High",
+            notes = "Allocated in Bin WH-04-A, MSL-3 baking verified before loading feeder carts."
+        ),
+        DepartmentHandoffItem(
+            id = "HND-03",
+            fromDept = "EMF",
+            toDept = "QA",
+            projectId = "HLPL-AI4T-01",
+            deliverableTitle = "SMT Pilot Batch 50 Pcs for Environmental Thermal Cycle Test",
+            status = "Under Review",
+            initiatedBy = "Casey Rowan (EMF Lead)",
+            targetLead = "Jordan Blake (QA Lead)",
+            timestamp = "2026-03-20 11:00",
+            priority = "Critical",
+            notes = "SPI 3D solder paste inspection reports attached. 0 bridging observed."
+        ),
+        DepartmentHandoffItem(
+            id = "HND-04",
+            fromDept = "QA",
+            toDept = "SAL",
+            projectId = "HLPL-AI4T-01",
+            deliverableTitle = "AIS-140 Annexure 3 & TAC ARAI Test Summary Report",
+            status = "Completed",
+            initiatedBy = "Jordan Blake (QA Lead)",
+            targetLead = "Priya Sharma (SAL Lead)",
+            timestamp = "2026-03-18 16:45",
+            priority = "Normal",
+            notes = "Ready for OEM client milestone submission and billing release."
+        ),
+        DepartmentHandoffItem(
+            id = "HND-10-01",
+            fromDept = "SAL",
+            toDept = "EHW",
+            projectId = "DEMO-PROJ-010",
+            deliverableTitle = "Northstar Enquiry DEMO-ENQ-010 & Preliminary SOR Handover",
+            status = "Accepted",
+            initiatedBy = "Aakash Verma (SAL)",
+            targetLead = "Avery Vale (EHW Lead)",
+            timestamp = "2026-10-28 11:30",
+            priority = "High",
+            notes = "Customer intake complete. Client requires offline rural tracking in agrarian areas with intermittent cellular coverage."
+        ),
+        DepartmentHandoffItem(
+            id = "HND-10-02",
+            fromDept = "EHW",
+            toDept = "SW",
+            projectId = "DEMO-PROJ-010",
+            deliverableTitle = "Hardware Interface Spec Draft: SPI/UART GNSS & LoRa Transceiver Pinout",
+            status = "Under Review",
+            initiatedBy = "Avery Vale (EHW Lead)",
+            targetLead = "Siddharth Roy (SW Lead)",
+            timestamp = "2026-10-30 14:15",
+            priority = "Critical",
+            notes = "Reviewing MCU GPIO multiplexing for LoRa DIO interrupt lines and NavIC timepulse PPS."
+        ),
+        DepartmentHandoffItem(
+            id = "HND-10-03",
+            fromDept = "PUR",
+            toDept = "EHW",
+            projectId = "DEMO-PROJ-010",
+            deliverableTitle = "Candidate Cellular (LTE Cat-1) and NavIC Chipset Availability & Lead-Time Sourcing Sheet",
+            status = "Pending Acceptance",
+            initiatedBy = "Morgan Reed (PUR Lead)",
+            targetLead = "Avery Vale (EHW Lead)",
+            timestamp = "2026-10-31 16:45",
+            priority = "High",
+            notes = "Mouser and distributor quotes gathered for 10-unit PoC lot. Quectel EG915N quoted at 6-week lead time."
+        ),
+        DepartmentHandoffItem(
+            id = "HND-10-04",
+            fromDept = "QA",
+            toDept = "EHW",
+            projectId = "DEMO-PROJ-010",
+            deliverableTitle = "Pre-Freeze DVP&R Verification Criteria & Bench Acceptance Protocol",
+            status = "Pending Acceptance",
+            initiatedBy = "Jordan Blake (QA Lead)",
+            targetLead = "Avery Vale (EHW Lead)",
+            timestamp = "2026-11-01 09:30",
+            priority = "Normal",
+            notes = "Defines bench test criteria for GNSS cold-start TTFF and conducted RF sensitivity under power ripple."
+        ),
+        DepartmentHandoffItem(
+            id = "HND-ENQ-01",
+            fromDept = "SAL",
+            toDept = "EHW",
+            projectId = "DEMO-PORT-01-ENQ",
+            deliverableTitle = "Northstar Agritech Initial Enquiry Intake & Preliminary Envelope",
+            status = "Accepted",
+            initiatedBy = "Aakash Verma (SAL Lead)",
+            targetLead = "Avery Vale (EHW Lead)",
+            timestamp = "2026-10-25 10:00",
+            priority = "Normal",
+            notes = "Customer inquiry logged for solar-powered soil sensor."
+        ),
+        DepartmentHandoffItem(
+            id = "HND-FRZ-01",
+            fromDept = "SAL",
+            toDept = "EHW",
+            projectId = "DEMO-PORT-03-FRZ",
+            deliverableTitle = "Select Motors Frozen PRS-01 & Pinout Constraint Document",
+            status = "Accepted",
+            initiatedBy = "Aakash Verma (SAL Lead)",
+            targetLead = "Avery Vale (EHW Lead)",
+            timestamp = "2026-10-20 14:00",
+            priority = "Critical",
+            notes = "Requirements frozen. Kickoff 4-layer rigid PCB layout."
+        ),
+        DepartmentHandoffItem(
+            id = "HND-HF-01",
+            fromDept = "EHW",
+            toDept = "FW",
+            projectId = "DEMO-PORT-04-HF",
+            deliverableTitle = "High-Voltage BMS Rev A Bring-up Board & Test Point Map",
+            status = "Accepted",
+            initiatedBy = "Avery Vale (EHW Lead)",
+            targetLead = "Devon Lane (FW Lead)",
+            timestamp = "2026-10-26 11:30",
+            priority = "Critical",
+            notes = "Power rails verified. Ready for FreeRTOS bootloader bring-up."
+        ),
+        DepartmentHandoffItem(
+            id = "HND-QA-01",
+            fromDept = "QA",
+            toDept = "SIT",
+            projectId = "DEMO-PORT-06-QA",
+            deliverableTitle = "DVP&R Stage 6 Interim Report & Cold-Chain Sensor Drift Analysis",
+            status = "Under Review",
+            initiatedBy = "Jordan Blake (QA Lead)",
+            targetLead = "Preeti Joshi (SIT Lead)",
+            timestamp = "2026-10-31 15:00",
+            priority = "High",
+            notes = "Investigating Field RMA sensor reading discrepancy."
         )
     )
+    private val _handoffs = MutableStateFlow(buildInitialHandoffs())
     override val handoffs: StateFlow<List<DepartmentHandoffItem>> = _handoffs.asStateFlow()
 
     // 16d. Actionable Notifications Feed
@@ -1231,83 +1717,154 @@ class ScmsRepositoryImpl(
     override val notifications: StateFlow<List<AppNotification>> = _notifications.asStateFlow()
 
     // 17. 6 HOD Feasibility & Contract Review (Master Plan Â§4 & Â§5, Stage 2 Gate)
-    private val _feasibilityReviews = MutableStateFlow(
-        listOf(
-            FeasibilityReview(
-                deptCode = "EHW",
-                deptName = "Electronics & Hardware Architecture",
-                leadName = "Avery Vale",
-                verdict = "FEASIBLE",
-                scopeSummary = "Automotive Telematics Gateway schematic with STM32H753 MCU, Quectel EG915N-EU LTE Cat-1, dual CAN-FD, and ISO 7637-2 power protection.",
-                internalRemarks = "Custom 4-layer FR4 stackup satisfies thermal & EMC targets. Quectel module requires early PO due to 14-week lead time. ATECC608B hardware secure element locked for TLS client cert storage.",
-                clientHighlights = "Architecture complies with Tata Motors SOR v1.4 telematics specifications. 100% AEC-Q100 Grade 2 active silicon selected.",
-                keyParameters = mapOf("MCU Clock" to "480 MHz", "Operating Temp" to "-40Â°C to +85Â°C", "Deep Sleep Current" to "< 1.8 mA", "CAN Channels" to "2x CAN-FD with Wake-up"),
-                signedAt = "2026-03-12 14:30",
-                signatureHash = "SHA256:8f9a2b1c4e7d0f3e8291a0c4f1e5"
-            ),
-            FeasibilityReview(
-                deptCode = "ESW",
-                deptName = "Embedded Software & Firmware",
-                leadName = "Devon Lane",
-                verdict = "FEASIBLE",
-                scopeSummary = "Automotive FreeRTOS kernel with dual-bank secure bootloader, UDS on CAN diagnostics, and TLS 1.3 MQTT edge telemetry.",
-                internalRemarks = "Dual-bank flash architecture allocated for seamless A/B rollback. Cryptographic signature check verified in <350ms on cold boot. Tata Motors proprietary CAN matrix dbc imported.",
-                clientHighlights = "AUTOSAR classic stack compatibility with real-time AIS-140 emergency health telemetry and remote Over-The-Air (FOTA) delta updates.",
-                keyParameters = mapOf("RTOS" to "FreeRTOS v10.5", "Bootloader" to "Dual-Bank A/B Secure", "FOTA Compression" to "Courgette Delta", "Cloud Protocol" to "MQTT over TLS 1.3"),
-                signedAt = "2026-03-12 15:15",
-                signatureHash = "SHA256:3a4b5c6d7e8f9012abcdef345678"
-            ),
-            FeasibilityReview(
-                deptCode = "MECH",
-                deptName = "Mechanical & Thermal Packaging",
-                leadName = "Elena Rostova",
-                verdict = "FEASIBLE",
-                scopeSummary = "IP67 Die-cast ADC12 aluminum housing, dual silicone compression gasket, and Molex MX150 automotive interface.",
-                internalRemarks = "Thermal FEA simulation shows junction temp stays < 72Â°C at 50Â°C ambient engine-bay conditions. Tooling quote approved for â‚¹8.5 Lakhs with 4-week T0 sample turnaround.",
-                clientHighlights = "Rigid IP67 water/dust proof enclosure designed for Tata Ace EV chassis mounting, vibration certified to ISO 16750-3 (10G RMS).",
-                keyParameters = mapOf("Ingress Protection" to "IP67 Immersion Rated", "Housing Material" to "ADC12 Die-Cast Aluminum", "Vibration Rating" to "ISO 16750-3 (10G RMS)", "Operating Temp" to "-40Â°C to +105Â°C"),
-                signedAt = "2026-03-12 16:00",
-                signatureHash = "SHA256:112233445566778899aabbccddee"
-            ),
-            FeasibilityReview(
-                deptCode = "PUR",
-                deptName = "Purchasing & SCM Supply Chain",
-                leadName = "Marcus Vance",
-                verdict = "FEASIBLE_WITH_CONDITIONS",
-                scopeSummary = "Dual-source supply chain verification, Mouser/Digi-Key inventory locking, and volume vendor allocation.",
-                internalRemarks = "Long lead-time on TI TCAN1042 transceivers mitigated by locking 10,000 pcs reel stock with Mouser. Alternate NXP TJA1051T qualified as secondary source. Target BOM locked at $42.80.",
-                clientHighlights = "94% of active BOM lines validated with Tier-1 franchised distributors. Committed piece price â‚¹4,066/unit ($48.80) within client commercial ceiling.",
-                keyParameters = mapOf("Locked Unit BOM" to "$42.80", "AVL Coverage" to "94%", "Long-Lead Lines" to "2 Lines (Reel Reserved)", "Payment Terms" to "Net 30 franchised"),
-                signedAt = "2026-03-13 10:00",
-                signatureHash = "SHA256:99aabbccddeeff00112233445566"
-            ),
-            FeasibilityReview(
-                deptCode = "QA",
-                deptName = "Quality Assurance & Regulatory Compliance",
-                leadName = "Sarah Chen",
-                verdict = "FEASIBLE",
-                scopeSummary = "IATF 16949 APQP Stage Gate compliance, ARAI AIS-140 type approval path, and ISO 7637-2 pre-compliance test matrix.",
-                internalRemarks = "8 pre-compliance DVP&R tests mapped. External lab test slots pre-booked with ARAI Pune for Q3 2026. Zero-defect IQC quarantine hold enforced on all incoming inward deliveries.",
-                clientHighlights = "Full automotive qualification pathway established. PPAP Level 3 package delivery guaranteed prior to commercial SOP.",
-                keyParameters = mapOf("Quality System" to "IATF 16949:2016", "Pre-Compliance Tests" to "8/8 Pass Criteria Defined", "PPAP Level" to "Level 3 with PSW", "Regulatory Agency" to "ARAI Pune (AIS-140)"),
-                signedAt = "2026-03-13 11:30",
-                signatureHash = "SHA256:fedcba9876543210fedcba987654"
-            ),
-            FeasibilityReview(
-                deptCode = "FIN",
-                deptName = "Finance & Commercial Contracts",
-                leadName = "Rajesh Sharma",
-                verdict = "FEASIBLE",
-                scopeSummary = "Commercial evaluation of â‚¹20.33 Cr multi-year contract, volume price commitments, and milestone cash flows.",
-                internalRemarks = "NRE budget â‚¹45.00 Lakhs covers tooling, ARAI testing, and prototype runs with 35% advance milestone. Project gross margin modeled at 34.2%.",
-                clientHighlights = "Contract volume locked for 50,000 units with progressive delivery schedules and milestone-linked payment terms.",
-                keyParameters = mapOf("Total Contract" to "â‚¹20.33 Cr", "Order Volume" to "50,000 Units", "NRE Milestone" to "â‚¹45.00 Lakhs", "Gross Margin Target" to "34.2%"),
-                signedAt = "2026-03-13 14:00",
-                signatureHash = "SHA256:abcdef0123456789abcdef012345"
-            )
+    private fun buildInitialFeasibilityReviews(): List<FeasibilityReview> = listOf(
+        FeasibilityReview(
+            deptCode = "EHW",
+            deptName = "Electronics & Hardware Architecture",
+            leadName = "Avery Vale",
+            verdict = "FEASIBLE",
+            scopeSummary = "Automotive Telematics Gateway schematic with STM32H753 MCU, Quectel EG915N-EU LTE Cat-1, dual CAN-FD, and ISO 7637-2 power protection.",
+            internalRemarks = "Custom 4-layer FR4 stackup satisfies thermal & EMC targets. Quectel module requires early PO due to 14-week lead time. ATECC608B hardware secure element locked for TLS client cert storage.",
+            clientHighlights = "Architecture complies with Tata Motors SOR v1.4 telematics specifications. 100% AEC-Q100 Grade 2 active silicon selected.",
+            keyParameters = mapOf("MCU Clock" to "480 MHz", "Operating Temp" to "-40Â°C to +85Â°C", "Deep Sleep Current" to "< 1.8 mA", "CAN Channels" to "2x CAN-FD with Wake-up"),
+            signedAt = "2026-03-12 14:30",
+            signatureHash = "SHA256:8f9a2b1c4e7d0f3e8291a0c4f1e5",
+            projectId = "HLPL-AI4T-01"
+        ),
+        FeasibilityReview(
+            deptCode = "ESW",
+            deptName = "Embedded Software & Firmware",
+            leadName = "Devon Lane",
+            verdict = "FEASIBLE",
+            scopeSummary = "Automotive FreeRTOS kernel with dual-bank secure bootloader, UDS on CAN diagnostics, and TLS 1.3 MQTT edge telemetry.",
+            internalRemarks = "Dual-bank flash architecture allocated for seamless A/B rollback. Cryptographic signature check verified in <350ms on cold boot. Tata Motors proprietary CAN matrix dbc imported.",
+            clientHighlights = "AUTOSAR classic stack compatibility with real-time AIS-140 emergency health telemetry and remote Over-The-Air (FOTA) delta updates.",
+            keyParameters = mapOf("RTOS" to "FreeRTOS v10.5", "Bootloader" to "Dual-Bank A/B Secure", "FOTA Compression" to "Courgette Delta", "Cloud Protocol" to "MQTT over TLS 1.3"),
+            signedAt = "2026-03-12 15:15",
+            signatureHash = "SHA256:3a4b5c6d7e8f9012abcdef345678",
+            projectId = "HLPL-AI4T-01"
+        ),
+        FeasibilityReview(
+            deptCode = "MECH",
+            deptName = "Mechanical & Thermal Packaging",
+            leadName = "Elena Rostova",
+            verdict = "FEASIBLE",
+            scopeSummary = "IP67 Die-cast ADC12 aluminum housing, dual silicone compression gasket, and Molex MX150 automotive interface.",
+            internalRemarks = "Thermal FEA simulation shows junction temp stays < 72Â°C at 50Â°C ambient engine-bay conditions. Tooling quote approved for â‚¹8.5 Lakhs with 4-week T0 sample turnaround.",
+            clientHighlights = "Rigid IP67 water/dust proof enclosure designed for Tata Ace EV chassis mounting, vibration certified to ISO 16750-3 (10G RMS).",
+            keyParameters = mapOf("Ingress Protection" to "IP67 Immersion Rated", "Housing Material" to "ADC12 Die-Cast Aluminum", "Vibration Rating" to "ISO 16750-3 (10G RMS)", "Operating Temp" to "-40Â°C to +105Â°C"),
+            signedAt = "2026-03-12 16:00",
+            signatureHash = "SHA256:112233445566778899aabbccddee",
+            projectId = "HLPL-AI4T-01"
+        ),
+        FeasibilityReview(
+            deptCode = "PUR",
+            deptName = "Purchasing & SCM Supply Chain",
+            leadName = "Marcus Vance",
+            verdict = "FEASIBLE_WITH_CONDITIONS",
+            scopeSummary = "Dual-source supply chain verification, Mouser/Digi-Key inventory locking, and volume vendor allocation.",
+            internalRemarks = "Long lead-time on TI TCAN1042 transceivers mitigated by locking 10,000 pcs reel stock with Mouser. Alternate NXP TJA1051T qualified as secondary source. Target BOM locked at .80.",
+            clientHighlights = "94% of active BOM lines validated with Tier-1 franchised distributors. Committed piece price â‚¹4,066/unit (.80) within client commercial ceiling.",
+            keyParameters = mapOf("Locked Unit BOM" to ".80", "AVL Coverage" to "94%", "Long-Lead Lines" to "2 Lines (Reel Reserved)", "Payment Terms" to "Net 30 franchised"),
+            signedAt = "2026-03-13 10:00",
+            signatureHash = "SHA256:99aabbccddeeff00112233445566",
+            projectId = "HLPL-AI4T-01"
+        ),
+        FeasibilityReview(
+            deptCode = "QA",
+            deptName = "Quality Assurance & Regulatory Compliance",
+            leadName = "Sarah Chen",
+            verdict = "FEASIBLE",
+            scopeSummary = "IATF 16949 APQP Stage Gate compliance, ARAI AIS-140 type approval path, and ISO 7637-2 pre-compliance test matrix.",
+            internalRemarks = "8 pre-compliance DVP&R tests mapped. External lab test slots pre-booked with ARAI Pune for Q3 2026. Zero-defect IQC quarantine hold enforced on all incoming inward deliveries.",
+            clientHighlights = "Full automotive qualification pathway established. PPAP Level 3 package delivery guaranteed prior to commercial SOP.",
+            keyParameters = mapOf("Quality System" to "IATF 16949:2016", "Pre-Compliance Tests" to "8/8 Pass Criteria Defined", "PPAP Level" to "Level 3 with PSW", "Regulatory Agency" to "ARAI Pune (AIS-140)"),
+            signedAt = "2026-03-13 11:30",
+            signatureHash = "SHA256:fedcba9876543210fedcba987654",
+            projectId = "HLPL-AI4T-01"
+        ),
+        FeasibilityReview(
+            deptCode = "FIN",
+            deptName = "Finance & Commercial Contracts",
+            leadName = "Rajesh Sharma",
+            verdict = "FEASIBLE",
+            scopeSummary = "Commercial evaluation of â‚¹20.33 Cr multi-year contract, volume price commitments, and milestone cash flows.",
+            internalRemarks = "NRE budget â‚¹45.00 Lakhs covers tooling, ARAI testing, and prototype runs with 35% advance milestone. Project gross margin modeled at 34.2%.",
+            clientHighlights = "Contract volume locked for 50,000 units with progressive delivery schedules and milestone-linked payment terms.",
+            keyParameters = mapOf("Total Contract" to "â‚¹20.33 Cr", "Order Volume" to "50,000 Units", "NRE Milestone" to "â‚¹45.00 Lakhs", "Gross Margin Target" to "34.2%"),
+            signedAt = "2026-03-13 14:00",
+            signatureHash = "SHA256:abcdef0123456789abcdef012345",
+            projectId = "HLPL-AI4T-01"
+        ),
+        // Connected DEMO-PROJ-010 Feasibility Reviews (Unsigned Pre-freeze Draft Engineering Assessment)
+        FeasibilityReview(
+            deptCode = "EHW",
+            deptName = "Electronics & Hardware Architecture",
+            leadName = "Avery Vale",
+            verdict = "UNSIGNED_DRAFT_ASSESSMENT",
+            scopeSummary = "Custom telematics tracker hardware architecture: dual 4G Cat-1 + NavIC/IRNSS receiver with SPI NOR flash logging.",
+            internalRemarks = "EDITABLE UNAPPROVED TEST ASSUMPTIONS: Quectel EG915N-EU selected for cellular backhaul. Allystar TAU1302 selected for NavIC/GPS dual constellation. Power consumption during deep sleep modeled at 42 µA @ 3.7V Li-ion. Preliminary BOM estimated at $31.80 for silicon and power passives.",
+            clientHighlights = "Local TEST draft assessment — no approval implied: Architecture proposed to meet offline logging requirements in rural agrarian coverage blackouts. Final hardware design pending Stage 3 requirement freeze.",
+            keyParameters = mapOf("Modem" to "Quectel EG915N-EU (Cat-1)", "GNSS Receiver" to "Allystar TAU1302 (NavIC + GPS)", "Flash Storage" to "16MB SPI NOR (Winbond)", "Target Sleep Current" to "42 µA @ 3.7V"),
+            signedAt = null,
+            signatureHash = null,
+            projectId = "DEMO-PROJ-010"
+        ),
+        FeasibilityReview(
+            deptCode = "SW",
+            deptName = "Software & Systems Engineering",
+            leadName = "Siddharth Roy",
+            verdict = "UNSIGNED_DRAFT_ASSESSMENT",
+            scopeSummary = "Ultra-low-power FreeRTOS firmware architecture with circular flash FIFO logging and store-and-forward telemetry protocol.",
+            internalRemarks = "EDITABLE UNAPPROVED TEST ASSUMPTIONS: Buffer sizing allocates 48,000 telemetry packets (30 days at 1-minute intervals). Automatic sync initiates upon LTE cell attach. Fallback peer-to-peer LoRa beacon mode under evaluation for gateway rendezvous.",
+            clientHighlights = "Local TEST draft assessment — no approval implied: Firmware designed for autonomous offline data resilience. Store-and-forward delta compression ensures zero data loss during multi-day coverage gaps.",
+            keyParameters = mapOf("RTOS Kernel" to "FreeRTOS Tickless Idle", "Flash Buffer" to "48,000 Telemetry Records", "Sync Protocol" to "CoAP / Lightweight MQTT", "Encryption" to "AES-128-GCM Software Core"),
+            signedAt = null,
+            signatureHash = null,
+            projectId = "DEMO-PROJ-010"
+        ),
+        FeasibilityReview(
+            deptCode = "PUR",
+            deptName = "Purchasing & SCM Supply Chain",
+            leadName = "Morgan Reed",
+            verdict = "UNSIGNED_DRAFT_ASSESSMENT",
+            scopeSummary = "PoC prototype component procurement feasibility (10 units) and mass-production supply chain risk mapping.",
+            internalRemarks = "EDITABLE UNAPPROVED TEST ASSUMPTIONS: Allystar TAU1302 module has 12-week factory lead time; evaluation samples sourced from regional distributor. Quectel modem reels available from Mouser. Sourcing assumptions subject to formal quotation.",
+            clientHighlights = "Local TEST draft assessment — no approval implied: All primary ICs mapped to franchised distributors with viable dual-source secondaries for production scaling.",
+            keyParameters = mapOf("PoC Sourcing Lot" to "10 Prototype Sets", "Estimated Lead Time" to "6-8 Weeks", "Target BOM (PoC)" to "$31.80 / unit", "Distributor Status" to "Stock Quotes Verified"),
+            signedAt = null,
+            signatureHash = null,
+            projectId = "DEMO-PROJ-010"
+        ),
+        FeasibilityReview(
+            deptCode = "QA",
+            deptName = "Quality Assurance & Regulatory Compliance",
+            leadName = "Jordan Blake",
+            verdict = "UNSIGNED_DRAFT_ASSESSMENT",
+            scopeSummary = "Pre-compliance qualification roadmap: ARAI AIS-140 Annexure 7 automotive tracking standards and IP67 test matrix.",
+            internalRemarks = "EDITABLE UNAPPROVED TEST ASSUMPTIONS: Pre-compliance test suite scoped for ISO 7637-2 electrical transients, CISPR 25 radiated emissions, and vibration testing per ISO 16750-3. Environmental chamber test slots tentative.",
+            clientHighlights = "Local TEST draft assessment — no approval implied: Complete regulatory verification pathway drafted. Full formal certification will commence post-Stage 3 requirement freeze.",
+            keyParameters = mapOf("Compliance Target" to "AIS-140 Annex 7 / IP67", "Test Batches" to "10 PoC Samples", "Thermal Rating" to "-20°C to +70°C", "Validation Status" to "Draft Test Plan"),
+            signedAt = null,
+            signatureHash = null,
+            projectId = "DEMO-PROJ-010"
         )
     )
+
+    private val _allFeasibilityReviews = MutableStateFlow(buildInitialFeasibilityReviews())
+    private val _feasibilityReviews = MutableStateFlow(
+        buildInitialFeasibilityReviews().filter { it.projectId != "DEMO-PROJ-010" }
+    )
     override val feasibilityReviews: StateFlow<List<FeasibilityReview>> = _feasibilityReviews.asStateFlow()
+
+    private fun refreshScopedFeasibilityReviews() {
+        val proj = _selectedProject.value
+        _feasibilityReviews.value = if (proj == "DEMO-PROJ-010") {
+            _allFeasibilityReviews.value.filter { it.projectId == "DEMO-PROJ-010" }
+        } else {
+            _allFeasibilityReviews.value.filter { it.projectId != "DEMO-PROJ-010" }
+        }
+    }
 
     // 18. Hardware Kick-off Path Selection ("pilot" = Direct-to-Pilot 12 wks vs "poc" = Proof of Concept First 20 wks)
     private val _hardwarePath = MutableStateFlow("pilot")
@@ -1519,76 +2076,254 @@ class ScmsRepositoryImpl(
     override val purchaseOrders: StateFlow<List<PurchaseOrder>> = _purchaseOrders.asStateFlow()
 
     // 24. Client OEM Deliverables & Document Vault (Master Plan Â§3)
-    private val _clientDeliverables = MutableStateFlow(
-        listOf(
-            ClientDeliverable(
-                id = "DELIV-SOR-01",
-                code = "HLPL-AI4T-01-MKT-SOR-01",
-                title = "System Requirement Specification (SOR)",
-                category = "Requirements",
-                standard = "Tata Motors SOR v1.4",
-                status = "Signed & Locked",
-                date = "2026-02-15",
-                owner = "Rajiv Mehta (Client)",
-                description = "Core functional specifications for Tata Ace EV Telematics Gateway."
-            ),
-            ClientDeliverable(
-                id = "DELIV-mNDA-01",
-                code = "HLPL-AI4T-01-MKT-mNDA-01",
-                title = "Mutual Non-Disclosure Agreement",
-                category = "Legal",
-                standard = "Bilateral Corporate NDA",
-                status = "Executed",
-                date = "2026-02-10",
-                owner = "Legal & Compliance",
-                description = "Mutual proprietary IP, schematic confidentiality, and trade secret protections."
-            ),
-            ClientDeliverable(
-                id = "DELIV-QUO-01",
-                code = "HLPL-AI4T-01-FIN-QUO-01",
-                title = "Commercial Quotation & Cost Breakdown",
-                category = "Commercial",
-                standard = "Volume 50k Locked Pricing",
-                status = "Locked",
-                date = "2026-03-01",
-                owner = "Rajesh Sharma (CFO)",
-                description = "Piece price â‚¹4,066/unit ($48.80) + NRE â‚¹45.00 Lakhs locked across 50,000 units."
-            ),
-            ClientDeliverable(
-                id = "DELIV-TAC-01",
-                code = "HLPL-AI4T-01-QA-TAC-01",
-                title = "ARAI AIS-140 Type Approval Certificate",
-                category = "Regulatory",
-                standard = "AIS-140 Amendment 2",
-                status = "Pre-Certification In Progress",
-                date = "Target 2026-08-30",
-                owner = "Sarah Chen (QA Lead)",
-                description = "Type approval certification required for roadworthiness and EV commercial registration."
-            ),
-            ClientDeliverable(
-                id = "DELIV-PDI-01",
-                code = "HLPL-AI4T-01-MFG-PDI-01",
-                title = "Pre-Delivery Inspection Checklist",
-                category = "Manufacturing",
-                standard = "IATF 16949 Â§8.6",
-                status = "Ready",
-                date = "2026-03-15",
-                owner = "Production Quality Lead",
-                description = "100% end-of-line flashing, calibration, and enclosure seal leak-test protocol."
-            ),
-            ClientDeliverable(
-                id = "DELIV-INV-01",
-                code = "HLPL-INV-2026-088",
-                title = "Inwarding & IQC Inspection Dossier",
-                category = "Stores / SCM",
-                standard = "IQC Zero-Defect Protocol",
-                status = "Quarantine Staged",
-                date = "2026-03-16",
-                owner = "Warehouse SCM",
-                description = "Inwarding record and certificate of analysis verification for pilot lot."
-            )
+    private fun buildInitialClientDeliverables(): List<ClientDeliverable> = listOf(
+        ClientDeliverable(
+            id = "DELIV-SOR-01",
+            code = "HLPL-AI4T-01-MKT-SOR-01",
+            title = "System Requirement Specification (SOR)",
+            category = "Requirements",
+            standard = "Tata Motors SOR v1.4",
+            status = "Signed & Locked",
+            date = "2026-02-15",
+            owner = "Rajiv Mehta (Client)",
+            description = "Core functional specifications for Tata Ace EV Telematics Gateway.",
+            projectId = "HLPL-AI4T-01"
+        ),
+        ClientDeliverable(
+            id = "DELIV-mNDA-01",
+            code = "HLPL-AI4T-01-MKT-mNDA-01",
+            title = "Mutual Non-Disclosure Agreement",
+            category = "Legal",
+            standard = "Bilateral Corporate NDA",
+            status = "Executed",
+            date = "2026-02-10",
+            owner = "Legal & Compliance",
+            description = "Mutual proprietary IP, schematic confidentiality, and trade secret protections.",
+            projectId = "HLPL-AI4T-01"
+        ),
+        ClientDeliverable(
+            id = "DELIV-QUO-01",
+            code = "HLPL-AI4T-01-FIN-QUO-01",
+            title = "Commercial Quotation & Cost Breakdown",
+            category = "Commercial",
+            standard = "Volume 50k Locked Pricing",
+            status = "Locked",
+            date = "2026-03-01",
+            owner = "Rajesh Sharma (CFO)",
+            description = "Piece price â‚¹4,066/unit (.80) + NRE â‚¹45.00 Lakhs locked across 50,000 units.",
+            projectId = "HLPL-AI4T-01"
+        ),
+        ClientDeliverable(
+            id = "DELIV-TAC-01",
+            code = "HLPL-AI4T-01-QA-TAC-01",
+            title = "ARAI AIS-140 Type Approval Certificate",
+            category = "Regulatory",
+            standard = "AIS-140 Amendment 2",
+            status = "Pre-Certification In Progress",
+            date = "Target 2026-08-30",
+            owner = "Sarah Chen (QA Lead)",
+            description = "Type approval certification required for roadworthiness and EV commercial registration.",
+            projectId = "HLPL-AI4T-01"
+        ),
+        ClientDeliverable(
+            id = "DELIV-PDI-01",
+            code = "HLPL-AI4T-01-MFG-PDI-01",
+            title = "Pre-Delivery Inspection Checklist",
+            category = "Manufacturing",
+            standard = "IATF 16949 Â§8.6",
+            status = "Ready",
+            date = "2026-03-15",
+            owner = "Production Quality Lead",
+            description = "100% end-of-line flashing, calibration, and enclosure seal leak-test protocol.",
+            projectId = "HLPL-AI4T-01"
+        ),
+        ClientDeliverable(
+            id = "DELIV-INV-01",
+            code = "HLPL-INV-2026-088",
+            title = "Inwarding & IQC Inspection Dossier",
+            category = "Stores / SCM",
+            standard = "IQC Zero-Defect Protocol",
+            status = "Quarantine Staged",
+            date = "2026-03-16",
+            owner = "Warehouse SCM",
+            description = "Inwarding record and certificate of analysis verification for pilot lot.",
+            projectId = "HLPL-AI4T-01"
+        ),
+        // Connected DEMO-PROJ-010 Client Deliverables (Local TEST Workspace Concept)
+        ClientDeliverable(
+            id = "DELIV-S10-01",
+            code = "DEMO-PROJ-010-SAL-SOR-01",
+            title = "Local TEST draft reference — not customer-issued (Offline Tracker Concept)",
+            category = "Requirements",
+            standard = "Local TEST Draft Concept",
+            status = "Draft · local test",
+            date = "2026-10-28",
+            owner = "Dr. Evelyn Vance (Simulated Persona)",
+            description = "Simulated draft statement of requirement for offline telemetry buffer and cellular fallback; editable assumptions.",
+            projectId = "DEMO-PROJ-010"
+        ),
+        ClientDeliverable(
+            id = "DELIV-S10-02",
+            code = "DEMO-PROJ-010-FIN-QUO-01",
+            title = "Commercial Quotation & Budget Assumptions (Unapproved)",
+            category = "Commercial",
+            standard = "Internal Cost Model",
+            status = "Draft · local test",
+            date = "2026-10-30",
+            owner = "Rajesh Sharma (CFO)",
+            description = "Unapproved commercial estimate for 10-unit PoC prototype run (₹4.85 Lakh estimated NRE).",
+            projectId = "DEMO-PROJ-010"
+        ),
+        ClientDeliverable(
+            id = "DELIV-S10-03",
+            code = "DEMO-PROJ-010-QA-TAC-01",
+            title = "ARAI AIS-140 Annexure 7 Type Approval Roadmap (Proposed)",
+            category = "Regulatory",
+            standard = "Proposed Test Suite",
+            status = "Proposed · Result Pending",
+            date = "Target 2026-11-15",
+            owner = "Jordan Blake (QA Lead)",
+            description = "Proposed test roadmap for AIS-140 Annexure 7 automotive compliance; vehicle-level testing has not occurred.",
+            projectId = "DEMO-PROJ-010"
+        ),
+        // DEMO-PORT-01-ENQ (Stage 1 Intake & Opportunity)
+        ClientDeliverable(
+            id = "DELIV-ENQ-01",
+            code = "DEMO-PORT-01-ENQ-SAL-ENQ-01",
+            title = "Preliminary Technical Feasibility & Solar Node Envelope Brief",
+            category = "Commercial / Intake",
+            standard = "Customer RFQ v0.1",
+            status = "Under Review",
+            date = "2026-10-25",
+            owner = "Aakash Verma (SAL)",
+            description = "Initial enquiry intake, solar energy budget, and microclimate sensor constraints.",
+            projectId = "DEMO-PORT-01-ENQ"
+        ),
+        ClientDeliverable(
+            id = "DELIV-ENQ-02",
+            code = "DEMO-PORT-01-ENQ-EHW-ENV-01",
+            title = "IP68 Solar Enclosure & Antenna Constraint Study",
+            category = "Engineering",
+            standard = "IEC 60529 IP68",
+            status = "Draft",
+            date = "2026-10-26",
+            owner = "Avery Vale (EHW)",
+            description = "Enclosure dimensions, solar cell mounting, and internal antenna radiation efficiency.",
+            projectId = "DEMO-PORT-01-ENQ"
+        ),
+        // DEMO-PORT-03-FRZ (Stage 3 Requirement Freeze & Commercial Lock)
+        ClientDeliverable(
+            id = "DELIV-FRZ-01",
+            code = "DEMO-PORT-03-FRZ-SAL-SOR-01",
+            title = "Select Motors Signed System Requirement Specification (SOR v2.0)",
+            category = "Requirements",
+            standard = "Select Motors SOR v2.0",
+            status = "Signed & Locked",
+            date = "2026-10-20",
+            owner = "Aakash Verma (SAL)",
+            description = "Two-wheeler telematics unit requirement baseline and commercial commitment.",
+            projectId = "DEMO-PORT-03-FRZ"
+        ),
+        ClientDeliverable(
+            id = "DELIV-FRZ-02",
+            code = "DEMO-PORT-03-FRZ-EHW-PRS-01",
+            title = "Hardware Product Requirement Specification (PRS)",
+            category = "Engineering",
+            standard = "AIS-140 Rev B",
+            status = "Frozen",
+            date = "2026-10-22",
+            owner = "Avery Vale (EHW)",
+            description = "Electrical architecture, 50-ohm antenna matching, and power budget.",
+            projectId = "DEMO-PORT-03-FRZ"
+        ),
+        ClientDeliverable(
+            id = "DELIV-FRZ-03",
+            code = "DEMO-PORT-03-FRZ-EHW-SCH-01",
+            title = "Circuit Schematic & ECAD Netlist Rev 01",
+            category = "Engineering",
+            standard = "IPC-2221 Class 2",
+            status = "Awaiting upload",
+            date = "2026-10-24",
+            owner = "Rahul Sen (EHW)",
+            description = "4-layer rigid PCB schematic and component pinout.",
+            projectId = "DEMO-PORT-03-FRZ"
+        ),
+        // DEMO-PORT-04-HF (Stage 4 HW + FW Integration)
+        ClientDeliverable(
+            id = "DELIV-HF-01",
+            code = "DEMO-PORT-04-HF-EHW-PRS-01",
+            title = "High-Voltage BMS Telemetry Module Engineering Specification",
+            category = "Engineering",
+            standard = "ISO 26262 ASIL-B / AIS-004",
+            status = "Released",
+            date = "2026-10-24",
+            owner = "Avery Vale (EHW)",
+            description = "Galvanic isolation, dual CAN-FD, and high-voltage safety interlock spec.",
+            projectId = "DEMO-PORT-04-HF"
+        ),
+        ClientDeliverable(
+            id = "DELIV-HF-02",
+            code = "DEMO-PORT-04-HF-FW-BSP-01",
+            title = "FreeRTOS Board Support Package & SPI Flash Driver",
+            category = "Firmware",
+            standard = "FreeRTOS LTS",
+            status = "In Integration",
+            date = "2026-10-26",
+            owner = "Devon Lane (FW)",
+            description = "Dual-bank bootloader and SPI DMA logging engine.",
+            projectId = "DEMO-PORT-04-HF"
+        ),
+        ClientDeliverable(
+            id = "DELIV-HF-03",
+            code = "DEMO-PORT-04-HF-FW-FWPKG-01",
+            title = "BMS Firmware Integration Package v1.0.0-rc1",
+            category = "Firmware",
+            standard = "MISRA C:2012",
+            status = "Awaiting upload",
+            date = "2026-10-28",
+            owner = "Priya Nair (FW)",
+            description = "Firmware binary bundle and flash map.",
+            projectId = "DEMO-PORT-04-HF"
+        ),
+        // DEMO-PORT-06-QA (Stage 6 DVP&R Pre-Compliance Validation & Stage 9 Service Feedback)
+        ClientDeliverable(
+            id = "DELIV-QA-01",
+            code = "DEMO-PORT-06-QA-QA-DVP-01",
+            title = "Cold-Chain Temperature Logger DVP&R Validation Report",
+            category = "Quality",
+            standard = "ISO 16750 / EN 12830",
+            status = "In Validation",
+            date = "2026-10-24",
+            owner = "Jordan Blake (QA)",
+            description = "Thermal chamber soak (-40Â°C to +85Â°C) and vibration test compliance record.",
+            projectId = "DEMO-PORT-06-QA"
+        ),
+        ClientDeliverable(
+            id = "DELIV-QA-02",
+            code = "DEMO-PORT-06-QA-QA-TEST-01",
+            title = "Environmental & Ingress Protection Test Evidence Package",
+            category = "Regulatory / Test",
+            standard = "IP68 & ISO 16750-4",
+            status = "Awaiting upload",
+            date = "2026-10-26",
+            owner = "Rohit Kulkarni (QA)",
+            description = "Chamber thermal data logs and water immersion inspection reports.",
+            projectId = "DEMO-PORT-06-QA"
+        ),
+        ClientDeliverable(
+            id = "DELIV-QA-03",
+            code = "DEMO-PORT-06-QA-SIT-RMA-01",
+            title = "Field Service RMA TKT-2026-0201 Root Cause Analysis Dossier",
+            category = "Field Service",
+            standard = "8D Problem Solving",
+            status = "Under Investigation",
+            date = "2026-10-31",
+            owner = "Preeti Joshi (SIT)",
+            description = "Field sensor drift investigation, gasket compression containment, and IP68 redesign.",
+            projectId = "DEMO-PORT-06-QA"
         )
     )
+    private val _clientDeliverables = MutableStateFlow(buildInitialClientDeliverables())
     override val clientDeliverables: StateFlow<List<ClientDeliverable>> = _clientDeliverables.asStateFlow()
 
     // 25. Receiving Draft Vouchers (Stage 5B Mobile Inwarding)
@@ -4209,5 +4944,153 @@ class ScmsRepositoryImpl(
         return Result.success(Unit)
     }
 
-}
+    override fun resetSampleWorkspace() {
+        _tasks.value = buildInitialTasks()
+        _handoffs.value = buildInitialHandoffs()
+        _allTickets.value = buildInitialTickets()
+        refreshScopedTickets()
+        _allFeasibilityReviews.value = buildInitialFeasibilityReviews()
+        _documents.value = buildInitialDocuments()
+        _clientDeliverables.value = buildInitialClientDeliverables()
+        _selectedProject.value = "DEMO-PROJ-010"
+        refreshScopedFeasibilityReviews()
+    }
 
+    override fun getHardwareMasterData(projectId: String): com.example.myapplication.data.model.HardwareMasterData {
+        val proj = com.example.myapplication.data.model.AutomotiveProjects.findById(projectId)
+        fun resolveCatalogueMpn(candidateMpn: String): String? {
+            return mouserCatalog.firstOrNull { it.mpn == candidateMpn }?.mpn
+        }
+
+        return when (proj.id) {
+            "DEMO-PROJ-010" -> {
+                val s10Bom = listOf(
+                    com.example.myapplication.data.model.HardwareBomLineItem("EG915N-EU", "Quectel LTE Cat-1 Modem with 2G GSM Fallback", 1, "Quectel / Franchised", 6, 14.50, resolveCatalogueMpn("EG915N-EU")),
+                    com.example.myapplication.data.model.HardwareBomLineItem("STM32G0B1VCT6", "STMicroelectronics ARM Cortex-M0+ MCU 512KB Flash", 1, "ST / Mouser", 8, 4.20, resolveCatalogueMpn("STM32G0B1VCT6")),
+                    com.example.myapplication.data.model.HardwareBomLineItem("TAU1302", "Allystar Dual-Constellation NavIC L5 + GPS L1 GNSS Receiver", 1, "Allystar / Distributor", 12, 6.80, resolveCatalogueMpn("TAU1302")),
+                    com.example.myapplication.data.model.HardwareBomLineItem("SX1262IMLTRT", "Semtech LoRa Sub-GHz 865-867 MHz Transceiver (Research Line)", 1, "Semtech / Digi-Key", 4, 3.40, resolveCatalogueMpn("SX1262IMLTRT")),
+                    com.example.myapplication.data.model.HardwareBomLineItem("W25Q128JVS", "Winbond 16MB SPI NOR Flash (48k Packet FIFO Buffer)", 1, "Winbond / Franchised", 6, 0.95, resolveCatalogueMpn("W25Q128JVS")),
+                    com.example.myapplication.data.model.HardwareBomLineItem("TCAN1042HVD", "TI ISO 11898-2 CAN-FD Transceiver with Standby Wake-up", 1, "TI / Mouser", 8, 1.25, resolveCatalogueMpn("TCAN1042HVD"))
+                )
+                val subtotalUsd = s10Bom.sumOf { it.quantityPerUnit * it.estimatedUnitCostUsd }
+                val subtotalInr = Math.round(subtotalUsd * 83.0 * 100.0) / 100.0
+
+                com.example.myapplication.data.model.HardwareMasterData(
+                    projectId = "DEMO-PROJ-010",
+                    projectName = "Northstar Field Systems \u2014 Offline-Capable 4G/GNSS Telematics Tracker PoC",
+                    requirementsAndProvenance = com.example.myapplication.data.model.HardwareRequirementsProvenance(
+                        customerSorReference = "Local TEST draft reference \u2014 not customer-issued (Draft preliminary SOR-010)",
+                        provenanceBaseline = "Internal engineering draft baseline derived from Hexense Telematics Platform V2 (Modular Cat-1 + GNSS Core) \u00b7 Local TEST workspace only",
+                        voltageRange = "9V - 36V DC Automotive (Proposed target: ISO 7637-2 pulse protection \u00b7 unverified test assumption)",
+                        operatingTemp = "-40\u00b0C to +85\u00b0C Industrial Target Range (unverified test assumption)",
+                        ingressProtection = "IP67 Target Die-Cast Enclosure with Gasket Seal (proposed design \u00b7 result pending)",
+                        powerBudgetDeepSleep = "42 \u00b5A @ 3.7V LiPo (unverified editable test assumption)",
+                        powerBudgetActive = "120 mA @ 12V Nominal (unverified editable test assumption)"
+                    ),
+                    reusableAssets = listOf(
+                        com.example.myapplication.data.model.HardwareAssetItem(
+                            assetId = "AST-PCB-01",
+                            name = "Mainboard PCB Assembly (4-Layer Rigid FR4)",
+                            revision = "Rev 0.2 Draft",
+                            reusabilityScope = "Candidate modular layout for offline tracker variants",
+                            componentCertification = "Proposed test / result pending (Target: AEC-Q200 Grade 1 & IPC-A-610 Class 2 \u2014 no test evidence attached)",
+                            systemCertificationStatus = "System Configuration: Not verified \u2014 no evidence attached (Full vehicle DVP&R and AIS-140 testing pending)"
+                        ),
+                        com.example.myapplication.data.model.HardwareAssetItem(
+                            assetId = "AST-ENC-01",
+                            name = "Die-Cast ADC12 Aluminum IP67 Enclosure",
+                            revision = "Rev A Tooling Sample",
+                            reusabilityScope = "Candidate housing shared with rugged telematics platform",
+                            componentCertification = "Proposed test / result pending (Target: UL94-V0 flammability & IP67 immersion \u2014 no lab evidence attached)",
+                            systemCertificationStatus = "System Configuration: Not verified \u2014 no evidence attached (Enclosure test proposal does not certify complete project configuration)"
+                        ),
+                        com.example.myapplication.data.model.HardwareAssetItem(
+                            assetId = "AST-HARN-01",
+                            name = "16-Pin USCAR-2 Automotive Wiring Harness",
+                            revision = "Rev 0.1 Proto",
+                            reusabilityScope = "Modular connector design compatible with Molex MX150",
+                            componentCertification = "Proposed test / result pending (Target: USCAR-2 terminal pull force \u2014 no pull-test evidence attached)",
+                            systemCertificationStatus = "System Configuration: Not verified \u2014 no evidence attached (Harness component evaluation does not certify system configuration)"
+                        ),
+                        com.example.myapplication.data.model.HardwareAssetItem(
+                            assetId = "AST-ANT-01",
+                            name = "Dual-Band Internal GNSS + LTE Patch Antenna",
+                            revision = "Rev 0.2 Draft",
+                            reusabilityScope = "Proposed antenna layout for metal roof mounting",
+                            componentCertification = "Proposed test / result pending (Target: VSWR < 2.0 @ 865 MHz & 1575 MHz \u2014 no chamber scan attached)",
+                            systemCertificationStatus = "System Configuration: Not verified \u2014 no evidence attached (Chamber OTA TRP/TIS testing pending)"
+                        )
+                    ),
+                    tentativeBom = s10Bom,
+                    budgetSummary = com.example.myapplication.data.model.HardwareBudgetSummary(
+                        prototypeLotSize = 10,
+                        estimatedBomCostPerUnitUsd = subtotalUsd,
+                        estimatedBomCostPerUnitInr = subtotalInr,
+                        estimatedNreAndToolingInr = 850000.0,
+                        targetMassProductionBomInr = 2650.0,
+                        statusDisclaimer = "EDITABLE GENERATED DRAFT \u00b7 UNAPPROVED TEST ASSUMPTIONS (Subject to engineering revision; no budget commitment)",
+                        isPartial = true,
+                        excludedItemsNote = "Partial BOM (6 primary ICs); excludes discrete passives (R/C/L), connectors, 4-layer FR4 PCB fabrication, enclosure tooling, antenna, and wiring harness."
+                    ),
+                    binaryDeliverables = listOf(
+                        com.example.myapplication.data.model.HardwareBinaryDeliverable("Schematic File", ".kicad_sch", "Absent Metadata / File Not Uploaded", "Binary schematic not present in repository. No mock download or upload state is fabricated."),
+                        com.example.myapplication.data.model.HardwareBinaryDeliverable("Gerber Fabrication Pack", ".zip", "Absent Metadata / File Not Uploaded", "Gerber CAM files not present. Fabrication release blocked until Stage 3 freeze."),
+                        com.example.myapplication.data.model.HardwareBinaryDeliverable("Firmware Binary", ".bin", "Absent Metadata / File Not Uploaded", "Compiled image not uploaded. Local development draft in workspace only."),
+                        com.example.myapplication.data.model.HardwareBinaryDeliverable("Mechanical 3D STEP", ".step", "Absent Metadata / File Not Uploaded", "CAD geometry file not present in repository."),
+                        com.example.myapplication.data.model.HardwareBinaryDeliverable("Wiring Harness Drawing", ".dwg", "Absent Metadata / File Not Uploaded", "Manufacturing 2D wire map not present in repository."),
+                        com.example.myapplication.data.model.HardwareBinaryDeliverable("DVP&R Lab Test Results", ".pdf", "Absent Metadata / File Not Uploaded", "Pre-compliance chamber test report absent; physical testing pending."),
+                        com.example.myapplication.data.model.HardwareBinaryDeliverable("ARAI Type Approval Certificate", ".pdf", "Absent Metadata / File Not Uploaded", "Government regulatory certificate absent; vehicle-level approval has not occurred.")
+                    )
+                )
+            }
+            else -> {
+                val fallbackBom = listOf(
+                    com.example.myapplication.data.model.HardwareBomLineItem("STM32H753", "32-Bit ARM Cortex-M7 480MHz Automotive MCU", 1, "ST / Mouser", 8, 12.80, resolveCatalogueMpn("STM32H753")),
+                    com.example.myapplication.data.model.HardwareBomLineItem("EG915N-EU", "LTE Cat-1 Automotive Telematics Modem", 1, "Quectel / Franchised", 6, 14.50, resolveCatalogueMpn("EG915N-EU")),
+                    com.example.myapplication.data.model.HardwareBomLineItem("TCAN1042", "High-Speed CAN-FD Transceiver", 2, "TI / Mouser", 8, 2.50, resolveCatalogueMpn("TCAN1042"))
+                )
+                val fallbackSubtotalUsd = fallbackBom.sumOf { it.quantityPerUnit * it.estimatedUnitCostUsd }
+                val fallbackSubtotalInr = Math.round(fallbackSubtotalUsd * 83.0 * 100.0) / 100.0
+
+                com.example.myapplication.data.model.HardwareMasterData(
+                    projectId = proj.id,
+                    projectName = proj.title,
+                    requirementsAndProvenance = com.example.myapplication.data.model.HardwareRequirementsProvenance(
+                        customerSorReference = "Local TEST draft reference \u2014 not customer-issued (Reference: REF-SOR-${proj.reference}-DRAFT)",
+                        provenanceBaseline = "Internal preliminary engineering baseline \u00b7 Local TEST workspace only",
+                        voltageRange = "9V - 32V DC Automotive (Proposed target specification \u00b7 unverified test assumption)",
+                        operatingTemp = "-40\u00b0C to +105\u00b0C Automotive Grade Target (unverified test assumption)",
+                        ingressProtection = "IP67 Target (Enclosure seal test pending \u00b7 no evidence attached)",
+                        powerBudgetDeepSleep = "< 1.8 mA Deep Sleep Target (unverified test assumption)",
+                        powerBudgetActive = "180 mA @ 12V Active Ingestion Target (unverified test assumption)"
+                    ),
+                    reusableAssets = listOf(
+                        com.example.myapplication.data.model.HardwareAssetItem(
+                            assetId = "AST-${proj.id}-PCB",
+                            name = "Automotive Gateway Mainboard Reference Design",
+                            revision = "Rev 0.1 Draft",
+                            reusabilityScope = "Multi-bus automotive candidate architecture",
+                            componentCertification = "Proposed test / result pending (Target: AEC-Q100 Grade 2 candidate \u2014 no evidence attached)",
+                            systemCertificationStatus = "System Configuration: Not verified \u2014 no evidence attached (No complete-project certification filed)"
+                        )
+                    ),
+                    tentativeBom = fallbackBom,
+                    budgetSummary = com.example.myapplication.data.model.HardwareBudgetSummary(
+                        prototypeLotSize = 50,
+                        estimatedBomCostPerUnitUsd = fallbackSubtotalUsd,
+                        estimatedBomCostPerUnitInr = fallbackSubtotalInr,
+                        estimatedNreAndToolingInr = 4500000.0,
+                        targetMassProductionBomInr = 2950.0,
+                        statusDisclaimer = "COMMERCIAL SPECIFICATION BASELINE \u00b7 UNAPPROVED TEST ESTIMATE",
+                        isPartial = true,
+                        excludedItemsNote = "Partial BOM (3 primary IC lines); excludes discrete passives, connectors, and PCB fabrication."
+                    ),
+                    binaryDeliverables = listOf(
+                        com.example.myapplication.data.model.HardwareBinaryDeliverable("Schematic File", ".pdf", "Absent Metadata / File Not Uploaded", "Controlled document metadata registered in repository. Binary download requires authorized backend endpoint."),
+                        com.example.myapplication.data.model.HardwareBinaryDeliverable("Gerber Archive", ".zip", "Absent Metadata / File Not Uploaded", "Archived production package. Download not exposed over mobile.")
+                    )
+                )
+            }
+        }
+    }
+}

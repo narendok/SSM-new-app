@@ -66,7 +66,9 @@ import com.example.myapplication.data.model.ClientDeliverable
 import com.example.myapplication.data.model.DepartmentRole
 import com.example.myapplication.data.model.PartComponent
 import com.example.myapplication.data.model.ReceivingDraftVoucher
+import com.example.myapplication.data.model.Stage5ReceivingAvailability
 import com.example.myapplication.data.repository.ScmsRepository
+import com.example.myapplication.ui.components.Stage5ReceivingUnavailableCard
 import java.util.UUID
 
 @Composable
@@ -384,6 +386,11 @@ fun ShopfloorToolsScreen(
             }
 
             "RECEIVING" -> {
+                if (!Stage5ReceivingAvailability.isAvailable) {
+                    item {
+                        Stage5ReceivingUnavailableCard()
+                    }
+                } else {
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -406,6 +413,7 @@ fun ShopfloorToolsScreen(
 
                         Button(
                             onClick = { showDraftReceivingModal = true },
+                            enabled = Stage5ReceivingAvailability.isAvailable,
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.height(30.dp)
@@ -487,6 +495,7 @@ fun ShopfloorToolsScreen(
                                 )
                             }
                         }
+                    }
                     }
                 }
             }

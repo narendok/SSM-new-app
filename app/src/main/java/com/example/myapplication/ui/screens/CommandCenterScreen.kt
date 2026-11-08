@@ -84,14 +84,18 @@ fun CommandCenterScreen(
     onOpenRoleSwitcher: () -> Unit,
     authenticatedName: String? = null,
     sharedTasks: List<com.example.myapplication.data.model.DailyTaskItem>? = null,
-    onSharedTaskToggle: ((String) -> Unit)? = null
+    onSharedTaskToggle: ((String) -> Unit)? = null,
+    isAuthenticated: Boolean = false,
+    projectCatalog: List<com.example.myapplication.data.model.ProjectMetadata> = com.example.myapplication.data.model.AutomotiveProjects.all,
+    onSharedTaskMove: ((String, String) -> Unit)? = null
 ) {
     val currentRole by scmsRepository.currentRole.collectAsState()
     val stages by scmsRepository.apqpStages.collectAsState()
     val selectedProject by scmsRepository.selectedProject.collectAsState()
     val demoTasks by scmsRepository.tasks.collectAsState()
-    val allTasks = if (!sharedTasks.isNullOrEmpty()) sharedTasks else demoTasks
-    val tasks = allTasks.filter { selectedProject == "ALL" || it.projectId == selectedProject }
+    val allTasks = if (isAuthenticated) sharedTasks.orEmpty() else demoTasks
+    val activeProjectId = if (projectCatalog.any { it.id == selectedProject }) selectedProject else "ALL"
+    val tasks = allTasks.filter { activeProjectId == "ALL" || it.projectId == activeProjectId }
     val raciMatrix by scmsRepository.raciMatrix.collectAsState()
     val feasibilityReviews by scmsRepository.feasibilityReviews.collectAsState()
     val hardwarePath by scmsRepository.hardwarePath.collectAsState()
@@ -133,7 +137,11 @@ fun CommandCenterScreen(
         // 1. Dynamic Project Overview Intelligence Banner
         item {
             com.example.myapplication.ui.components.ProjectOverviewBanner(
-                projectId = selectedProject
+                projectId = activeProjectId,
+                projects = projectCatalog,
+                onResetWorkspace = if (!isAuthenticated && currentRole == DepartmentRole.ADMIN && activeProjectId == "DEMO-PROJ-010") {
+                    { scmsRepository.resetSampleWorkspace() }
+                } else null
             )
         }
 
@@ -390,8 +398,8 @@ fun CommandCenterScreen(
 
         // 6. Daily Tasks & Action Items (3-Lane Operational Checklist)
         item {
-            val todayTasks = tasks.filter { !it.isCompleted && it.lane.equals("Today", ignoreCase = true) }
-            val tomorrowTasks = tasks.filter { !it.isCompleted && it.lane.equals("Tomorrow", ignoreCase = true) }
+            val todayTasks = tasks.filter { !it.isCompleted && (it.lane.equals("Today", true) || it.lane.equals("In Progress", true)) }
+            val todoTasks = tasks.filter { !it.isCompleted && (it.lane.equals("To Do", true) || it.lane.equals("Tomorrow", true) || it.lane.equals("Planned", true)) }
             val reviewTasks = tasks.filter { !it.isCompleted && it.lane.equals("Review", ignoreCase = true) }
             val completedTasks = tasks.filter { it.isCompleted || it.lane.equals("Completed", ignoreCase = true) }
             val overdueTasksCount = todayTasks.count { it.isOverdue }
@@ -436,14 +444,14 @@ fun CommandCenterScreen(
                                 }
                             }
                             Text(
-                                text = "3-lane operational pipeline: Today, Planned, and Review.",
+                                text = "Today / In Progress, Review, and To Do. Completed tasks stay collapsed.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 11.sp
                             )
                         }
 
-                        FilledTonalButton(
+                        if (sharedTasks == null) FilledTonalButton(
                             onClick = {
                                 newTaskTitle = ""
                                 newTaskAssignee = currentRole.leadName
@@ -473,7 +481,7 @@ fun CommandCenterScreen(
                     ) {
                         listOf(
                             Triple("Today", "Today", todayTasks.size),
-                            Triple("Tomorrow", "Tomorrow", tomorrowTasks.size),
+                            Triple("To Do", "To Do", todoTasks.size),
                             Triple("Review", "Review", reviewTasks.size)
                         ).forEach { (laneKey, laneLabel, count) ->
                             val isSelected = selectedTaskLane == laneKey
@@ -519,7 +527,7 @@ fun CommandCenterScreen(
 
                     // Active Lane Task List
                     val activeLaneTasks = when (selectedTaskLane) {
-                        "Tomorrow" -> tomorrowTasks
+                        "To Do" -> todoTasks
                         "Review" -> reviewTasks
                         else -> todayTasks
                     }
@@ -546,11 +554,24 @@ fun CommandCenterScreen(
                                     task = task,
                                     currentLane = selectedTaskLane,
                                     onToggleComplete = {
-                                        if (sharedTasks != null) onSharedTaskToggle?.invoke(task.id) else scmsRepository.toggleTask(task.id)
+                                        if (sharedTasks != null) {
+                                            if (task.lane != "Review") onSharedTaskToggle?.invoke(task.id)
+                                        } else scmsRepository.toggleTask(task.id)
                                     },
                                     onMoveLane = { targetLane ->
-                                        scmsRepository.moveTaskLane(task.id, targetLane)
+                                        if (sharedTasks != null) {
+                                            val status = when (targetLane) {
+                                                "Review" -> "In review"
+                                                "Today" -> "In Progress"
+                                                else -> "Open"
+                                            }
+                                            onSharedTaskMove?.invoke(task.id, status)
+                                        } else {
+                                            scmsRepository.moveTaskLane(task.id, targetLane)
+                                        }
                                     },
+                                    allowDelegate = sharedTasks == null,
+                                    allowToggleComplete = sharedTasks == null || task.lane != "Review",
                                     onDelegate = {
                                         taskToReassign = task
                                         reassignNotes = ""
@@ -645,11 +666,17 @@ fun CommandCenterScreen(
                                                 )
                                             }
                                             TextButton(
-                                                onClick = { scmsRepository.moveTaskLane(task.id, "Today") },
+                                                onClick = {
+                                                    if (sharedTasks != null) {
+                                                        onSharedTaskMove?.invoke(task.id, "Open")
+                                                    } else {
+                                                        scmsRepository.moveTaskLane(task.id, "Today")
+                                                    }
+                                                },
                                                 contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                                                 modifier = Modifier.height(24.dp)
                                             ) {
-                                                Text("Restore", fontSize = 10.sp)
+                                                Text(if (sharedTasks != null) "Reopen" else "Restore", fontSize = 10.sp)
                                             }
                                         }
                                     }
@@ -661,8 +688,9 @@ fun CommandCenterScreen(
             }
         }
 
-        // 8. Six Lifecycle Scenarios (§14.14)
-        item {
+        if (!isAuthenticated) {
+            // 8. Six Lifecycle Scenarios (§14.14)
+            item {
             var showScenarios by remember { mutableStateOf(false) }
             Card(
                 colors = CardDefaults.cardColors(
@@ -691,6 +719,7 @@ fun CommandCenterScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
                             )
+                            }
                         }
                         Text(
                             text = if (showScenarios) "Hide ▲" else "View ▼",
@@ -756,7 +785,7 @@ fun CommandCenterScreen(
                                             ) {
                                                 Column(modifier = Modifier.padding(8.dp)) {
                                                     Text(
-                                                        text = "Production Reconciliation: ${pr.acceptedUnits} Accepted + ${pr.heldUnits} Held + ${pr.pendingInspectionUnits} Pending Insp = ${pr.lotQuantity} Lot 1 (${pr.remainingPlannedUnits} Balance Remaining)",
+                                                        text = "TEST Reconciliation: ${pr.simulatedQaPassUnits} simulated internal QA pass + ${pr.heldUnits} held + ${pr.pendingInspectionUnits} pending inspection = ${pr.lotQuantity} illustrative lot units (${pr.remainingPlannedUnits} remaining in sample plan)",
                                                         style = MaterialTheme.typography.labelSmall,
                                                         fontWeight = FontWeight.Bold,
                                                         color = MaterialTheme.colorScheme.primary
@@ -1259,7 +1288,10 @@ fun CommandCenterScreen(
                 ) {
                     item {
                         Text(
-                            text = "Stage 2 Sign-off · 6 Multi-Departmental HOD Verdicts:",
+                            text = if (feasibilityReviews.any { it.signedAt == null })
+                                "Stage 2 Sign-off · Draft Multi-Departmental Assessments (Unsigned · No Approval Implied):"
+                            else
+                                "Stage 2 Sign-off · 6 Multi-Departmental HOD Verdicts:",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -1282,22 +1314,31 @@ fun CommandCenterScreen(
                                         fontWeight = FontWeight.Bold
                                     )
                                     Surface(
-                                        color = if (review.verdict == "FEASIBLE") Color(0xFFE8F5E9) else Color(0xFFFFF3E0),
+                                        color = when {
+                                            review.signedAt == null -> Color(0xFFFFF3E0)
+                                            review.verdict == "FEASIBLE" -> Color(0xFFE8F5E9)
+                                            else -> Color(0xFFFFEBEE)
+                                        },
                                         shape = RoundedCornerShape(4.dp)
                                     ) {
                                         Text(
-                                            text = review.verdict,
+                                            text = if (review.signedAt == null) "UNSIGNED DRAFT" else review.verdict,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (review.verdict == "FEASIBLE") Color(0xFF2E7D32) else Color(0xFFE65100)
+                                            color = when {
+                                                review.signedAt == null -> Color(0xFFE65100)
+                                                review.verdict == "FEASIBLE" -> Color(0xFF2E7D32)
+                                                else -> Color(0xFFC62828)
+                                            }
                                         )
                                     }
                                 }
                                 Text(
-                                    text = "Lead: ${review.leadName} | Signed: ${review.signedAt}",
+                                    text = if (review.signedAt != null) "Lead: ${review.leadName} | Signed: ${review.signedAt}"
+                                           else "Lead: ${review.leadName} | Status: Unsigned Draft Assessment (No Approval Implied)",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = if (review.signedAt != null) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFFE65100)
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
@@ -1317,11 +1358,20 @@ fun CommandCenterScreen(
                                     color = Color(0xFF424242)
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Sig: ${review.signatureHash.take(24)}...",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.outline
-                                )
+                                if (review.signatureHash != null) {
+                                    Text(
+                                        text = "Sig: ${review.signatureHash.take(24)}...",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Signature: Unsigned Draft Assessment · Awaiting HOD Review",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFFE65100),
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
                             }
                         }
                     }
@@ -1545,7 +1595,7 @@ fun CommandCenterScreen(
                         Text("Operational Lane:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("Today", "Tomorrow", "Review").forEach { lane ->
+                            listOf("Today", "To Do", "Review").forEach { lane ->
                                 val isSel = newTaskLane == lane
                                 Surface(
                                     modifier = Modifier.clickable { newTaskLane = lane },
@@ -1641,9 +1691,9 @@ fun CommandCenterScreen(
                                 dept = currentRole.code,
                                 priority = newTaskPriority,
                                 assignee = newTaskAssignee.ifBlank { currentRole.leadName },
-                                dueDate = if (newTaskLane == "Today") "Today" else if (newTaskLane == "Tomorrow") "Tomorrow" else "Next 48h",
+                                dueDate = if (newTaskLane == "Today") "Today" else if (newTaskLane == "To Do") "Tomorrow" else "Next 48h",
                                 isCompleted = false,
-                                lane = newTaskLane,
+                                lane = if (newTaskLane == "To Do") "Tomorrow" else newTaskLane,
                                 projectId = "HLPL-AI4T-01"
                             )
                             scmsRepository.createDailyTask(task)
@@ -1931,7 +1981,9 @@ fun OperationalTaskCard(
     currentLane: String,
     onToggleComplete: () -> Unit,
     onMoveLane: (String) -> Unit,
-    onDelegate: () -> Unit
+    onDelegate: () -> Unit,
+    allowDelegate: Boolean = true,
+    allowToggleComplete: Boolean = true
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1952,7 +2004,8 @@ fun OperationalTaskCard(
                 Checkbox(
                     checked = task.isCompleted,
                     onCheckedChange = { onToggleComplete() },
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(24.dp),
+                    enabled = allowToggleComplete
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -2059,12 +2112,12 @@ fun OperationalTaskCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (currentLane == "Today") {
                         FilledTonalButton(
-                            onClick = { onMoveLane("Tomorrow") },
+                            onClick = { onMoveLane(if (allowDelegate) "Tomorrow" else "To Do") },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                             shape = RoundedCornerShape(6.dp),
                             modifier = Modifier.height(26.dp)
                         ) {
-                            Text("→ Tomorrow", fontSize = 10.sp)
+                            Text("→ To Do", fontSize = 10.sp)
                         }
                         FilledTonalButton(
                             onClick = { onMoveLane("Review") },
@@ -2074,7 +2127,7 @@ fun OperationalTaskCard(
                         ) {
                             Text("→ Review", fontSize = 10.sp)
                         }
-                    } else if (currentLane == "Tomorrow") {
+                    } else if (currentLane == "Tomorrow" || currentLane == "To Do") {
                         FilledTonalButton(
                             onClick = { onMoveLane("Today") },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
@@ -2083,7 +2136,7 @@ fun OperationalTaskCard(
                         ) {
                             Text("← Move to Today", fontSize = 10.sp)
                         }
-                    } else if (currentLane == "Review") {
+                    } else if (currentLane == "Review" && allowToggleComplete) {
                         Button(
                             onClick = { onToggleComplete() },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
@@ -2093,12 +2146,14 @@ fun OperationalTaskCard(
                         ) {
                             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(12.dp))
                             Spacer(modifier = Modifier.width(3.dp))
-                            Text("Sign-off & Complete", fontSize = 10.sp)
+                            Text("Mark complete", fontSize = 10.sp)
                         }
+                    } else if (currentLane == "Review") {
+                        Text("Awaiting review decision", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
-                OutlinedButton(
+                if (allowDelegate) OutlinedButton(
                     onClick = onDelegate,
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                     shape = RoundedCornerShape(6.dp),
@@ -2138,4 +2193,3 @@ fun CommandCenterScreenPreview() {
         )
     }
 }
-

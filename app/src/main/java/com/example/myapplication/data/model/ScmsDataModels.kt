@@ -72,46 +72,102 @@ object AutomotiveProjects {
         ProjectMetadata(
             id = "HLPL-AI4T-01",
             reference = "HLPL-AI4T-01",
-            title = "Tata Ace EV 4G Telematics Gateway",
-            client = "Tata Motors Limited \u00b7 EV Fleet Division, Pune",
-            volume = "50,000 units / year",
-            totalValue = "\u20b920.33 Cr (.45M)",
-            stage = "Stage 4: Design & Development PoC",
-            status = "Active",
-            deliverable = "AIS-140 Cat-1 Gateway \u00b7 Dual-CAN J1939 \u00b7 IP67"
+            title = "Northstar Field Gateway Integration Review",
+            client = "Northstar Mobility Works \u00b7 fictional TEST client",
+            volume = "50,000 units / year (illustrative only)",
+            totalValue = "\u20b920.33 Cr estimate (unapproved TEST data)",
+            stage = "Stage 4: Design & Development Review (TEST)",
+            status = "In Progress · Local TEST",
+            deliverable = "Candidate Cat-1 Gateway \u00b7 Dual-CAN concept \u00b7 ingress target unverified"
         ),
         ProjectMetadata(
             id = "HLPL-SLCT-01",
             reference = "HLPL-SLCT-01",
-            title = "Select Motors AIS-140 GPS Gateway",
-            client = "Select Motors India Private Limited",
-            volume = "10,000 units / year",
-            totalValue = "\u20b94.12 Cr",
-            stage = "Stage 3: Requirement Freeze & Commercial Lock",
-            status = "Active",
-            deliverable = "AIS-140 Annexure 3 GPS Tracker \u00b7 SOS Beacon"
+            title = "Cedar Ridge GPS Gateway (TEST)",
+            client = "Cedar Ridge Mobility \u00b7 fictional TEST client",
+            volume = "10,000 units / year (illustrative only)",
+            totalValue = "\u20b94.12 Cr estimate (unapproved TEST data)",
+            stage = "Stage 3: Requirements Review (not frozen)",
+            status = "Under Review · Local TEST",
+            deliverable = "Candidate GPS tracker \u00b7 SOS beacon concept (unverified)"
         ),
         ProjectMetadata(
             id = "HLPL-SW-01",
             reference = "HLPL-SW-01",
-            title = "Commercial Fleet Telematics & Driver Analytics Cloud Platform",
-            client = "Tata Motors Limited \u00b7 Connected Fleet Cloud Division",
-            volume = "Unlimited SaaS Subscriptions",
-            totalValue = "\u20b96.80 Cr ($820k)",
-            stage = "Stage 4: Cloud Architecture & Sprint PoC",
-            status = "Active",
-            deliverable = "Enterprise Cloud SaaS \u00b7 High-Concurrency Ingestion \u00b7 SOC 2 / ISO 27001"
+            title = "Pinecone Fleet Cloud & Driver Analytics (TEST)",
+            client = "Pinecone Fleetworks \u00b7 fictional TEST client",
+            volume = "Illustrative SaaS subscriptions",
+            totalValue = "\u20b96.80 Cr estimate (unapproved TEST data)",
+            stage = "Stage 4: Cloud Architecture Review (TEST)",
+            status = "In Progress · Local TEST",
+            deliverable = "Cloud ingestion concept \u00b7 security/compliance applicability unverified"
         ),
         ProjectMetadata(
             id = "HLPL-XLINK-03",
             reference = "HLPL-XLINK-03",
-            title = "Commercial Vehicle Dual-CAN Gateway",
-            client = "Ashok Leyland & Commercial Fleets",
-            volume = "25,000 units / year",
-            totalValue = "\u20b914.50 Cr",
-            stage = "Stage 2: Feasibility & Contract Review",
-            status = "In Review",
-            deliverable = "Dual-CAN J1939 + OBD-II High-Speed Telematics Unit"
+            title = "Willow Ridge Dual-CAN Gateway Feasibility (TEST)",
+            client = "Willow Ridge Fleet Labs \u00b7 fictional TEST client",
+            volume = "25,000 units / year (illustrative only)",
+            totalValue = "\u20b914.50 Cr estimate (unapproved TEST data)",
+            stage = "Stage 2: Feasibility & Requirements Review",
+            status = "Under Review · Local TEST",
+            deliverable = "Dual-CAN gateway concept \u00b7 interface assumptions not frozen"
+        ),
+        ProjectMetadata(
+            id = "DEMO-PROJ-010",
+            reference = "DEMO-PROJ-010",
+            title = "Northstar Field Systems — Offline-Capable 4G/GNSS Telematics Tracker PoC",
+            client = "Northstar Field Systems (fictional client)",
+            volume = "10 units (PoC prototypes · preliminary)",
+            totalValue = "₹4.85 Lakh (PoC budget estimate · unapproved)",
+            stage = "Stage 2: Feasibility & Requirements Review",
+            status = "Pending Feasibility",
+            deliverable = "Field Telematics Gateway (4G LTE Cat-1 / NavIC GNSS / LoRa Research · Unfrozen)"
+        ),
+        // Distinct Local Simulation Portfolio (Coherent Lifecycle Situations & Track Combinations)
+        ProjectMetadata(
+            id = "DEMO-PORT-01-ENQ",
+            reference = "DEMO-PORT-01-ENQ",
+            title = "Northstar Agritech — Smart Irrigation Sensor Node (Enquiry)",
+            client = "Northstar Agritech (fictional client)",
+            volume = "5,000 units / year (preliminary)",
+            totalValue = "₹65.0 Lakh (estimate)",
+            stage = "Stage 1: Intake & Opportunity",
+            status = "Enquiry Only",
+            deliverable = "Soil Moisture & Microclimate Sensor Node (Solar Powered)"
+        ),
+        ProjectMetadata(
+            id = "DEMO-PORT-03-FRZ",
+            reference = "DEMO-PORT-03-FRZ",
+            title = "Cedar Ridge Two-Wheeler Gateway (TEST)",
+            client = "Cedar Ridge Mobility · fictional TEST client",
+            volume = "15,000 units / year (illustrative only)",
+            totalValue = "₹4.20 Cr estimate (unapproved TEST data)",
+            stage = "Stage 3: Simulated Requirements Freeze & HW Kickoff",
+            status = "Freeze Workflow Complete · Local TEST",
+            deliverable = "Candidate tracker schematics · not frozen or released"
+        ),
+        ProjectMetadata(
+            id = "DEMO-PORT-04-HF",
+            reference = "DEMO-PORT-04-HF",
+            title = "Juniper E-Mobility BMS Telemetry Module (TEST)",
+            client = "Juniper E-Mobility · fictional TEST client",
+            volume = "8,000 units / year (illustrative only)",
+            totalValue = "₹7.50 Cr estimate (unapproved TEST data)",
+            stage = "Stage 4: Engineering Design Review (TEST)",
+            status = "HW + FW Review · Local TEST",
+            deliverable = "CAN-FD board and bootloader concepts · unverified"
+        ),
+        ProjectMetadata(
+            id = "DEMO-PORT-06-QA",
+            reference = "DEMO-PORT-06-QA",
+            title = "Frostline Cargo Cold-Chain Logger (TEST)",
+            client = "Frostline Cargo Systems · fictional TEST client",
+            volume = "20,000 units / year (illustrative only)",
+            totalValue = "₹5.80 Cr estimate (unapproved TEST data)",
+            stage = "Stage 6: QA Checklist Review (TEST)",
+            status = "QA / Synthetic Service Feedback · Local TEST",
+            deliverable = "DVP&R checklist and synthetic RMA feedback loop · no actual field evidence"
         ),
         ProjectMetadata(
             id = "ALL",
@@ -371,7 +427,12 @@ data class ControlledDoc(
     val storageBucket: String = "controlled-documents",
     val storagePath: String = "",
     val sha256Hex: String? = null,
-    val byteSize: Long? = null
+    val byteSize: Long? = null,
+    /** Explicit project link for local and shared document filtering. */
+    val projectId: String = "",
+    /** AUTO_DRAFT is edited in-app; UPLOAD_BINARY must be supplied as a file. */
+    val documentKind: String = "UPLOAD_BINARY",
+    val draftContent: String = ""
 )
 
 /**
@@ -642,13 +703,77 @@ data class FeasibilityReview(
     val deptCode: String,
     val deptName: String,
     val leadName: String,
-    val verdict: String, // "FEASIBLE", "FEASIBLE_WITH_CONDITIONS", "INFEASIBLE"
+    val verdict: String, // "FEASIBLE", "FEASIBLE_WITH_CONDITIONS", "INFEASIBLE", "UNSIGNED_DRAFT_ASSESSMENT"
     val scopeSummary: String,
     val internalRemarks: String,   // Confidential internal review
     val clientHighlights: String,  // Shared client-facing highlights
     val keyParameters: Map<String, String>,
-    val signedAt: String,
-    val signatureHash: String
+    val signedAt: String? = null,
+    val signatureHash: String? = null,
+    val projectId: String? = null
+)
+
+@Serializable
+data class HardwareMasterData(
+    val projectId: String,
+    val projectName: String,
+    val requirementsAndProvenance: HardwareRequirementsProvenance,
+    val reusableAssets: List<HardwareAssetItem>,
+    val tentativeBom: List<HardwareBomLineItem>,
+    val budgetSummary: HardwareBudgetSummary,
+    val binaryDeliverables: List<HardwareBinaryDeliverable>
+)
+
+@Serializable
+data class HardwareRequirementsProvenance(
+    val customerSorReference: String,
+    val provenanceBaseline: String,
+    val voltageRange: String,
+    val operatingTemp: String,
+    val ingressProtection: String,
+    val powerBudgetDeepSleep: String,
+    val powerBudgetActive: String
+)
+
+@Serializable
+data class HardwareAssetItem(
+    val assetId: String,
+    val name: String,
+    val revision: String,
+    val reusabilityScope: String,
+    val componentCertification: String,
+    val systemCertificationStatus: String
+)
+
+@Serializable
+data class HardwareBomLineItem(
+    val mpn: String,
+    val description: String,
+    val quantityPerUnit: Int,
+    val supplier: String,
+    val leadTimeWeeks: Int,
+    val estimatedUnitCostUsd: Double,
+    val inventoryLinkMpn: String? = null
+)
+
+@Serializable
+data class HardwareBudgetSummary(
+    val prototypeLotSize: Int,
+    val estimatedBomCostPerUnitUsd: Double,
+    val estimatedBomCostPerUnitInr: Double,
+    val estimatedNreAndToolingInr: Double,
+    val targetMassProductionBomInr: Double,
+    val statusDisclaimer: String,
+    val isPartial: Boolean = true,
+    val excludedItemsNote: String? = null
+)
+
+@Serializable
+data class HardwareBinaryDeliverable(
+    val deliverableType: String,
+    val fileExtension: String,
+    val status: String,
+    val details: String
 )
 
 /**
@@ -725,7 +850,8 @@ data class ClientDeliverable(
     val status: String,
     val date: String,
     val owner: String,
-    val description: String
+    val description: String,
+    val projectId: String = ""
 )
 
 /**
@@ -1044,13 +1170,13 @@ data class ScenarioDependencyItem(
 data class ProductionReconciliationItem(
     val totalPlannedUnits: Int,
     val lotQuantity: Int,
-    val acceptedUnits: Int,
+    val simulatedQaPassUnits: Int,
     val heldUnits: Int,
     val pendingInspectionUnits: Int,
     val remainingPlannedUnits: Int
 ) {
     val isReconciled: Boolean
-        get() = (acceptedUnits + heldUnits + pendingInspectionUnits == lotQuantity) &&
+        get() = (simulatedQaPassUnits + heldUnits + pendingInspectionUnits == lotQuantity) &&
                 (totalPlannedUnits - lotQuantity == remainingPlannedUnits)
 }
 
@@ -1138,20 +1264,20 @@ object LifecycleScenarios {
             projectCode = "TEST-POC-01",
             enquiryCode = "ENQ-2026-POC-01",
             isExternalClient = true,
-            clientName = "Tata Motors Limited · EV Fleet Division",
-            currentPosition = "Enquiry -> qualified opportunity -> accepted scoped feasibility -> explicit project gate -> requirements/PRS draft and reviewed baseline -> prototype BOM/design/build -> initial bench evidence -> PoC delivery/evaluation.",
-            stageRemark = "Basic reporting demonstrated on the agreed test setup; ignition-state debounce feedback remains pending. PoC acceptance does not authorize mass production.",
-            currentNextAction = "Await client PoC feedback and one interface clarification regarding ignition debounce threshold.",
+            clientName = "Northstar Mobility Works · fictional TEST client",
+            currentPosition = "Synthetic enquiry -> illustrative feasibility review -> local project fixture -> draft requirements -> simulated prototype planning -> internal bench checklist. No delivery or customer evaluation is represented.",
+            stageRemark = "Synthetic reporting checklist and ignition debounce question remain under internal review; no customer acceptance or production release is represented.",
+            currentNextAction = "Review the illustrative 50ms vs 200ms debounce assumption; record no customer feedback as received.",
             dependencies = listOf(
                 ScenarioDependencyItem(
                     id = "dep-s03-1",
-                    whatNeeded = "Client Ignition-Line Debounce Clarification",
+                    whatNeeded = "Synthetic Ignition-Line Debounce Question",
                     deliverableCode = "HLPL-POC-SAL-CRD-02",
-                    providerDept = "Sales & Client",
+                    providerDept = "Sales & Systems",
                     providerLead = "Priya Sharma",
                     waitingDept = "Firmware (ESW)",
                     state = "Under Review",
-                    nextAction = "Confirm 50ms vs 200ms debounce filter timing",
+                    nextAction = "Review the placeholder 50ms vs 200ms timing assumption internally; no client clarification is recorded.",
                     criticalPath = true
                 )
             )
@@ -1159,35 +1285,35 @@ object LifecycleScenarios {
         LifecycleScenarioItem(
             id = "S04",
             fixtureKey = "SYSTEM-PILOT",
-            title = "TEST Vehicle Gateway Integration Pilot",
+            title = "TEST Vehicle Gateway Integration Review",
             projectCode = "TEST-PILOT-01",
             enquiryCode = "ENQ-2026-VGW-01",
             isExternalClient = true,
-            clientName = "Ashok Leyland Limited · Commercial Trucks",
-            currentPosition = "Requirements -> technical feasibility -> approved project -> hardware/firmware/mechanical design baselines -> validation -> HSI/system integration -> controlled pilot candidate -> customer pilot.",
-            stageRemark = "Bench integration complete for the agreed sample configuration; customer pilot observation period remains open.",
-            currentNextAction = "Complete 30-day customer pilot observation period across 5 trial commercial trucks.",
+            clientName = "Pinecone Fleetworks · fictional TEST client",
+            currentPosition = "Draft requirements -> feasibility review -> conditional project workflow -> HW/FW/mechanical design review -> synthetic HSI checklist -> internal review. No customer pilot is represented.",
+            stageRemark = "Internal integration checklist is illustrative and incomplete; no measurement, customer observation, or acceptance is recorded.",
+            currentNextAction = "Complete internal interface review before proposing any external trial.",
             dependencies = listOf(
                 ScenarioDependencyItem(
                     id = "dep-s04-1",
-                    whatNeeded = "Cloud Telemetry Server Ingestion Acknowledgment",
+                    whatNeeded = "Synthetic Cloud Telemetry Ingestion Check",
                     deliverableCode = "HLPL-VGW-SIT-ACK-01",
                     providerDept = "Service & IT",
                     providerLead = "Kai Morgan",
                     waitingDept = "QA (Compliance)",
-                    state = "Approved/Frozen",
-                    nextAction = "MQTT 3.1.1 broker operational; 99.98% packet receipt verified",
+                    state = "Under Review",
+                    nextAction = "Illustrative broker configuration only; no server connection or packet receipt is measured.",
                     criticalPath = false
                 ),
                 ScenarioDependencyItem(
                     id = "dep-s04-2",
-                    whatNeeded = "Customer Pilot 30-Day Field Sign-off",
+                    whatNeeded = "Internal Pilot Evidence Review",
                     deliverableCode = "HLPL-VGW-QA-PILOT-01",
                     providerDept = "Quality Assurance",
                     providerLead = "Jordan Blake",
                     waitingDept = "Executive Admin",
                     state = "Under Review",
-                    nextAction = "Day 19 of 30 currently logged with zero fatal resets",
+                    nextAction = "Fictional progress marker only; no external field trial, customer sign-off, or reset result.",
                     criticalPath = true
                 )
             )
@@ -1195,13 +1321,13 @@ object LifecycleScenarios {
         LifecycleScenarioItem(
             id = "S05",
             fixtureKey = "PILOT-REFINEMENT",
-            title = "TEST Cold-Chain Tracker Pilot Refinement",
+            title = "TEST Cold-Chain Tracker Regression Refinement",
             projectCode = "TEST-REFINEMENT-01",
             enquiryCode = "ENQ-2026-CCT-01",
             isExternalClient = true,
-            clientName = "TransFresh Cold Chain Solutions",
-            currentPosition = "Requirements/design/build/validation -> pilot issue -> actual simulated feedback -> linked engineering change/NCR as applicable -> refinement tasks/retest plan.",
-            stageRemark = "Pilot feedback identified intermittent alert duplication; corrective candidate is under regression review. Final customer acceptance and bulk release remain blocked.",
+            clientName = "Frostline Cargo Systems · fictional TEST client",
+            currentPosition = "Requirements/design/build checklist -> synthetic issue fixture -> linked sample engineering change/NCR -> refinement tasks/retest plan.",
+            stageRemark = "Synthetic test fixture records intermittent alert duplication; corrective candidate is under internal regression review. No real customer feedback or acceptance is represented.",
             currentNextAction = "QA regression re-test of firmware patch v2.1.2 on cell handover test bench.",
             dependencies = listOf(
                 ScenarioDependencyItem(
@@ -1220,18 +1346,18 @@ object LifecycleScenarios {
         LifecycleScenarioItem(
             id = "S06",
             fixtureKey = "BULK-PRODUCTION",
-            title = "TEST Rugged Fleet Tracker Production",
+            title = "TEST Rugged Fleet Tracker Production Workflow",
             projectCode = "TEST-PROD-01",
             enquiryCode = "ENQ-2026-RFT-01",
             isExternalClient = true,
-            clientName = "Bharat Fleet Telematics Limited",
-            currentPosition = "Reviewed requirements and design -> verified validation -> recorded pilot acceptance -> authorized production release -> released BOM/process/control-plan baseline -> production orders/lots -> receiving/inspection/EOL/release evidence -> dispatch/receivables.",
-            stageRemark = "Hold disposition pending for five units; only accepted quantity is eligible for release.",
-            currentNextAction = "QA material review board disposition on 5 held units; release 150 accepted units to dispatch.",
+            clientName = "Willow Ridge Fleet Labs · fictional TEST client",
+            currentPosition = "Requirements/design -> internal validation checklist -> simulated production-readiness review -> sample lot/receiving/inspection records. No customer acceptance, authorization, shipment, or revenue is represented.",
+            stageRemark = "Simulation only: 150 internal QA-pass placeholders, 5 held placeholders, and 45 inspection placeholders; no customer acceptance or dispatch.",
+            currentNextAction = "Complete the internal sample MRB and inspection workflow; do not dispatch or infer customer acceptance from local fixture data.",
             productionReconciliation = ProductionReconciliationItem(
                 totalPlannedUnits = 500,
                 lotQuantity = 200,
-                acceptedUnits = 150,
+                simulatedQaPassUnits = 150,
                 heldUnits = 5,
                 pendingInspectionUnits = 45,
                 remainingPlannedUnits = 300
@@ -1257,6 +1383,64 @@ object LifecycleScenarios {
                     waitingDept = "Client Logistics & Dispatch",
                     state = "Submitted",
                     nextAction = "Ready for GST e-way bill generation upon release",
+                    criticalPath = true
+                )
+            )
+        ),
+        LifecycleScenarioItem(
+            id = "S10",
+            fixtureKey = "LC2-P10-OFFLINE-TELEMATICS",
+            title = "Northstar Field Systems — Offline-Capable 4G/GNSS Field Telematics Tracker PoC",
+            projectCode = "DEMO-PROJ-010",
+            enquiryCode = "DEMO-ENQ-010",
+            isExternalClient = true,
+            clientName = "Northstar Field Systems (fictional client)",
+            currentPosition = "Enquiry intake DEMO-ENQ-010 + draft OMS completed -> Stage 2 cross-department feasibility in review -> prerequisite requirement-freeze gate pending -> conditional HW/FW/SW development, prototype build, DVP&R, client field demo, and closeout. Pilot and bulk production are outside current authorization.",
+            stageRemark = "TEST WORKSPACE ASSUMPTION: 4G Cat-1 connectivity, NavIC/IRNSS receiver integration, and local LoRa offline mesh/relay topology are candidate concepts under active feasibility evaluation. Architecture, band allocation, and power budgets are unapproved test-fixture assumptions; no customer sign-off or frozen baseline is claimed.",
+            currentNextAction = "Resolve engineering feasibility reviews (EHW, FW, SW, PUR, QA), consolidate client feedback on rural offline buffering, and establish an authorized versioned requirement freeze before activating Rev A schematic release.",
+            dependencies = listOf(
+                ScenarioDependencyItem(
+                    id = "dep-s10-ehw-1",
+                    whatNeeded = "Dual-band GNSS (GPS L1 + NavIC L5) receiver and active antenna geometry evaluation",
+                    deliverableCode = "DEMO-PROD-010-EHW-FEAS",
+                    providerDept = "Electronics Manufacturing / EHW",
+                    providerLead = "Avery Vale",
+                    waitingDept = "Firmware & Sales",
+                    state = "In Review",
+                    nextAction = "Evaluate Quectel LC79D / Allystar TAU1302 vs board space; antenna integration requires chamber return loss measurement.",
+                    criticalPath = true
+                ),
+                ScenarioDependencyItem(
+                    id = "dep-s10-lora-1",
+                    whatNeeded = "Offline telemetry data-flow research: LoRa P2P beacon vs store-and-forward mesh",
+                    deliverableCode = "DEMO-PROD-010-SW-LO-RESEARCH",
+                    providerDept = "SW / Systems Engineering",
+                    providerLead = "Siddharth Roy",
+                    waitingDept = "Electronics, Firmware & Client",
+                    state = "In Review",
+                    nextAction = "Analyze 865-867 MHz Indian ISM band ERP/duty cycle limits and investigate agricultural relay gateway topology before freeze.",
+                    criticalPath = true
+                ),
+                ScenarioDependencyItem(
+                    id = "dep-s10-pur-1",
+                    whatNeeded = "Candidate cellular module (LTE Cat-1), GNSS chip, and transceiver availability & MOQ lead-time",
+                    deliverableCode = "DEMO-PROD-010-PUR-FEAS",
+                    providerDept = "Purchasing",
+                    providerLead = "Morgan Reed",
+                    waitingDept = "Hardware & Finance",
+                    state = "Submitted",
+                    nextAction = "Maintain franchised distributor RF quotes for 10-unit PoC sample batch; no commercial order or stock commitment is implied.",
+                    criticalPath = false
+                ),
+                ScenarioDependencyItem(
+                    id = "dep-s10-qa-1",
+                    whatNeeded = "Pre-freeze PoC verification protocol and automotive transient immunity test matrix",
+                    deliverableCode = "DEMO-PROD-010-QA-PLAN",
+                    providerDept = "Quality & Testing",
+                    providerLead = "Jordan Blake",
+                    waitingDept = "Hardware, Firmware & Client",
+                    state = "In Review",
+                    nextAction = "Define laboratory bench acceptance vs external regulatory certification boundaries prior to baseline lock.",
                     criticalPath = true
                 )
             )

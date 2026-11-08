@@ -13,9 +13,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -72,6 +75,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -89,6 +93,12 @@ import com.example.myapplication.data.model.PurchasingBomReviewItem
 import com.example.myapplication.data.model.VendorRecord
 import com.example.myapplication.data.model.WireHarness
 import com.example.myapplication.data.repository.ScmsRepository
+import com.example.myapplication.data.model.Stage5ReceivingAvailability
+import com.example.myapplication.data.model.AutomotiveProjects
+import com.example.myapplication.data.model.ProjectMetadata
+import com.example.myapplication.ui.components.ProjectFilterDropdown
+import com.example.myapplication.ui.components.resolveProjectSelection
+import com.example.myapplication.ui.components.Stage5ReceivingUnavailableCard
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,7 +106,8 @@ import java.util.UUID
 fun DepartmentRecordsScreen(
     scmsRepository: ScmsRepository,
     onOpenRoleSwitcher: () -> Unit = {},
-    sharedBusinessContent: (@Composable (String) -> Unit)? = null
+    sharedBusinessContent: (@Composable (String) -> Unit)? = null,
+    projectCatalog: List<ProjectMetadata> = AutomotiveProjects.all
 ) {
     val currentRole by scmsRepository.currentRole.collectAsState()
     val parts by scmsRepository.parts.collectAsState()
@@ -117,6 +128,7 @@ fun DepartmentRecordsScreen(
     val assignedTrainings by scmsRepository.assignedTrainings.collectAsState()
 
     val selectedProject by scmsRepository.selectedProject.collectAsState()
+    val activeProjectId = resolveProjectSelection(selectedProject, projectCatalog)
     var selectedSubTab by remember { mutableIntStateOf(0) }
     var showCreateRecordModal by remember { mutableStateOf(false) }
     var selectedRecordForInspect by remember { mutableStateOf<Any?>(null) }
@@ -160,7 +172,7 @@ fun DepartmentRecordsScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Top Department & Project Scope Header
+        // Compact department, project, and create-action header.
         Surface(
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 2.dp,
@@ -169,7 +181,7 @@ fun DepartmentRecordsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -179,86 +191,52 @@ fun DepartmentRecordsScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "DEPARTMENT RECORDS",
-                                style = MaterialTheme.typography.labelSmall,
+                                text = "Records",
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                letterSpacing = 0.8.sp
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Surface(
-                                shape = RoundedCornerShape(4.dp),
+                                shape = RoundedCornerShape(6.dp),
                                 color = MaterialTheme.colorScheme.secondaryContainer,
                                 modifier = Modifier.clickable { onOpenRoleSwitcher() }
                             ) {
                                 Text(
-                                    text = "${currentRole.code} · ${currentRole.title}",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    text = currentRole.code,
+                                    style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
                         }
                         Text(
-                            text = "${currentRole.leadName}'s Record Hub",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = currentRole.title,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
                         )
                     }
 
-                    // + New Record Action Button
-                    Button(
+                    FilledTonalButton(
                         onClick = { showCreateRecordModal = true },
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         modifier = Modifier.padding(start = 8.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "New Record", modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Add, contentDescription = "Create record", modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Record", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text("New", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Project Selector Chips Row
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = "Project:",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    listOf(
-                        "HLPL-AI4T-01" to "Tata Ace EV (AI4T-01)",
-                        "HLPL-SLCT-01" to "Select AIS-140",
-                        "HLPL-SW-01" to "Fleet Cloud (Pure SW)",
-                        "ALL" to "All Projects"
-                    ).forEach { (id, label) ->
-                        val isSelected = selectedProject == id
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                            border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)) else null,
-                            modifier = Modifier.clickable { scmsRepository.selectProject(id) }
-                        ) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-                }
+                ProjectFilterDropdown(
+                    selectedProjectId = activeProjectId,
+                    onProjectSelected = scmsRepository::selectProject,
+                    projects = projectCatalog,
+                    modifier = Modifier.padding(top = 5.dp)
+                )
             }
         }
 
@@ -276,10 +254,11 @@ fun DepartmentRecordsScreen(
                     onClick = { selectedSubTab = index },
                     text = {
                         Text(
-                            text = title,
+                            text = compactRecordTabLabel(title),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (activeSubTabIndex == index) FontWeight.Bold else FontWeight.Medium,
-                            fontSize = 12.sp
+                            fontSize = 11.sp,
+                            maxLines = 1
                         )
                     }
                 )
@@ -387,7 +366,7 @@ fun DepartmentRecordsScreen(
                 // WIRE HARNESSES
                 subTabs[activeSubTabIndex].contains("Harness", ignoreCase = true) -> {
                     val filteredHarnesses = harnesses.filter {
-                        selectedProject == "ALL" || it.projectId == selectedProject
+                        activeProjectId == "ALL" || it.projectId == activeProjectId
                     }
                     item {
                         RecordSectionHeader(
@@ -551,6 +530,14 @@ fun DepartmentRecordsScreen(
                     }
                 }
 
+                subTabs[activeSubTabIndex].contains("Receiving Drafts", ignoreCase = true) -> {
+                    item {
+                        if (!Stage5ReceivingAvailability.isAvailable) {
+                            Stage5ReceivingUnavailableCard()
+                        }
+                    }
+                }
+
                 // DEPARTMENT BUDGET ALLOCATIONS
                 subTabs[activeSubTabIndex].contains("Budgets", ignoreCase = true) -> {
                     if (currentRole.code == "CLIENT") {
@@ -577,7 +564,7 @@ fun DepartmentRecordsScreen(
                         }
                     } else {
                         val filteredAllocations = departmentAllocations.filter {
-                            val matchesProject = selectedProject == "ALL" || it.projectId == null || it.projectId == selectedProject
+                            val matchesProject = activeProjectId == "ALL" || it.projectId == null || it.projectId == activeProjectId
                             val matchesDept = if (currentRole.code in listOf("ADMIN", "MD", "FIN")) true else it.departmentCode.equals(currentRole.code, ignoreCase = true)
                             matchesProject && matchesDept
                         }
@@ -639,7 +626,7 @@ fun DepartmentRecordsScreen(
                         }
                     } else {
                         val filteredExpenses = expenseRequests.filter {
-                            val matchesProject = selectedProject == "ALL" || it.projectId == null || it.projectId == selectedProject
+                            val matchesProject = activeProjectId == "ALL" || it.projectId == null || it.projectId == activeProjectId
                             val matchesDept = if (currentRole.code in listOf("ADMIN", "MD", "FIN")) true else it.requesterDept.equals(currentRole.code, ignoreCase = true)
                             matchesProject && matchesDept
                         }
@@ -788,6 +775,27 @@ fun RecordSectionHeader(
             }
         }
     }
+}
+
+private fun compactRecordTabLabel(title: String): String = when (title) {
+    "All Inventory" -> "Inventory"
+    "BOM Review" -> "BOM"
+    "Orders (POs)" -> "POs"
+    "Suppliers (ASL)" -> "Suppliers"
+    "Wire Harnesses" -> "Harnesses"
+    "Enclosures & CAD" -> "CAD"
+    "Tooling & Ingress" -> "Tooling"
+    "Control Plans" -> "Controls"
+    "Receiving Drafts" -> "Receiving"
+    "DVP&R Matrix" -> "DVP&R"
+    "PPAP Level 3" -> "PPAP"
+    "Calibration Logs" -> "Calibration"
+    "NCR Logs" -> "NCR"
+    "Capital Assets" -> "Assets"
+    "Expense Claims" -> "Expenses"
+    "Milestone Cashflow" -> "Cashflow"
+    "Training & Skills" -> "Training"
+    else -> title
 }
 
 // -----------------------------------------------------------------------------
@@ -1174,26 +1182,69 @@ fun CreateRecordDialog(
     var field3 by remember { mutableStateOf("") }
     var field4 by remember { mutableStateOf("") }
     var field5 by remember { mutableStateOf("") }
+    val requiredFieldsValid = when (recordType) {
+        "Purchase Order" -> listOf(field1, field2, field3, field4).all { it.isNotBlank() } &&
+            (field3.toDoubleOrNull() ?: 0.0) > 0.0
+        "Wire Harness" -> listOf(field1, field2, field3, field4).all { it.isNotBlank() } &&
+            (field3.toIntOrNull() ?: 0) > 0
+        "DVP&R Test" -> listOf(field1, field2, field3, field4).all { it.isNotBlank() }
+        "Capital Asset" -> listOf(field1, field2, field3).all { it.isNotBlank() }
+        "Controlled Doc" -> listOf(field1, field2, field3, field4).all { it.isNotBlank() }
+        else -> listOf(field1, field2, field3, field4, field5).all { it.isNotBlank() } &&
+            (field5.toIntOrNull() ?: -1) >= 0
+    }
 
     AlertDialog(
+        modifier = Modifier.fillMaxWidth(0.96f).heightIn(max = 760.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         onDismissRequest = onDismiss,
         title = {
-            Text("Create New $recordType", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("New $recordType", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "Local demo only — not shared operational data.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error
+                )
                 // Record type selector chips
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     val types = listOf("Part / Component", "Purchase Order", "Wire Harness", "DVP&R Test", "Capital Asset", "Controlled Doc")
                     items(types) { type ->
                         val selected = recordType == type
                         Surface(
                             shape = RoundedCornerShape(4.dp),
                             color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.clickable { recordType = type }
+                            modifier = Modifier.clickable {
+                                if (recordType != type) {
+                                    recordType = type
+                                    field1 = ""
+                                    field2 = ""
+                                    field3 = ""
+                                    field4 = ""
+                                    field5 = ""
+                                }
+                            }
                         ) {
                             Text(
-                                text = type,
+                                text = when (type) {
+                                    "Part / Component" -> "Part"
+                                    "Purchase Order" -> "PO"
+                                    "Wire Harness" -> "Harness"
+                                    "DVP&R Test" -> "DVP&R"
+                                    "Capital Asset" -> "Asset"
+                                    else -> "Document"
+                                },
                                 fontSize = 11.sp,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1391,6 +1442,7 @@ fun CreateRecordDialog(
         },
         confirmButton = {
             Button(
+                enabled = requiredFieldsValid,
                 onClick = {
                     when (recordType) {
                         "Purchase Order" -> {
