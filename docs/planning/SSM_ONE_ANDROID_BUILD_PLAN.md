@@ -1,13 +1,13 @@
-# SSM One — Android Mobile Managing Portal Master Plan
+# SSM One Android Build Plan
 
-**Document Version:** 2.3 (Multi-Track Lifecycle View & Backend Contract Status Reconciliation)
-
-**Date:** 31 October 2026
+**Updated:** 8 November 2026
+**Scope:** Android-specific implementation and verification. Shared product requirements belong to the cross-platform master plan; this is not a second master plan.
 
 **Target Repository:** `C:/Users/Admin/AndroidStudioProjects/SSM-new/SSM-new-app`
 
-**Cross-platform Master Plan Reference:** [SSM-new root master plan](../../../SSM_ONE_MASTER_PLAN.md). The [detailed web implementation plan](../../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md) is a subordinate web handoff; Android-local copies are historical references.
-**Product lifecycle reference:** [Electronics Multi-Track Lifecycle and APQP Roadmap](../../../SSM_ONE_PLANNING_LIBRARY/Electronics%20Multi-Track%20Lifecycle%20and%20APQP%20Roadmap.md); consume the same project-pinned lifecycle/template and responsibility-matrix versions as web.
+**Cross-platform Master Plan Reference:** [SSM-new root master plan](https://github.com/narendok/SSM-new/blob/main/SSM_ONE_MASTER_PLAN.md). The [detailed web implementation plan](https://github.com/narendok/ssm-new-web/blob/main/SSM_ONE_WEB_IMPLEMENTATION_PLAN.md) is a subordinate web handoff; Android-local copies are historical references.
+**Product lifecycle reference:** [Electronics Multi-Track Lifecycle and APQP Roadmap](https://github.com/narendok/SSM-new/blob/main/Electronics%20Multi-Track%20Lifecycle%20and%20APQP%20Roadmap.md); consume the same project-pinned lifecycle/template and responsibility-matrix versions as web.
+**Document catalogue:** [SSM One Document Catalogue](https://github.com/narendok/SSM-new/blob/main/SSM%20One%20Document%20Catalogue%20-%20Auto-Drafting%20Audit%20and%20Native%20Upload%20Rules.md); use this single shared family/revision source on both clients.
 **Backend handoff authority:** [`mobile_backend_contract.json`](../backend-handoff/mobile_backend_contract.json) records verified status and must be checked against the current deployed environment. [`stage5-remediation-20260924154357.sql.txt`](../backend-handoff/evidence/stage5-remediation-20260924154357.sql.txt) is source evidence only; it does not establish deployment. The former `MOBILE_BACKEND_CONTRACT.md`, `ANDROID_BACKEND_HANDOFF.md`, and `VERIFIED_MATERIAL_ISSUE_RETURN_CONTRACT_2026-09-27.md` links are stale/missing and are not authoritative.
 
 ---
@@ -501,7 +501,7 @@ Company-name anonymization: current repository display labels, planning/referenc
 
 This is a documentation/handoff update, not an Android implementation or device verification. Existing stage/build claims above describe historical checkpoints; they do not prove current live integration. No Kotlin, Gradle, APK or backend changes were made for this update, and Android tests/build were not rerun for documentation alone.
 
-The [SSM-new root master plan](../../../SSM_ONE_MASTER_PLAN.md) is the cross-platform authority. The [detailed web checkpoint](../../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md#28-cross-department-portal-correction-and-production-acceptance--19-october-2026) records fixes to department scoping, navigation, document drafts, task field retention, serialized local edits, designated approvals and client routing. Fourteen web tests, TypeScript/build and a two-tab Hardware-to-Quality round trip passed locally. These results do not certify Android behavior or shared server persistence. [Web browser evidence](../../../ssm-new-web/docs/evidence/DEPARTMENT_SCOPE_FIX_2026-10-19.md).
+The [SSM-new root master plan](https://github.com/narendok/SSM-new/blob/main/SSM_ONE_MASTER_PLAN.md) is the cross-platform authority. The [web implementation plan](https://github.com/narendok/ssm-new-web/blob/main/SSM_ONE_WEB_IMPLEMENTATION_PLAN.md) contains current web-specific requirements and status. Older web verification is retained as dated evidence; it does not certify Android behavior or shared server persistence. [Web browser evidence](https://github.com/narendok/ssm-new-web/blob/main/docs/evidence/DEPARTMENT_SCOPE_FIX_2026-10-19.md).
 
 Live Lovable inspection found no enabled sign-in method and no organization/users or operational rows in the inspected core tables. Real organization identity and first administrator work email are required for secure provisioning; no passwords belong in plans/chat. The user approved narendok/ssm-new-web main on 19 October; web fixes and the web plan were pushed through 3403586 and received by Lovable. Live-preview Service task navigation and Finance approval scoping passed. This resolves the earlier automatic-review push block. Production publishing and Android remote sync were not performed.
 
@@ -1032,6 +1032,26 @@ No shared reset RPC/action exists in the current contract. The existing shared s
 The device-local demo `Reset Workspace` action is now supplied to the overview banner only when the app is unauthenticated, the selected local role is Admin, and `DEMO-PROJ-010` is selected. Other local roles (including EHW) and authenticated sessions receive no reset action. The reset remains device-local and does not reset the shared TEST workspace or web data. Added `nonAdminDemoRoleSeesTestBannerButNotResetAction` alongside the Admin reset visibility assertion in `S10ProjectSelectionUiTest`.
 
 **Verification for this follow-up:** `git diff --check` passed for the Android source changes. The attempted `:app:testDebugUnitTest :app:compileDebugAndroidTestKotlin --no-daemon` did not reach compilation or tests because the existing Gradle wrapper distribution lock under `C:\Users\Admin\.gradle\wrapper\dists\...gradle-9.5.0-bin.zip.lck` was denied; `adb devices -l` also could not start the ADB server, so no emulator run was available. The new visibility test is present but remains unverified by execution. No backend or production data was accessed.
+
+## Shared TEST document create-and-upload checkpoint — 6 November 2026
+
+Android Documents now exposes one authenticated **Add document** dialog when a project is selected. It captures title, document type, and the original binary in the same save action, displays the selected project/current phase, and labels the result as an unapproved Draft pending review. Upload is restricted to the staging build and limited to 25 MB. Stable encrypted request IDs allow document/file registration retries; registered bytes are checksum-verified by the existing server verifier. A department-scoped `register_test_controlled_original` RPC was deployed only to isolated TEST project `jiqbxcqlywvvmhbgirzl`; organization and department are server-derived, and anonymous execution is revoked. Backend catalogue/grant readback confirmed SECURITY DEFINER, anon execute false, authenticated execute true.
+
+**Verification:** `:app:testDebugUnitTest`, `:app:assembleDebug`, and `:app:compileDebugAndroidTestKotlin` passed with `-PssmBackend=staging`. The new Compose test compiles. ADB starts but reports no attached emulator, so that UI test was not executed; no valid authenticated TEST account was available in this pass, therefore no shared TEST document/file was created and cross-client readback remains unverified. No production data was touched. The one-dialog flow covers lightweight shared document creation/upload; it does not replace the full 38-family document authoring catalogue or create an operational engineering record.
+
+**6 November Android verification refresh:** `:app:testDebugUnitTest :app:assembleDebug :app:compileDebugAndroidTestKotlin -PssmBackend=staging --no-daemon` completed successfully; the generated unit-test XML reports **105 tests, 0 failures, 0 errors, 0 skipped**. Debug APK assembly succeeded and Android UI-test sources compiled. `adb devices -l` could not start the ADB daemon, so no emulator/device UI execution or live authenticated TEST upload was performed. Build output contains one existing Compose `ScrollableTabRow` deprecation warning. This is build/unit evidence only; web/Android persisted parity remains unverified.
+
+## Shared expense form alignment — 6 November 2026
+
+The authenticated mobile expense dialog now follows the refined three-choice request flow: Travel/advance, Reimbursement, or Purchase. It loads Finance categories from the shared `get_expense_catalogue` RPC, requires an explicit category choice, displays project phase context when the snapshot includes it, and offers an opt-in category suggestion. Travel/reimbursement details and goods/service request fields are collected in the same dialog; quote/receipt link or reference stays optional. Category state is scoped to organization and department and cleared on account changes to avoid leaking cached options. The service suggestions match the web defaults but remain code-defined; lead-managed catalogue editing is not implemented.
+
+**Verification and limits:** Android `:app:testDebugUnitTest :app:assembleDebug :app:compileDebugAndroidTestKotlin -PssmBackend=staging --no-daemon` passed; unit result XML reports **108 tests, 0 failures, 0 errors, 0 skipped**. The added tests cover the category RPC and phase suggestion mapping. Android UI-test code compiled, but ADB could not start and no device interaction or authenticated shared TEST save was performed. This increment does not claim persisted Android/web expense parity.
+
+## Shared service catalogue follow-up — 6 November 2026
+
+The expense form now reads service choices from the same authenticated `get_expense_catalogue` RPC as the web form. Department-scoped choices include the shared company defaults; selecting a service continues to prefill provider, billing cycle and owner while keeping the Finance category manually selected. The prior static service array has been removed from the Android form. Web Expense Settings provides the authorized management surface; Android remains a request client, with lead write-management intentionally handled on web.
+
+**Verification and limits:** `:app:testDebugUnitTest :app:assembleDebug :app:compileDebugAndroidTestKotlin -PssmBackend=staging --no-daemon` passed after this change; **108 unit tests, 0 failures, 0 errors, 0 skipped**, debug APK assembled and UI-test source compiled. The shared TEST save RPC now validates all required service text fields. No emulator/ADB or authenticated mobile save/reload was available, so the TEST RPC-to-Android runtime display and persisted parity remain unverified.
 
 ## Service ticket handoff and recurring-issue parity — 8 November 2026
 

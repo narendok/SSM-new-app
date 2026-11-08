@@ -1,28 +1,15 @@
-# SSM One — Project Context and Current State
+# SSM One — Project Context and Evidence Index
 
-Web/backend requirements and delivery roadmap: [Web portal plan location](../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md), refined through 14 October 2026. It supersedes dated planning layouts and incorporates the latest Sales, feasibility, four-group Drive, Excel register and DOCX refinements. The implementation checkpoints below remain historical evidence, not newly verified completion claims.
+> This is an orientation/evidence document, not a product plan. Dated sections below are historical snapshots; current requirements live in the six active plan files.
 
-Latest implementation checkpoint: [2026-10-03 final-framework increment](evidence/final-framework-implementation-2026-10-03.md).
-Latest follow-on: [department Drive categories and ownership preflight](evidence/department-drive-categories-2026-10-03.md),
-with 79 passing Android tests, installed category filters and independently
-observed admin web preflight after routing/counting corrections. Ownership
-backfill, file provenance and periodic-review deployment remain pending.
-Android compile, 76 tests, debug build and emulator update passed. Lovable Pack 1
-source work is reported implemented; protected lifecycle acceptance and legacy
-Drive ownership/source mapping remain pending. The full final target below is
-not complete. Preserve the dated boundaries in the checkpoint.
+- [Cross-platform master plan](https://github.com/narendok/SSM-new/blob/main/SSM_ONE_MASTER_PLAN.md)
+- [Web implementation plan](https://github.com/narendok/ssm-new-web/blob/main/SSM_ONE_WEB_IMPLEMENTATION_PLAN.md)
+- [Android build plan](planning/SSM_ONE_ANDROID_BUILD_PLAN.md)
+- [Canonical document catalogue](https://github.com/narendok/SSM-new/blob/main/SSM%20One%20Document%20Catalogue%20-%20Auto-Drafting%20Audit%20and%20Native%20Upload%20Rules.md)
+- [Electronics lifecycle roadmap](https://github.com/narendok/SSM-new/blob/main/Electronics%20Multi-Track%20Lifecycle%20and%20APQP%20Roadmap.md)
+- [Sample Data and Test Plan](https://github.com/narendok/SSM-new/blob/main/Feature%20Roadmap/Sample%20Data%20and%20Test%20Plan.md)
 
-Latest target plan: [Web portal master plan — refined 2026-10-14](../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md),
-derived from the user's final DOCX. It maps the full document inventory, nine macro
-stages and web/mobile delivery packs into the eight existing departments. This is
-a planning update; it does not deploy contracts, change roles or update historical
-implementation/verification claims below.
-
-Android implementation/build roadmap: [SSM_ONE_ANDROID_BUILD_PLAN.md](planning/SSM_ONE_ANDROID_BUILD_PLAN.md). Web planning may include contract handoff but must not schedule Android stages or APK/device work.
-
-## Current cross-department acceptance checkpoint — 19 October 2026
-
-See the [web master plan §28](../../ssm-new-web/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md#28-cross-department-portal-correction-and-production-acceptance--19-october-2026) and [Android plan §9](planning/SSM_ONE_ANDROID_BUILD_PLAN.md#9-web-cross-department-audit-and-android-acceptance-dependencies--19-october-2026). Local web fixes and browser acceptance do not establish production or Android completion. Live Auth is not enabled and inspected core backend tables are empty; shared lifecycle integration remains pending. No Android source/build/device work was performed in this documentation update.
+Check each owner document's latest status before interpreting older evidence as current acceptance.
 
 ## 1. System Overview
 
@@ -117,6 +104,8 @@ Web Phase 4 — COMPLETE
 Web Phase 5 — COMPLETE
 
 Web Phase 6 — VERIFIED WITH REMAINING GAPS: controlled Stage 5 transaction remediation is complete; legacy migration/storage reconciliation and session-scoped acceptance evidence remain incomplete.
+
+**Correction from 2026-10-31 read-only audit:** the above statement describes source work previously reported, not deployed backend readiness. Lovable's current SSM-new TEST catalog audit reported the five Stage 5 inventory RPCs and two receiving views absent. Their source SQL exists only in the archived evidence artifact. Do not treat Stage 5 backend remediation as deployed or ready; see `backend-handoff/mobile_backend_contract.json` for the latest checked status and migration-ledger discrepancy.
 
 Web Phase 7 — COMPLETE
 
@@ -364,9 +353,9 @@ restored.
 
 Initial backend discovery showed Stage 5 transaction-safety gaps.
 
-Lovable subsequently completed a dedicated Mobile Stage 5 backend remediation.
+Lovable previously reported a dedicated Mobile Stage 5 backend remediation, and a SQL snapshot was archived. A later read-only audit/preflight (2026-10-31) against confirmed Android target `rzskhndweihuczbdhoxk` reported the associated procedures and receiving views absent, as well as all 13 required procurement/inventory base tables and four permission/numbering helper functions. The archived SQL proves intended/source definitions only; it is not self-contained and cannot be applied as-is to this target.
 
-The remediation covered:
+The archived SQL and historical remediation report describe intended work covering:
 
 - Final GRN retry/idempotency hardening
 - GRN concurrency protection
@@ -382,41 +371,32 @@ The remediation covered:
 - transaction/RLS tests
 - partial migration-history reconciliation: new controlled inventory functions and receiving projections are captured; older controlled definitions and storage policies remain unresolved
 
-Post-remediation Lovable validation reported:
+Historical post-remediation Lovable validation reported:
 
 - 77 tests PASS
 - type checks PASS
 - production build PASS
 
-Use the latest remediation report for exact transaction names and verified
-semantics.
+Do not treat the historical test/build report or archived SQL as current live
+deployment evidence. Use `backend-handoff/mobile_backend_contract.json` for the
+current backend status and resolve the checked-backend identity before deployment.
 
-Do not rely on older pre-remediation BACKEND_GAPS information where a newer
-artifact resolves the gap.
+These archived claims do not resolve the current deployment gap. Follow the
+2026-10-31 machine-readable snapshot and live target preflight; do not infer
+readiness from older reports.
 
 ---
 
-# 10. Current Mobile Stage 5 Readiness
+# 10. Current Mobile Stage 5 Readiness (2026-10-31)
 
-Latest reported backend status:
-
-Mobile Stage 5A — READY
-
-Mobile Stage 5B — READY
-
-Mobile Stage 5C — READY
-
-Mobile Stage 5D — READY
-
-Mobile Stage 5E — READY
-
-Mobile Stage 5F — READY
+Latest checked status: **Stage 5 backend blocked.** The read-only catalog audit reported all five stock transaction RPCs and both receiving views absent from the checked TEST backend. Archived source code is not deployment proof. Android's stock mutation repository returns `UnsupportedOperationException`; keep these calls disabled.
 
 Mobile Stage 5G — BLOCKED / pending approved live test identities and suitable
 final acceptance environment support.
 
-Do not let the Stage 5G acceptance blocker prevent implementation of verified
-5A–5F.
+Do not interpret the earlier 5A–5F READY labels as current backend verification.
+Implementation may proceed only on non-mutating Android UI/draft work or after
+the live backend contract is deployed and verified.
 
 Do not mark full Mobile Stage 5 complete until Stage 5G final acceptance is
 resolved.

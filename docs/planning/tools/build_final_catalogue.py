@@ -94,7 +94,7 @@ lines = ["# Final source document catalogue — 2026-10-03", "",
          "Status: **planning reference; no templates, records, certificates or permissions created.**", "",
          f"All **{len(items)}** item/note blocks from the source annexure are retained below. Codes and descriptions are copied as reference labels, not new official identifiers. Owner mapping is a recommendation within the eight agreed departments, not a live access grant.", "",
          "The source's combined entries remain combined here. Implementation may split them into linked record families (for example infrastructure versus liability risks), while retaining the original source block. Missing template files and certificates must be shown as missing/unverified, not as completed records.", "",
-         "See [implementation plan](../../../SSM-new-web/docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md) and the [machine-readable reference](FINAL_DOCUMENT_CATALOGUE_2026-10-03.json).", "",
+         "See the [canonical cross-platform master plan](https://github.com/narendok/SSM-new/blob/main/SSM_ONE_MASTER_PLAN.md) and the [shared document catalogue](https://github.com/narendok/SSM-new/blob/main/SSM%20One%20Document%20Catalogue%20-%20Auto-Drafting%20Audit%20and%20Native%20Upload%20Rules.md), with its [machine-readable mapping](https://github.com/narendok/SSM-new/blob/main/SSM%20One%20Document%20Catalogue%20-%20Auto-Drafting%20Audit%20and%20Native%20Upload%20Rules.json).", "",
          f"Source SHA-256: `{reference['sha256']}`", ""]
 last = None
 def cell(value):
