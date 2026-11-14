@@ -1,6 +1,6 @@
 # SSM One Android Build Plan
 
-**Updated:** 8 November 2026
+**Updated:** 14 November 2026
 **Scope:** Android-specific implementation and verification. Shared product requirements belong to the cross-platform master plan; this is not a second master plan.
 
 **Target Repository:** `C:/Users/Admin/AndroidStudioProjects/SSM-new/SSM-new-app`
@@ -10,17 +10,58 @@
 **Document catalogue:** [SSM One Document Catalogue](https://github.com/narendok/SSM-new/blob/main/SSM%20One%20Document%20Catalogue%20-%20Auto-Drafting%20Audit%20and%20Native%20Upload%20Rules.md); use this single shared family/revision source on both clients.
 **Backend handoff authority:** [`mobile_backend_contract.json`](../backend-handoff/mobile_backend_contract.json) records verified status and must be checked against the current deployed environment. [`stage5-remediation-20260924154357.sql.txt`](../backend-handoff/evidence/stage5-remediation-20260924154357.sql.txt) is source evidence only; it does not establish deployment. The former `MOBILE_BACKEND_CONTRACT.md`, `ANDROID_BACKEND_HANDOFF.md`, and `VERIFIED_MATERIAL_ISSUE_RETURN_CONTRACT_2026-09-27.md` links are stale/missing and are not authoritative.
 
+## Current shared feature contract — 14 November 2026
+
+The [SSM One Master Plan](https://github.com/narendok/SSM-new/blob/main/SSM_ONE_MASTER_PLAN.md) is the authority for shared product rules. The [Multi-Track Lifecycle roadmap](https://github.com/narendok/SSM-new/blob/main/Electronics%20Multi-Track%20Lifecycle%20and%20APQP%20Roadmap.md) owns detailed phases, stage/task mappings and scheduling; the [Document Catalogue](https://github.com/narendok/SSM-new/blob/main/SSM%20One%20Document%20Catalogue%20-%20Auto-Drafting%20Audit%20and%20Native%20Upload%20Rules.md) owns document families and draft/upload/revision rules. This plan owns only the Android-specific interaction and verification.
+
+Android must provide the same authorized workflow outcomes and shared-record links as Web, while using a focused mobile layout. It must not copy Web page structure or maintain a separate source of truth.
+
+| Shared feature | Android responsibility |
+|---|---|
+| People, department roles and assignees | Read saved organization settings and employee profiles. Resolve L1 lead, L2 senior/specialist, L3 associate/technician and L4 operator/trainee by stable role profile; one person may hold multiple department roles. Show missing or ambiguous assignments clearly; never substitute a demo person or infer identity from a name. |
+| Project lifecycle, RACI and time/budget | Use the project's pinned TG-0–TG-9, stage, task and RACI revisions. Respect stage duration and feasibility task timelines; keep estimates, timer actuals, commitments and settled costs distinct. A timer does not complete work or approve a gate. |
+| Records, documents and approvals | Use the shared IDs, catalogue, source links and permissions. Support eligible auto-draft and original upload flows with Draft/review status; do not imply approval or release. Preserve attributable approval actions and history. |
+| Canonical linked masters | Read the same Customer, Supplier, Project, Part and Product IDs as Web. Resolve legacy references only on an exact, unambiguous master match; names and titles never establish identity. Keep Android link editing within the authorized backend contract and preserve unresolved historical links for review. |
+| Inventory and other established features | Keep the complete authorized workflow, including category/department views, quantities and assignment/issue actions where permitted. A role or environment may restrict actions only according to server permissions; it must not silently replace the full view with a reduced fallback. |
+| Mobile presentation | Keep each destination focused and concise; place cross-team summaries in the appropriate overview and reveal secondary detail on demand. Similar workflow and data connections are required; identical Web layout is not. |
+
+All clients read and write the same authorized backend records and saved settings. Verify Android and Web separately for role access, stable-ID links, save/reload, and pinned-project behavior. Historical checkpoints below record what was observed at their dates; if an older checkpoint conflicts with this current contract or a linked shared owner, follow the current contract and verify before implementation. A plan link alone is not proof of deployed backend or cross-client parity.
+
+**Current Shared TEST deployment checkpoint (14 November 2026):** the migration ledger contains 65 entries, latest `20261114033959_validate_project_record_links`. Web can explicitly edit Project/Supplier associations in Shared TEST; the backend validates changed Project aliases against active, same-organization visible masters. Android implementation and authenticated link-edit save/reload parity have not been verified. Follow the master rule and the Web implementation plan; do not infer Android readiness from the shared deployment.
+
 ---
+
+## Builder handoff: backend connection and schema (11 November 2026)
+
+**Current connection verified on 11 November 2026:** Web `.env` and `.env.staging.local` both name `jiqbxcqlywvvmhbgirzl`. Supabase management reports this project (`ssm-one-staging`) ACTIVE_HEALTHY. Android now defaults to `ssmBackend=staging`, using the matching existing staging URL/key properties and `.staging` package. The older project remains an explicit legacy configuration; earlier historical audit sections naming it do not override this current target. No database was copied, renamed or promoted to production in this change.
+
+**Deployment check:** The live migration ledger lists 32 entries through `department_workspace_responsibilities`. Source file `20261110090000_multi_department_lead_access.sql` is not listed by version or name. Many deployed timestamps differ from source filenames; compare names and actual definitions rather than assuming timestamp equality. Full schema parity and authenticated cross-client behavior remain unverified. Do not enable or claim multi-department access solely from source presence.
+Read this section before implementing against the updated lifecycle. Existing contract snapshots are references, not proof that all new web features are deployed or available to Android.
+
+| Item | Authoritative source / action |
+| --- | --- |
+| Shared backend contract | [Backend Contracts](../../../SSM-Planning/Backend%20Contracts.md), plus the [Android RPC/decoder snapshot](../backend-handoff/mobile_backend_contract.json). Check deployed arguments, responses and permissions before enabling actions. |
+| Shared TEST / staging | `https://jiqbxcqlywvvmhbgirzl.supabase.co`; select explicitly with `-PssmBackend=staging` for local debug work. |
+| Production configuration | `https://rzskhndweihuczbdhoxk.supabase.co`; Legacy environment, accessible only through explicit `-PssmBackend=production`; the normal Android default now uses the newer shared TEST database. |
+| Connection configuration | [local.properties.example](../../local.properties.example) documents exact property names. Actual keys belong in ignored `local.properties`; obtain the matching publishable key from the authorized project configuration. Never use a service-role key in the app. |
+| Schema and permissions source | [Web Supabase migrations](../../../ssm-new-web/supabase/migrations/) define schema evolution, RLS and RPCs. [Web generated types](../../../ssm-new-web/src/integrations/supabase/types.ts) assist navigation but must be checked against deployed schema. |
+| Deployment status | Compare the selected project's actual migration ledger and function signatures with source. A source commit, passing build or browser-local demo does not prove deployment. Record the checked project, migration version and verification date in the existing backend contract when verified. |
+| Authentication and roles | Use real authenticated TEST identities, organization membership and server permissions. Verify one lead with multiple configured roles/departments, allowed and denied actions, and RACI-driven assignments. Demo persona selection is not authentication. |
+| Lifecycle/document inputs | Consume shared settings and project-pinned lifecycle/RACI revisions: phases 0–9, configured department stages and default tasks, document families, draft parameters, upload/storage references and approval state. Follow linked master/lifecycle/catalogue owners instead of duplicating definitions. |
+
+Before claiming Android parity, verify a persisted staging round trip: create an enquiry on web, dispatch for configured feasibility review, read and act with the assigned authorized Android identity, refresh web, then verify the same IDs, assignments, approval state and document metadata. Project creation must follow reviewed feasibility and the accountable start decision. Check signed file access, original upload and stale/unauthorized action rejection. Browser-local web stage completion and later lifecycle progression remain unfinished; do not assume those have a deployed mobile contract.
+
+Useful build entry point: `./gradlew.bat -PssmBackend=staging :app:assembleDebug` after supplying the staging publishable key. This handoff documents source configuration; no live database deployment or Android round-trip verification was performed while adding it.
 
 ## 1. Executive Purpose & Architectural Authority
 
-The **SSM One Android Mobile Application** serves as the authoritative on-the-move managing and operational client for the SSM One enterprise platform. It enables engineers, storekeepers, technicians, quality inspectors, facility managers, security guards, and executives to monitor operations, scan hardware/assets/lots, execute verified draft workflows, inspect document revisions, and perform controlled transactions from Android handheld devices and tablets.
+The **SSM One Android Mobile Application** is the mobile companion for the SSM One enterprise platform; authenticated backend services remain authoritative for shared records and settings. It enables engineers, storekeepers, technicians, quality inspectors, facility managers, security guards, and executives to monitor authorized work, scan hardware/assets/lots, execute verified draft workflows, inspect document revisions, and perform controlled transactions from Android handheld devices and tablets.
 
 ### 1.1 System Authority Split
 
 ```mermaid
 flowchart TD
-    subgraph BackendAuthority["Authoritative Backend (Supabase Cloud rzskhndweihuczbdhoxk)"]
+    subgraph BackendAuthority["Current shared TEST backend (Supabase jiqbxcqlywvvmhbgirzl)"]
         AUTH["Supabase Auth & User Identities"]
         RLS["Authoritative Row Level Security"]
         RPC["Controlled Transaction RPCs (Numbering, Atomicity)"]
@@ -66,7 +107,7 @@ The core architectural boundary of the SSM One ecosystem is defined by the opera
 The mobile application is deliberately designed as an agile operational companion for engineers, managers, inspectors, and storekeepers walking the plant floor or on the move:
 1. **1-Tap Daily Task Approvals & Rejections**: Instant triage of pending operational assignments without traversing complex multi-level menus.
 2. **Deal & Feasibility Review Sign-Off**: Sales and technical leads can review high-level feasibility criteria and provide decisive sign-offs from anywhere.
-3. **Stage Gate Overview & APQP Freeze Reviews**: Real-time visibility into the 9-stage APQP lifecycle, active stage bottlenecks, and gate prerequisite completion.
+3. **Stage Gate Overview & APQP Freeze Reviews**: Real-time visibility into the shared fixed TG-0–TG-9 lifecycle, active stage bottlenecks, and gate prerequisite completion.
    - Provide a graphical, project-aware workflow view from the shared lifecycle and responsibility-matrix contract. Show the signed-in user's authorized department stages, subtasks, dependencies, cross-department handoffs, approval states, and rework routes; Admin may see the complete authorized project flow.
    - Render progress only from persisted backend state. Use accessible labels and lightweight transitions/animation; never imply an unrecorded task completion, handoff, approval, or synchronization.
    - Android is a mobile viewer and contract-approved action surface. Workflow template editing, department/RACI routing, dependency configuration, versioning, and impact review remain web-authoritative. Do not add a second Android workflow model or infer permission from a visual assignment.
@@ -1068,3 +1109,50 @@ Mobile parity uses the same [role-action and seven-track sample pack](https://gi
 Consume the shared [generation and role Docs Vault plan](https://github.com/narendok/SSM-new/blob/main/SSM%20One%20Document%20Catalogue%20-%20Auto-Drafting%20Audit%20and%20Native%20Upload%20Rules.md#consolidated-generation-and-role-docs-vault-plan). Mobile uses the same profile IDs, stage eligibility, source/branding versions, role assignments and canonical vault records. Support authorized source entry, draft preview, original upload, review and current-revision download according to accepted backend capabilities. Show stale/expired/superseded status and preserve signed revisions. Verify cross-role visibility, source updates and audit links after the web/backend contract is deployed; Android support for the new reference profiles is pending.
 
 Follow the [master department/lead rules](https://github.com/narendok/SSM-new/blob/main/SSM_ONE_MASTER_PLAN.md#department-ownership-and-multiple-lead-roles) and linked multi-track lifecycle. One authenticated lead may handle multiple explicitly assigned departments. Mobile must read the same server-authorized department scopes, configured stages/default tasks, RACI and document draft/upload eligibility beneath fixed TG-0–TG-9; do not derive access from a single primary department or workspace grouping. Preserve pinned project versions and independent approvals. This is a required shared contract; Android parity for the new web role change has not been verified.
+
+## 9.25 Historical checkpoint: UI/UX restoration and Shared TEST alignment — 11 November 2026
+
+The Android client UI has been fully aligned with the 31 visual evidence screenshots in `docs/evidence/` across the 5 canonical domains, while strictly preserving `CommandCenterScreen` (Heading 1) as-is:
+
+1. **Restored 5 Core Navigation Domains (`AppShell.kt`):**
+   - **Tab 0: Command Center (`CommandCenterScreen.kt`):** Preserved Heading 1 intact (9-stage APQP Stepper, 6 HOD Feasibility Review, Squad Directory, Kick-off Path Selector, and Stage 6 traveler jump).
+   - **Tab 1: Governed Inventory (`GovernedInventoryScreen.kt`):** Restored all 10 automotive stages & tabs (Parts Register, Wire Harnesses, Allocations, GRN & IQC Hold, Cycle & Pick, Receiving Drafts, Plant & Maintenance, Security & Gatehouse, Staff & Skill Matrix, Audit Ledger). Added dynamic project-aware header (`IATF 16949 • Universal Inventory` vs `IATF 16949 • $selectedProject`). Compact modern card padding and fit-to-view text.
+   - **Tab 2: Smart BOM & Purchasing (`SmartBomAndPurchasingScreen.kt`):** Dual EBOM/MBOM lifecycle, What-If Cost Simulator, ECO Freeze gate, ASL/AVL suppliers, and active Purchase Orders register (`HLPL-PO-2026-042..044`).
+   - **Tab 3: Ingestion & QA (`AdaptiveIngestionAndQualityScreen.kt`):** Automotive ECU subsystems (Power 12V/24V ISO 7637-2, Processing Core STM32G0B1VCT6, Cellular Modem Quectel EG915N-EU, Vehicle Bus I/O TCAN1042VDRQ1, IP67 Packaging), IQC Quarantine Staging, AQL Sampling, Universal Barcode/QR Scanner.
+   - **Tab 4: Docs & Vault (`DocumentControlScreen.kt`):** Restored 5 sub-tabs:
+     - *Controlled Docs:* Canonical formula `HLPL-[PROJ_ID]-[DEPT]-[DOC_TYPE]-[REV]`, HMAC 300s TTL signed URL generation.
+     - *Client OEM Portal:* Tata Motors Limited OEM dashboard, commercial contract status (`Commercial Vehicle Telematics Division • 50,000 units • ₹20.33 Cr Locked`), client verification dossier items, and interactive `+ Support Ticket` modal dialog with audit dispatch to EHW Lead.
+     - *Security Vault:* Android Keystore `AES256_GCM` encryption status, master key alias, zero plaintext credentials policy.
+     - *Company Directory:* 11 automotive functional departments + executive leadership directory.
+     - *Sales CRM & Accounts:* Registered client accounts (Tata Motors, Ashok Leyland, Mahindra Electric) and `+ Add Customer` modal.
+   - **Stage 6 Shopfloor Traveler (`ShopfloorScreen.kt`):** Accessible directly from Stage 6 on `CommandCenterScreen`.
+
+2. **Shared TEST Supabase Backend Audit & Contract Verification:**
+   - **Backend Targeting:** Android defaults to the shared TEST Supabase project `jiqbxcqlywvvmhbgirzl` (`https://jiqbxcqlywvvmhbgirzl.supabase.co`) with publishable/anon key sourced from `local.properties`. Production access remains separate. Zero service-role keys or database passwords exist in the application.
+   - **Live Migration Ledger Audit:** Checked against live Supabase test database; 32 migrations are deployed ending at `department_workspace_responsibilities`. Migration `20261110090000_multi_department_lead_access.sql` has NOT yet been applied to the live test ledger. Android maintains client-side guards and reports multi-department lead access as undeployed on the server.
+   - **Lifecycle Model:** Implements fixed phases 0–9 with configurable department stages, RACI ownership, and default tasks derived from pinned settings.
+
+3. **Build & Automated Verification Results:**
+   - `:app:assembleDebug` and `:app:assembleDebugAndroidTest` assemble and package cleanly with zero errors.
+   - `:app:testDebugUnitTest`: **111 unit tests executed across 14 test suites with 0 failures, 0 errors, 0 skipped (100% green)**.
+   - Live Pixel 7 Emulator Verification (`emulator-5554`, Android 15 / API 35): launched AVD, installed staging package (`com.example.myapplication.staging`), launched `MainActivity`, and verified all 5 core navigation tabs live on device.
+   - Live visual evidence captured in `docs/evidence/`:
+     * `scms_mobile_live_command_center.png`: Executive Command Center live runtime.
+     * `scms_mobile_live_inventory.png`: Governed Inventory (IATF 16949 • HLPL-AI4T-01) 10-stage stock registers.
+     * `scms_mobile_live_smart_bom.png`: Dual-Lifecycle Smart BOM, ECO freeze, AEC-Q100 line items.
+     * `scms_mobile_live_ingest_qa.png`: Ingestion Gate zero-automatic stock posting invariant & fuzzy match.
+     * `scms_mobile_live_docs_vault.png`: Controlled Docs register with canonical formula & 300s signed URLs.
+     * `scms_mobile_live_client_portal.png`: Tata Motors OEM Portal with ₹20.33 Cr locked contract & deliverables.
+     * `scms_mobile_live_ticket_modal.png`: Interactive New Client Support Ticket dialog with dispatch to EHW Lead.
+   - `git diff --check`: passed cleanly with zero whitespace or line-ending errors.
+
+## Shared settings and feature continuity — 13 November 2026
+
+Implement these mobile behaviors from the shared sources above; keep the Android UI focused rather than duplicating web settings screens:
+
+- **People and task assignment:** read authenticated employee/profile and organization-chart mappings. One employee may hold multiple configured department roles. Resolve a task's default assignee by the configured L1 lead, L2 senior/specialist, L3 associate/technician or L4 operator/trainee profile, not a hard-coded employee name. If the level has no unique eligible member, show it as unassigned for an authorized lead to resolve; do not substitute a different level. A name or org-chart change must not rewrite pinned project assignments or historical time entries.
+- **Lifecycle, estimates and actual time:** use the project's pinned TG-0–TG-9, stage, task-template and RACI revisions. Admin-configured stage-duration defaults and lead-configured feasibility task timelines must stay within their stage/dependency windows. Show estimated effort, elapsed task time, forecast/commitment/actual cost and commercial value as distinct sourced values. A timer never completes a task or passes a gate; do not infer money from time without an approved rate.
+- **Feature continuity and access:** a role- or environment-specific screen must not silently replace a full feature with a reduced fallback. Enforce server permissions and explain unavailable actions; preserve the complete authorized workflow (including inventory tabs, department views, quantities and issue/assignment actions where permitted). Before any intentional temporary visibility or access change, document its reason, roles/conditions, duration or end condition, impact and rollback path; test both normal and restricted states. Never alter stock or project data merely to demonstrate a screen.
+- **Mobile presentation:** keep each destination centered on its task; use concise summaries and reveal secondary detail on demand. Shared summaries such as team capacity belong in an overview, not repeated across unrelated feature pages. Match web behavior and shared IDs, not its exact page layout.
+
+**Acceptance:** after each shared setting change, verify Android reads the new saved revision and still respects the project's pinned baseline; test permitted and denied roles, missing/ambiguous assignee mappings, offline/read-only boundaries, and restored feature navigation. Verify inventory quantities and assignments through authorized shared records without creating a stock movement during visual checks. Capture Android-specific evidence in this plan's evidence folder and link to the shared master/lifecycle owner; do not duplicate full requirements here. No backend or Android behavior is claimed complete by this planning note alone.
