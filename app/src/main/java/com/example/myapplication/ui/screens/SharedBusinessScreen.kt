@@ -8,13 +8,51 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.viewmodel.MainViewModel
 import kotlinx.serialization.json.*
+import java.time.LocalDate
 
 private fun JsonObject.text(key:String)=this[key]?.jsonPrimitive?.contentOrNull.orEmpty()
 private fun JsonObject.rows(key:String)=(this[key] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
+
+@Composable
+private fun SharedSearchPicker(
+    label: String,
+    selectedLabel: String,
+    options: List<Pair<String, String>>,
+    enabled: Boolean = true,
+    emptyText: String = "No authorized options are available.",
+    onSelect: (String) -> Unit
+) {
+    var open by remember(label) { mutableStateOf(false) }
+    var query by remember(label, open) { mutableStateOf("") }
+    OutlinedButton(onClick = { open = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+        Text(selectedLabel.ifBlank { "Select $label" }, maxLines = 1)
+    }
+    if (open) {
+        val filtered = options.filter { (_, display) -> display.contains(query.trim(), ignoreCase = true) }
+        AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text("Select $label") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = query, onValueChange = { query = it }, label = { Text("Search $label") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    if (filtered.isEmpty()) Text(if (options.isEmpty()) emptyText else "No matches.", style = MaterialTheme.typography.bodySmall)
+                    else LazyColumn(modifier = Modifier.heightIn(max = 360.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        items(filtered, key = { it.first }) { (id, display) ->
+                            TextButton(onClick = { onSelect(id); open = false }, modifier = Modifier.fillMaxWidth()) { Text(display, modifier = Modifier.fillMaxWidth(), maxLines = 2) }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { open = false }) { Text("Close") } }
+        )
+    }
+}
 
 internal fun suggestedFinanceCategory(stage:String,requestType:String,categories:List<String>):String? {
     fun find(pattern:Regex)=categories.firstOrNull { pattern.containsMatchIn(it) }
@@ -32,6 +70,39 @@ internal fun suggestedFinanceCategory(stage:String,requestType:String,categories
     }
 }
 
+internal fun travelDateValidationMessage(startDate: String?, endDate: String?): String? {
+    if (startDate.isNullOrBlank()) return "Choose a travel start date."
+    if (endDate.isNullOrBlank()) return "Choose a travel end date."
+    val start = runCatching { LocalDate.parse(startDate) }.getOrNull()
+        ?: return "Choose a valid travel start date."
+    val end = runCatching { LocalDate.parse(endDate) }.getOrNull()
+        ?: return "Choose a valid travel end date."
+    if (end.isBefore(start)) return "Travel end date must be on or after the start date."
+    return null
+}
+
+internal fun budgetAllocationValidationMessage(
+    departmentId: String?, category: String?, allowedCategories: List<String>, allocatedAmount: String?,
+    currency: String?, periodId: String?, startDate: String?, endDate: String?, financeLimit: String?
+): String? {
+    if (departmentId.isNullOrBlank()) return "Choose a department."
+    if (category.isNullOrBlank() || category !in allowedCategories) return "Choose a Finance category from the authorized catalogue."
+    val amount = allocatedAmount?.toDoubleOrNull()
+    if (amount == null || !amount.isFinite() || amount <= 0.0) return "Enter an approved allocation greater than zero."
+    if (currency?.matches(Regex("^[A-Z]{3}$")) != true) return "Enter a 3-letter currency code, such as INR."
+    if (periodId.isNullOrBlank()) return "Enter the approved budget period reference."
+    val start = runCatching { LocalDate.parse(startDate) }.getOrNull()
+        ?: return "Choose a valid allocation start date."
+    val end = runCatching { LocalDate.parse(endDate) }.getOrNull()
+        ?: return "Choose a valid allocation end date."
+    if (end.isBefore(start)) return "Allocation end date must be on or after the start date."
+    if (!financeLimit.isNullOrBlank()) {
+        val limit = financeLimit.toDoubleOrNull()
+        if (limit == null || !limit.isFinite() || limit < 0.0) return "Finance limit must be zero or greater."
+    }
+    return null
+}
+
 /** Mobile participation in the same shared records as web; authoring remains on web. */
 @Composable
 fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
@@ -39,12 +110,27 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
     val busy by viewModel.businessBusy.collectAsState()
     val failure by viewModel.businessError.collectAsState()
     val saved by viewModel.businessSaved.collectAsState()
-    var section by remember(initialView) { mutableStateOf(initialView) }
-    var action by remember { mutableStateOf<String?>(null) }
+    val openNewExpense = initialView == "new_expense"
+    var section by remember(initialView) { mutableStateOf(if (openNewExpense) "budgets" else initialView) }
+    var action by remember(initialView) { mutableStateOf<String?>(if (openNewExpense) "request_expense" else null) }
     var target by remember { mutableStateOf<JsonObject?>(null) }
-    var form by remember { mutableStateOf<Map<String,String>>(emptyMap()) }
+    var form by remember(initialView) {
+        mutableStateOf<Map<String, String>>(
+            if (openNewExpense) mapOf(
+                "requestType" to "travel",
+                "purchaseKind" to "goods",
+                "currency" to "INR",
+                "requiredDate" to java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).toString()
+            ) else emptyMap()
+        )
+    }
+    var datePickerField by remember { mutableStateOf<String?>(null) }
+    val datePickerState = rememberDatePickerState()
     var validationMessage by remember { mutableStateOf("") }
+    var showLocationRequest by remember { mutableStateOf(false) }
+    var handledLocationRequestSaved by remember { mutableIntStateOf(viewModel.expenseLocationRequestSaved.value) }
     var selectedChannel by remember { mutableStateOf("") }
+    var travelPolicyDetailsExpanded by remember { mutableStateOf(false) }
     var sentGeneration by remember { mutableIntStateOf(-1) }
     LaunchedEffect(Unit) { viewModel.refreshBusinessWorkspace() }
     LaunchedEffect(saved) { if(sentGeneration>=0 && saved>sentGeneration) { action=null;form=emptyMap();sentGeneration=-1 } }
@@ -56,11 +142,26 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
     val dept=actor?.text("department_code").orEmpty()
     val expenseCategories by viewModel.expenseCategories.collectAsState()
     val expenseServices by viewModel.expenseServices.collectAsState()
+    val expenseSuppliers by viewModel.expenseSuppliers.collectAsState()
+    val expenseLocations by viewModel.expenseLocations.collectAsState()
+    val locationRequestBusy by viewModel.expenseLocationRequestBusy.collectAsState()
+    val locationRequestSaved by viewModel.expenseLocationRequestSaved.collectAsState()
+    val locationRequestError by viewModel.expenseLocationRequestError.collectAsState()
+    val expenseCatalogueBusy by viewModel.expenseCatalogueBusy.collectAsState()
+    val expenseCatalogueLoaded by viewModel.expenseCatalogueLoaded.collectAsState()
+    val expenseCatalogueError by viewModel.expenseCatalogueError.collectAsState()
+    val travelPolicy by viewModel.travelPolicy.collectAsState()
+    val travelPolicyError by viewModel.travelPolicyError.collectAsState()
+    val travelPolicySaving by viewModel.travelPolicySaving.collectAsState()
+    val travelPolicySaveMessage by viewModel.travelPolicySaveMessage.collectAsState()
     val expenseOrganizationId=actor?.text("organization_id")?.ifBlank{actor.text("organizationId")}.orEmpty()
     val expenseDepartmentId=data?.rows("departments")?.firstOrNull { it.text("code")==dept }?.text("id").orEmpty()
     val expenseDepartmentScope=form["departmentId"]?.takeIf{it.isNotBlank()}?:expenseDepartmentId
+    var policyScopeDepartment by remember(role,expenseDepartmentId) { mutableStateOf(if(role=="admin")"" else expenseDepartmentId) }
+    var policyEditorVisible by remember { mutableStateOf(false) }
     val expenseProjects=data?.rows("projects").orEmpty()
-    LaunchedEffect(section,expenseDepartmentScope,expenseOrganizationId) { if(section=="budgets") viewModel.refreshExpenseCategories(expenseDepartmentScope,expenseOrganizationId) }
+    LaunchedEffect(section,expenseDepartmentScope,expenseOrganizationId,policyScopeDepartment) { if(section=="budgets") { viewModel.refreshExpenseCategories(expenseDepartmentScope,expenseOrganizationId);viewModel.refreshTravelPolicy(policyScopeDepartment.ifBlank{null},force=true) } }
+    LaunchedEffect(locationRequestSaved) { if(locationRequestSaved>handledLocationRequestSaved){handledLocationRequestSaved=locationRequestSaved;showLocationRequest=false;form=form-"newLocationName"-"newLocationCity"-"newLocationReason";viewModel.refreshExpenseCategories(expenseDepartmentScope,expenseOrganizationId,true)} }
     val finance=role=="admin" || (role=="department_lead" && dept=="FIN")
     val service=role=="admin" || dept=="SIT"
     fun kind(k:String)=all.filter { it.text("kind")==k }
@@ -69,14 +170,26 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
     fun submit(extra:JsonObject?=null) {
         val a=action?:return
         val entry=target
+        if(a=="allocate") {
+            if(!finance) { validationMessage="Only Admin or Finance may create a shared allocation.";return }
+            val allocationError=budgetAllocationValidationMessage(
+                form["departmentId"],form["category"],expenseCategories,form["allocatedAmount"],form["currency"],
+                form["periodId"],form["startDate"],form["endDate"],form["financeLimit"]
+            )
+            if(allocationError!=null) { validationMessage=allocationError;return }
+        }
+        if(a in setOf("approve_allocation","reject_allocation") && !finance) { validationMessage="Only Admin or Finance may review an allocation.";return }
+        if(a=="reject_allocation" && form["reason"].orEmpty().trim().length<3) { validationMessage="Enter a reason of at least 3 characters.";return }
         if(a=="request_expense") {
             val requestType=form["requestType"]?:"travel"
+            val travelDateError=if(requestType=="travel") travelDateValidationMessage(form["travelStartDate"],form["travelEndDate"]) else null
             val missing=when {
                 form["category"].isNullOrBlank()->"Choose a Finance category."
                 (form["amount"]?.toDoubleOrNull()?:0.0)<=0.0->"Enter an estimate greater than zero."
                 form["currency"].isNullOrBlank()->"Choose a currency."
                 form["requiredDate"].isNullOrBlank()->"Enter a required date."
-                requestType=="travel"&&form["destination"].isNullOrBlank()->"Enter the travel destination."
+                travelDateError!=null->travelDateError
+                requestType=="travel"&&form["locationId"].isNullOrBlank()->"Choose an approved shared travel location."
                 requestType=="reimbursement"&&form["merchant"].isNullOrBlank()->"Enter the merchant or payee."
                 requestType=="purchase"&&form["itemOrService"].isNullOrBlank()->"Enter the good or service needed."
                 requestType=="purchase"&&form["purchaseKind"]=="service"&&(form["serviceSeats"]?.toDoubleOrNull()?:0.0)<=0.0->"Enter positive service seats or units."
@@ -94,15 +207,15 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
             form+mapOf("requestType" to type,"purchaseKind" to (form["purchaseKind"]?:"goods"),"departmentId" to (form["departmentId"]?:expenseDepartmentId),"purpose" to detail)
         } else form
         val details=extra?:buildJsonObject { submittedForm.forEach { (k,v)->
-            when(k) { "tags"->put(k,JsonArray(v.split(",").map{it.trim()}.filter{it.isNotBlank()}.map{JsonPrimitive(it)}));"amount","actualAmount"->put(k,v.toDoubleOrNull()?:-1.0);"isInternalNote","acknowledged"->put(k,v=="true");else->put(k,v) }
+            when(k) { "tags"->put(k,JsonArray(v.split(",").map{it.trim()}.filter{it.isNotBlank()}.map{JsonPrimitive(it)}));"amount","actualAmount","allocatedAmount"->put(k,v.toDoubleOrNull()?:-1.0);"financeLimit"->if(v.isBlank())put(k,JsonNull) else put(k,v.toDoubleOrNull()?:-1.0);"isInternalNote","acknowledged"->put(k,v=="true");else->put(k,v) }
         } }
         sentGeneration=saved
         viewModel.mutateBusinessWorkspace(a,buildJsonObject { if(entry!=null){ put("id",entry.text("id"));put("version",entry["version"]!!) };put("data",details) })
     }
     Column(Modifier.fillMaxSize().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-            Column { Text("${actor?.text("display_name").orEmpty()}",style=MaterialTheme.typography.titleMedium);Text("Authenticated shared workspace",style=MaterialTheme.typography.labelSmall) }
-            TextButton(onClick={viewModel.refreshBusinessWorkspace()},enabled=!busy){Text("Refresh")}
+            Column { Text("${actor?.text("display_name").orEmpty()}",style=MaterialTheme.typography.titleMedium);Text("Company workspace",style=MaterialTheme.typography.labelSmall) }
+            TextButton(onClick={viewModel.refreshBusinessWorkspace();if(section=="budgets")viewModel.refreshExpenseCategories(expenseDepartmentScope,expenseOrganizationId,force=true)},enabled=!busy){Text("Refresh")}
         }
         LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){items(listOf("budgets","tickets","profile","communication")){id->FilterChip(selected=section==id,onClick={section=id},label={Text(when(id){"budgets"->"Expenses";"tickets"->"Tickets";"profile"->"My Profile";else->"Team Chat"})})}}
         if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -110,8 +223,16 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
         if(data==null) { Text("Shared data is unavailable until the business-workspace migration is deployed. No sample data is substituted.");return@Column }
         if(role=="viewer"&&section!="tickets"){Text("Access restricted to internal employees.");return@Column}
         if(section=="budgets"&&role!="viewer")Button(onClick={open("request_expense",defaults=mapOf("requestType" to "travel","purchaseKind" to "goods","currency" to "INR","requiredDate" to java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).toString()))},enabled=!busy){Text("New expense request")}
+        if(section=="budgets"&&finance)OutlinedButton(onClick={open("allocate",defaults=mapOf("currency" to "INR","startDate" to LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).toString()))},enabled=!busy){Text("Add allocation")}
         if(section=="tickets")Button(onClick={open("ticket_create",defaults=mapOf("priority" to "Normal","category" to "General"))},enabled=!busy){Text("New ticket")}
         LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.weight(1f)) {
+            if(section=="tickets"&&kind("ticket").isEmpty()) item {
+                Text(
+                    "No shared tickets were returned in this access scope yet. A new ticket will be saved to the shared workspace.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             if(section=="profile") {
                 val profile=kind("profile").firstOrNull { it.text("ownerId")==me }?.let(::payload)
                 item { Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){Text(actor?.text("display_name").orEmpty());listOf("employeeCode","email","phone","roleTitle","joiningDate").forEach {key->Text("$key: ${profile?.text(key)?.ifBlank { "Not recorded" }?:"Not recorded"}",style=MaterialTheme.typography.bodySmall)}}} }
@@ -121,7 +242,84 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
                 }
             }
             if(section=="budgets") {
-                items(kind("allocation")){entry->val a=payload(entry);Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){Text("${a.text("category")} · ${a.text("currency")}");Text("Allocated ${a.text("allocatedAmount")} · committed ${a.text("committedAmount")} · spent ${a.text("spentAmount")}",style=MaterialTheme.typography.bodySmall)}}}
+                if(travelPolicy?.get("canView")?.jsonPrimitive?.booleanOrNull==true) {
+                item {
+                    val company=travelPolicy?.get("company") as? JsonObject
+                    val departmentPolicy=travelPolicy?.get("department") as? JsonObject
+                    val policy=departmentPolicy ?: company
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                        Text("Travel policy",style=MaterialTheme.typography.titleSmall)
+                        when {
+                            travelPolicyError!=null -> Text("Policy unavailable: $travelPolicyError",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
+                            policy==null -> Text("Loading policy from the authorized shared workspace…",style=MaterialTheme.typography.bodySmall)
+                            else -> {
+                                Text("${policy.text("status")} · ${policy.text("currency")} · ${if(departmentPolicy!=null) "Department limits" else "Company policy"}",style=MaterialTheme.typography.bodySmall)
+                                val bands=policy.rows("bands")
+                                Text("${bands.size} role bands · INR limits are illustrative until Finance confirms and publishes.",style=MaterialTheme.typography.bodySmall)
+                                TextButton(onClick={travelPolicyDetailsExpanded=!travelPolicyDetailsExpanded},contentPadding=PaddingValues(horizontal=0.dp,vertical=0.dp)) {
+                                    Text(if(travelPolicyDetailsExpanded) "Hide rate details" else "View rate details")
+                                }
+                                if(travelPolicyDetailsExpanded) bands.forEach { band->Text("${band.text("label")}: hotel ₹${band.text("hotelMetro")} / night (Metro), ₹${band.text("hotelOther")} / night (Other); meals ₹${band.text("mealsPerDay")} / day; local ₹${band.text("localPerDay")} / day",style=MaterialTheme.typography.bodySmall) }
+                                if(policy.text("status")!="Active") Text("Draft only; not used to approve or cap requests.",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.error)
+                                Text("Server check: one unsettled advance per requester when an Active policy enables it. Amount caps and exception routing are not yet enforced.",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    } }
+                }
+                item {
+                    Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                        OutlinedButton(onClick={policyEditorVisible=!policyEditorVisible},enabled=!travelPolicySaving) {
+                            Text(if(policyEditorVisible)"Close travel policy settings" else "Configure travel policy")
+                        }
+                        if(policyEditorVisible) {
+                            val scopeMatches=travelPolicy?.text("scopeDepartment").orEmpty()==policyScopeDepartment
+                            if(!scopeMatches) Text("Loading the selected policy scope…",style=MaterialTheme.typography.bodySmall)
+                            else SharedTravelPolicyEditor(
+                                policyData=travelPolicy!!,
+                                departments=data.rows("departments"),
+                                selectedDepartmentId=policyScopeDepartment,
+                                onDepartmentSelected={policyScopeDepartment=it},
+                                isAdmin=role=="admin",
+                                saving=travelPolicySaving,
+                                saveMessage=travelPolicySaveMessage,
+                                onSave={departmentId,value,version,publish->viewModel.saveTravelPolicy(departmentId,value,version,publish)}
+                            )
+                        }
+                    }
+                }
+            } else if(section=="budgets" && travelPolicyError==null && travelPolicy!=null) {
+                item {
+                    Text(
+                        "Travel policy details are managed by Admin and Operations.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                }
+                if(kind("allocation").isEmpty())item { Text("No shared budget allocations are configured for this view.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+                items(kind("allocation")) { entry ->
+                    val allocation = payload(entry)
+                    val status = allocation.text("status").ifBlank { "Approved" }
+                    val approved = status == "Approved"
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("${allocation.text("category")} · ${allocation.text("currency")}")
+                            Text("${allocation.text("periodId")} · $status", style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                if (approved) "Allocated ${allocation.text("allocatedAmount")} · committed ${allocation.text("committedAmount")} · spent ${allocation.text("spentAmount")}"
+                                else "Amounts are excluded until an independent reviewer approves this allocation.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            if (status == "Pending_Approval" && finance && entry.text("ownerId") != me) {
+                                Row {
+                                    TextButton(onClick = { open("approve_allocation", entry) }, enabled = !busy) { Text("Approve") }
+                                    TextButton(onClick = { open("reject_allocation", entry) }, enabled = !busy) { Text("Reject") }
+                                }
+                            }
+                        }
+                    }
+                }
+                if(kind("expense").isEmpty())item { Text("No shared expense requests are available in this authorized view yet.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
                 items(kind("expense")){entry->val a=payload(entry);val status=a.text("status");Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){Text(a.text("purpose"));Text("${a.text("currency")} ${a.text("amount")} · $status",style=MaterialTheme.typography.bodySmall)
                     if(entry.text("ownerId")!=me&&((status=="Pending_Dept_Review"&&role in listOf("admin","department_lead"))||(status=="Pending_Finance"&&finance)||(status=="Pending_Admin"&&role=="admin")))Row { TextButton(onClick={open("approve_expense",entry)},enabled=!busy){Text("Review")};TextButton(onClick={open("reject_expense",entry)},enabled=!busy){Text("Reject")} }
                     if(status=="Approved"&&finance&&entry.text("ownerId")!=me)TextButton(onClick={open("post_expense",entry, mapOf("actualAmount" to a.text("amount")))},enabled=!busy){Text("Post actuals")}
@@ -138,8 +336,13 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
             }
         }
     }
-    if(action!=null)AlertDialog(onDismissRequest={if(!busy)action=null},title={Text(action!!.replace('_',' '))},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        @Composable fun field(key:String,label:String){OutlinedTextField(value=form[key].orEmpty(),onValueChange={form=form+(key to it)},label={Text(label)},modifier=Modifier.fillMaxWidth(),enabled=!busy)}
+    if(action!=null)AlertDialog(onDismissRequest={if(!busy)action=null},title={Text(action!!.replace('_',' '),style=MaterialTheme.typography.titleMedium)},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+        @Composable fun field(key:String,label:String,modifier:Modifier=Modifier,numeric:Boolean=false){OutlinedTextField(value=form[key].orEmpty(),onValueChange={value->form=form+(key to if(key=="currency")value.uppercase() else value)},label={Text(label,style=MaterialTheme.typography.bodySmall)},modifier=modifier.fillMaxWidth().heightIn(min=52.dp,max=58.dp),textStyle=MaterialTheme.typography.bodyMedium,singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=if(numeric)KeyboardType.Decimal else KeyboardType.Text),enabled=!busy)}
+        @Composable fun dateField(key:String,label:String,modifier:Modifier=Modifier){
+            OutlinedButton(onClick={datePickerField=key},enabled=!busy,modifier=modifier.fillMaxWidth().heightIn(min=44.dp)){
+                Text(if(form[key].isNullOrBlank())"$label · Select" else "$label · ${form[key]}",maxLines=1,style=MaterialTheme.typography.labelMedium)
+            }
+        }
         @Composable fun select(key:String,label:String,options:List<Pair<String,String>>) {Text(label,style=MaterialTheme.typography.labelSmall);options.forEach{(id,name)->FilterChip(selected=form[key]==id,onClick={form=form+(key to id)},label={Text(name)})}}
         when(action) {
             "request_expense"->{
@@ -148,24 +351,143 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
                 val projectPhase=selectedProject?.let{it.text("companyPhase").ifBlank{it.text("phase")}}.orEmpty()
                 val projectStage=selectedProject?.let{it.text("currentStage").ifBlank{it.text("stage")}}.orEmpty()
                 Text("Project context (optional)",style=MaterialTheme.typography.labelSmall)
-                LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){item{FilterChip(selected=form["projectId"].isNullOrBlank(),onClick={form=form-("projectId")},label={Text("Department work")})};items(expenseProjects){project->FilterChip(selected=form["projectId"]==project.text("id"),onClick={form=form+("projectId" to project.text("id"))},label={Text(project.text("reference"))})}}
+                SharedSearchPicker(
+                    label = "project",
+                    selectedLabel = expenseProjects.firstOrNull { it.text("id") == form["projectId"] }?.let { "${it.text("reference")} · ${it.text("title")}" } ?: "Department work · no project",
+                    options = listOf("" to "Department work · no project") + expenseProjects
+                        .filter { it.text("id").isNotBlank() && it.text("status").lowercase() !in setOf("archived", "cancelled", "canceled", "inactive", "retired") }
+                        .map { it.text("id") to "${it.text("reference")} · ${it.text("title")} · ${it.text("status")}" }
+                        .distinctBy { it.first },
+                    enabled = !busy
+                ) { id -> form = if (id.isBlank()) form - "projectId" else form + ("projectId" to id) }
                 if(selectedProject!=null)Text("${selectedProject.text("reference")} · Phase: ${projectPhase.ifBlank{"Not recorded"}} · Stage: ${projectStage.ifBlank{"Not recorded"}}",style=MaterialTheme.typography.bodySmall)
-                Text("Request type",style=MaterialTheme.typography.labelSmall)
-                Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){listOf("travel" to "Travel / advance","reimbursement" to "Reimbursement","purchase" to "Purchase").forEach{(id,label)->FilterChip(selected=requestType==id,onClick={form=form+("requestType" to id)+("category" to "")},label={Text(label)})}}
-                Text("Finance category · choose manually",style=MaterialTheme.typography.labelSmall)
-                if(expenseCategories.isEmpty())Text("Loading configured Finance categories…",style=MaterialTheme.typography.bodySmall) else LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){items(expenseCategories){category->FilterChip(selected=form["category"]==category,onClick={form=form+("category" to category)},label={Text(category)})}}
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                    listOf("travel" to "Travel","reimbursement" to "Reimburse","purchase" to "Purchase").forEach { (id,label) ->
+                        FilterChip(
+                            selected=requestType==id,
+                            onClick={if(!busy)form=form+("requestType" to id)+("category" to "")},
+                            enabled=!busy,
+                            label={Text(label,maxLines=1)},
+                            modifier=Modifier.weight(1f)
+                        )
+                    }
+                }
+                Text("Finance category",style=MaterialTheme.typography.labelSmall)
+                when {
+                    expenseCatalogueBusy || !expenseCatalogueLoaded -> Text("Loading configured Finance categories…",style=MaterialTheme.typography.bodySmall)
+                    expenseCatalogueError!=null -> Text("Finance categories could not be loaded: $expenseCatalogueError. Refresh and try again.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
+                    expenseCategories.isEmpty() -> Text("No Finance categories are configured for this department. Ask the department lead or Finance to configure the shared catalogue.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
+                    else -> SharedSearchPicker(
+                        label = "Finance category",
+                        selectedLabel = form["category"].orEmpty(),
+                        options = expenseCategories.filter(String::isNotBlank).distinct().map { it to it },
+                        enabled = !busy,
+                        emptyText = "No Finance categories are configured for this department."
+                    ) { category -> form = form + ("category" to category) }
+                }
                 val suggestion=suggestedFinanceCategory("$projectPhase $projectStage",requestType,expenseCategories)
                 if(suggestion!=null&&form["category"]!=suggestion)TextButton(onClick={form=form+("category" to suggestion)}){Text("Use suggested category: $suggestion")}
-                Text("Travel and reimbursement go to Finance. Purchases go to Procurement first. Category suggestions never approve spend.",style=MaterialTheme.typography.bodySmall)
+                Text(if(requestType=="purchase")"Purchase requests go to Procurement first." else "Travel and reimbursements go to Finance.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 when(requestType){
-                    "travel"->{field("destination","Destination / visit location");field("travelStartDate","Travel start YYYY-MM-DD");field("travelEndDate","Travel end YYYY-MM-DD")}
-                    "reimbursement"->{field("merchant","Merchant / payee");field("expenseDate","Expense date YYYY-MM-DD");field("receiptReference","Receipt link / reference (optional)")}
-                    else->{Text("Purchase type",style=MaterialTheme.typography.labelSmall);Row{FilterChip(selected=(form["purchaseKind"]?:"goods")=="goods",onClick={form=form+("purchaseKind" to "goods")},label={Text("Goods / materials")});FilterChip(selected=form["purchaseKind"]=="service",onClick={form=form+("purchaseKind" to "service")+("itemOrService" to "")+("serviceAction" to "new")},label={Text("Service")})};if(form["purchaseKind"]=="service") {field("serviceSearch","Find a company service");val matches=expenseServices.filter{it.text("name").contains(form["serviceSearch"].orEmpty(),ignoreCase=true)};LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){items(matches){serviceOption->val name=serviceOption.text("name");FilterChip(selected=form["itemOrService"]==name,onClick={form=form+("itemOrService" to name)+("serviceCatalogueId" to serviceOption.text("id"))+("supplierName" to serviceOption.text("provider"))+("billingCycle" to serviceOption.text("cycle"))+("serviceOwner" to serviceOption.text("owner"))},label={Text(name)})}};field("itemOrService","Service needed (or enter another)");select("serviceAction","Request",listOf("new" to "New service","renew" to "Renew existing service","seats" to "Add seats / capacity"));select("billingCycle","Billing cycle",listOf("Monthly" to "Monthly","Annual" to "Annual","One-time" to "One-time"));field("serviceSeats","Seats / units");field("serviceOwner","Responsible owner");if(form["serviceAction"]!="new")field("existingServiceReference","Subscription / contract reference")} else {field("itemOrService","Goods / materials needed");field("quantity","Quantity")};field("supplierName","Preferred supplier (optional)");field("quotationReference","Quote / invoice link or reference (optional)")}
+                    "travel"->{
+                        Text("Approved accounting location",style=MaterialTheme.typography.labelSmall)
+                        SharedSearchPicker(
+                            label="approved travel location",
+                            selectedLabel=expenseLocations.firstOrNull{it.text("id")==form["locationId"]}?.let{"${it.text("reference")} · ${it.text("name")} · ${it.text("city")}"}?:"Search approved locations…",
+                            options=expenseLocations.filter{it.text("active")!="false"}.map{it.text("id") to "${it.text("reference")} · ${it.text("name")} · ${it.text("city")} · ${if(it.text("cityTier")=="metro")"Metro" else "Other city"}"},
+                            enabled=!busy&&!locationRequestBusy,
+                            emptyText="No approved accounting locations are configured yet."
+                        ){id->val location=expenseLocations.firstOrNull{it.text("id")==id};form=form+mapOf("locationId" to id,"destination" to (location?.let{"${it.text("name")} · ${it.text("city")}"}.orEmpty()))}
+                        TextButton(enabled=!busy&&!locationRequestBusy,onClick={showLocationRequest=!showLocationRequest}){Text(if(showLocationRequest)"Cancel location request" else "Location not listed? Request it")}
+                        if(showLocationRequest){
+                            Text("Finance/Admin must approve a requested location before it can be selected.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            field("newLocationName","Facility / location name")
+                            field("newLocationCity","City")
+                            field("newLocationReason","Why is it needed?")
+                            Button(enabled=!busy&&!locationRequestBusy&&form["newLocationName"].orEmpty().trim().length>=2&&form["newLocationCity"].orEmpty().trim().length>=2&&form["newLocationReason"].orEmpty().trim().length>=3,onClick={viewModel.requestExpenseLocation(form["newLocationName"].orEmpty(),form["newLocationCity"].orEmpty(),form["newLocationReason"].orEmpty(),expenseDepartmentScope,expenseOrganizationId)}){Text(if(locationRequestBusy)"Sending…" else "Send for review")}
+                            locationRequestError?.let{Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)}
+                        }
+                        if(expenseLocations.isEmpty())Text("No approved locations yet; use the review request or ask Admin/Finance to add one.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
+                        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){dateField("travelStartDate","Start",Modifier.weight(1f));dateField("travelEndDate","End",Modifier.weight(1f))}
+                    }
+                    "reimbursement"->{field("merchant","Merchant / payee");dateField("expenseDate","Expense date");field("receiptReference","Receipt link / reference (optional)")}
+                    else->{Text("Purchase type",style=MaterialTheme.typography.labelSmall);Row{FilterChip(selected=(form["purchaseKind"]?:"goods")=="goods",onClick={form=form+("purchaseKind" to "goods")},label={Text("Goods / materials")});FilterChip(selected=form["purchaseKind"]=="service",onClick={form=form+("purchaseKind" to "service")+("itemOrService" to "")+("serviceAction" to "new")},label={Text("Service")})};if(form["purchaseKind"]=="service") {field("serviceSearch","Find a company service");val matches=expenseServices.filter{it.text("name").contains(form["serviceSearch"].orEmpty(),ignoreCase=true)};LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){items(matches){serviceOption->val name=serviceOption.text("name");FilterChip(selected=form["itemOrService"]==name,onClick={form=form+("itemOrService" to name)+("serviceCatalogueId" to serviceOption.text("id"))+("supplierId" to serviceOption.text("supplierId"))+("supplierName" to serviceOption.text("provider"))+ ("billingCycle" to serviceOption.text("cycle"))+ ("serviceOwner" to serviceOption.text("owner"))},label={Text(name)})}};field("itemOrService","Service needed (or enter another)");select("serviceAction","Request",listOf("new" to "New service","renew" to "Renew existing service","seats" to "Add seats / capacity"));select("billingCycle","Billing cycle",listOf("Monthly" to "Monthly","Annual" to "Annual","One-time" to "One-time"));field("serviceSeats","Seats / units");field("serviceOwner","Responsible owner");if(form["serviceAction"]!="new")field("existingServiceReference","Subscription / contract reference")} else {field("itemOrService","Goods / materials needed");field("quantity","Quantity")};
+                        SharedSearchPicker(
+                            label = "supplier",
+                            selectedLabel = expenseSuppliers.firstOrNull { it.text("id") == form["supplierId"] }?.let { "${it.text("reference")} · ${it.text("title")}" } ?: if (form["supplierOther"] == "yes") form["supplierName"].orEmpty() else "Other / not listed (optional)",
+                            options = listOf("__other__" to "Other / not listed (optional)") + expenseSuppliers
+                                .filter { it.text("id").isNotBlank() && it.text("status").lowercase() !in setOf("archived", "obsolete", "rejected", "inactive", "cancelled", "canceled") }
+                                .map { it.text("id") to "${it.text("reference")} · ${it.text("title")} · ${it.text("status")}" }
+                                .distinctBy { it.first },
+                            enabled = !busy,
+                            emptyText = "No authorized supplier options are available."
+                        ) { id ->
+                            form = if (id == "__other__") form - "supplierId" + ("supplierOther" to "yes")
+                            else form + ("supplierId" to id) + ("supplierOther" to "no") + ("supplierName" to (expenseSuppliers.firstOrNull { it.text("id") == id }?.text("title").orEmpty()))
+                        }
+                        if (form["supplierOther"] == "yes") field("supplierName", "Supplier name / reference")
+                        field("quotationReference","Quote / invoice link or reference (optional)")}
                 }
-                field("amount","Estimate");field("currency","Currency");field("requiredDate","Required date YYYY-MM-DD")
-                if(dept.isBlank())select("departmentId","Department",data?.rows("departments").orEmpty().map{it.text("id") to it.text("name")})
+                Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                    field("amount","Estimate",Modifier.weight(1.25f))
+                    field("currency","Currency",Modifier.weight(0.75f))
+                }
+                dateField("requiredDate","Required date")
+                if(role=="admin") {
+                    val departments=data?.rows("departments").orEmpty()
+                    val selectedDepartmentId=form["departmentId"]?:expenseDepartmentId
+                    val selectedDepartmentName=departments.firstOrNull{it.text("id")==selectedDepartmentId}?.text("name")?:"Select department"
+                    SharedSearchPicker(
+                        label = "department",
+                        selectedLabel = selectedDepartmentName,
+                        options = departments.filter { it.text("id").isNotBlank() }.map { it.text("id") to "${it.text("name")} · ${it.text("code")}" },
+                        enabled = !busy,
+                        emptyText = "No departments are authorized for this profile."
+                    ) { id -> form = form + ("departmentId" to id) + ("category" to "") }
+                } else Text("Department: ${actor?.text("department_name")?.ifBlank{dept}?:dept} · restricted to your authorized profile",style=MaterialTheme.typography.bodySmall)
             }
-            "approve_expense"->{if(payload(target!!).text("status")=="Pending_Dept_Review")Text("Forward to Finance review")else select("allocationId","Exact allocation",kind("allocation").filter{it.text("departmentId")==target!!.text("departmentId")&&it.text("projectId")==target!!.text("projectId")&&payload(it).text("category")==payload(target!!).text("category")&&payload(it).text("currency")==payload(target!!).text("currency")}.map{it.text("id") to "${payload(it).text("periodId")} · ${payload(it).text("category")}"})}
+            "allocate"->{
+                val departments=data?.rows("departments").orEmpty().filter{it.text("id").isNotBlank()&&it.text("code")!="CLIENT"}
+                val selectedDepartment=form["departmentId"].orEmpty()
+                Text("Create a shared budget allocation. It will appear in Web and Android after the server confirms the save.",style=MaterialTheme.typography.bodySmall)
+                SharedSearchPicker(
+                    label="department",
+                    selectedLabel=departments.firstOrNull{it.text("id")==selectedDepartment}?.text("name")?:"Select department",
+                    options=departments.map{it.text("id") to "${it.text("name")} · ${it.text("code")}"},
+                    enabled=!busy,
+                    emptyText="No active departments are available."
+                ){id->form=form+mapOf("departmentId" to id,"category" to "")}
+                if(selectedDepartment.isBlank()) Text("Choose a department before selecting its Finance category.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                else if(expenseCatalogueBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                else if(expenseCategories.isEmpty()) Text("No Finance categories are configured for this department.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
+                else SharedSearchPicker(
+                    label="Finance category",
+                    selectedLabel=form["category"]?:"Select Finance category",
+                    options=expenseCategories.filter(String::isNotBlank).distinct().map{it to it},
+                    enabled=!busy,
+                    emptyText="No Finance categories are configured for this department."
+                ){id->form=form+("category" to id)}
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                    field("allocatedAmount","Approved amount",Modifier.weight(1.2f),numeric=true)
+                    field("currency","Currency",Modifier.weight(0.8f))
+                }
+                field("periodId","Approved period reference (for example FY2026-27)")
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                    dateField("startDate","Start date",Modifier.weight(1f))
+                    dateField("endDate","End date",Modifier.weight(1f))
+                }
+                field("financeLimit","Finance approval limit (blank requires Admin)",numeric=true)
+                SharedSearchPicker(
+                    label="project",
+                    selectedLabel=expenseProjects.firstOrNull{it.text("id")==form["projectId"]}?.let{"${it.text("reference")} · ${it.text("title")}"}?:"Department operating budget · no project",
+                    options=listOf("" to "Department operating budget · no project")+expenseProjects.filter{it.text("id").isNotBlank()&&it.text("status").lowercase() !in setOf("archived","cancelled","canceled","inactive","retired")}.map{it.text("id") to "${it.text("reference")} · ${it.text("title")} · ${it.text("status")}"}.distinctBy{it.first},
+                    enabled=!busy,
+                    emptyText="No active projects are available."
+                ){id->form=if(id.isBlank())form-"projectId" else form+("projectId" to id)}
+            }
+            "approve_allocation"->Text("This allocation will become available only after your independent approval is saved.",style=MaterialTheme.typography.bodySmall)
+            "reject_allocation"->field("reason","Reason for rejection")
+            "approve_expense"->{if(payload(target!!).text("status")=="Pending_Dept_Review")Text("Forward to Finance review")else select("allocationId","Exact allocation",kind("allocation").filter{(payload(it).text("status").isBlank()||payload(it).text("status")=="Approved")&&it.text("departmentId")==target!!.text("departmentId")&&it.text("projectId")==target!!.text("projectId")&&payload(it).text("category")==payload(target!!).text("category")&&payload(it).text("currency")==payload(target!!).text("currency")}.map{it.text("id") to "${payload(it).text("periodId")} · ${payload(it).text("category")}"})}
             "post_expense"->{field("actualAmount","Verified actual amount");field("postingRef","Finance posting reference");field("evidenceRef","Invoice / receipt evidence reference")}
             "reject_expense"->field("reason","Reason")
             "ticket_create"->{field("subject","Subject");field("description","Description");field("category","Category");select("priority","Priority",listOf("Critical","High","Normal","Low").map{it to it})}
@@ -176,7 +498,8 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
         }
         validationMessage.takeIf{it.isNotBlank()}?.let{Text(it,color=MaterialTheme.colorScheme.error)}
         failure?.let{Text(it,color=MaterialTheme.colorScheme.error)}
-    }},confirmButton={TextButton(enabled=!busy,onClick={
+    }},confirmButton={TextButton(enabled=!busy&&(action!="request_expense"||expenseCategories.isNotEmpty()),onClick={
         if(action=="submit_assignment") {val template=all.firstOrNull{it.text("id")==payload(target!!).text("templateId")}?.let(::payload);submit(buildJsonObject {put("acknowledged",form["acknowledged"]=="true");put("answers",buildJsonObject{template?.rows("questions")?.forEach{q->val key=q.text("id");val value=form[key];if(value!=null)when(q.text("type")){"boolean"->put(key,value=="true");"number","rating"->put(key,value.toDoubleOrNull()?:-1.0);else->put(key,value)}}})})}else submit()
     }){Text(if(busy)"Saving…" else "Save")}},dismissButton={TextButton(enabled=!busy,onClick={action=null}){Text("Cancel")}})
+    if(datePickerField!=null) DatePickerDialog(onDismissRequest={datePickerField=null},confirmButton={TextButton(onClick={datePickerState.selectedDateMillis?.let{millis->form=form+(datePickerField!! to java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString())};datePickerField=null}){Text("Select")}},dismissButton={TextButton(onClick={datePickerField=null}){Text("Cancel")}}){DatePicker(state=datePickerState)}
 }

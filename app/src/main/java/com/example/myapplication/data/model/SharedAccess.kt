@@ -7,6 +7,99 @@ object SharedAccess {
     fun text(row: JsonObject, key: String) = (row[key] as? JsonPrimitive)?.contentOrNull.orEmpty()
     fun rows(snapshot: JsonObject?, key: String) = (snapshot?.get(key) as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
 
+    private val inactiveMasterStatuses = setOf("archived", "obsolete", "rejected", "inactive", "cancelled", "canceled", "retired", "disabled")
+
+    private fun isSelectableMasterStatus(status: String) = status.trim().lowercase() !in inactiveMasterStatuses
+
+    /** Canonical, authorized choices for Web catalogue master fields in Android record forms. */
+    fun masterPickerOptions(snapshot: JsonObject?, master: String, projectCatalog: List<ProjectMetadata> = projects(snapshot).drop(1)): List<SharedPickerOption> {
+        val optionKey = when (master) {
+            "customers" -> "customerOptions"
+            "suppliers" -> "supplierOptions"
+            "parts" -> "partOptions"
+            "products" -> "productOptions"
+            else -> ""
+        }
+        if (master == "projects") {
+            // Keep the server-authorized project catalogue as the source of truth,
+            // but do not offer archived/inactive records for new links. The general
+            // project browser can still retain archived rows for historical review.
+            val selectableProjectIds = rows(snapshot, "records")
+                .filter { text(it, "record_type").equals("Project", ignoreCase = true) }
+                .filter { text(it, "archived_at").isBlank() && text(it, "archived") != "true" }
+                .filter { isSelectableMasterStatus(text(it, "status")) }
+                .map { text(it, "id") }
+                .filter(String::isNotBlank)
+                .toSet()
+            return projectCatalog
+            .filter { it.id != "ALL" && it.id in selectableProjectIds && isSelectableMasterStatus(it.status) }
+            .map { SharedPickerOption(it.id, it.reference, it.title, it.status) }
+            .distinctBy { it.id }
+            .sortedBy { it.reference.lowercase() }
+        }
+        if (master == "people") {
+            val departmentsById = rows(snapshot, "departments").associateBy { text(it, "id") }
+            return rows(snapshot, "members")
+                .mapNotNull { member ->
+                    val id = text(member, "id")
+                    if (id.isBlank()) null else {
+                        val deptCode = departmentsById[text(member, "department_id")]?.let { text(it, "code") }.orEmpty()
+                        val name = text(member, "display_name").ifBlank { "Unnamed member" }
+                        SharedPickerOption(id, "", name, "Active", description = deptCode)
+                    }
+                }
+                .distinctBy { it.id }
+                .sortedBy { it.title.lowercase() }
+        }
+        if (master == "documentTypes") return rows(snapshot, "documents")
+            .map { text(it, "document_type") }
+            .filter(String::isNotBlank)
+            .distinct()
+            .sortedBy(String::lowercase)
+            .map { SharedPickerOption(it, "", it) }
+
+        val recordTypes = when (master) {
+            "customers" -> setOf("customer")
+            "suppliers" -> setOf("supplier")
+            "parts" -> setOf("part")
+            "products" -> setOf("product")
+            "locations" -> setOf("location", "facility")
+            "routes" -> setOf("production route", "route")
+            else -> emptySet()
+        }
+        val byId = linkedMapOf<String, SharedPickerOption>()
+        rows(snapshot, "records").forEach { record ->
+            if (text(record, "record_type").trim().lowercase() !in recordTypes || !isSelectableMasterStatus(text(record, "status"))) return@forEach
+            val id = text(record, "id")
+            if (id.isBlank()) return@forEach
+            val fields = record["fields"] as? JsonObject
+            byId[id] = SharedPickerOption(
+                id = id,
+                reference = text(record, "reference"),
+                title = text(record, "title"),
+                status = text(record, "status"),
+                mpn = fields?.get("mpn")?.jsonPrimitive?.contentOrNull.orEmpty()
+            )
+        }
+        if (optionKey.isNotBlank()) rows(snapshot, optionKey).forEach { option ->
+            val id = text(option, "id")
+            if (id.isBlank()) return@forEach
+            if (!isSelectableMasterStatus(text(option, "status"))) {
+                byId.remove(id)
+                return@forEach
+            }
+            val visible = byId[id]
+            byId[id] = SharedPickerOption(
+                id = id,
+                reference = text(option, "reference").ifBlank { visible?.reference.orEmpty() },
+                title = text(option, "title").ifBlank { visible?.title.orEmpty() },
+                status = text(option, "status"),
+                mpn = text(option, "mpn").ifBlank { visible?.mpn.orEmpty() }
+            )
+        }
+        return byId.values.sortedBy { it.reference.lowercase() }
+    }
+
     /** Project picker options from the server-authorized workspace projection. */
     fun projects(snapshot: JsonObject?): List<ProjectMetadata> {
         val permitted = rows(snapshot, "records")
@@ -145,3 +238,14 @@ data class SharedDocumentItem(
     val projectId: String,
     val createdAt: String
 )
+
+data class SharedPickerOption(
+    val id: String,
+    val reference: String,
+    val title: String,
+    val status: String = "Active",
+    val mpn: String = "",
+    val description: String = ""
+) {
+    val label: String get() = listOf(reference, title, mpn, description).filter(String::isNotBlank).joinToString(" · ")
+}

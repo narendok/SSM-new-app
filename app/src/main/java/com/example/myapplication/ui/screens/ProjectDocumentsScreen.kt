@@ -138,6 +138,7 @@ fun ProjectDocumentsScreen(
     isAuthenticated: Boolean = false,
     projectCatalog: List<ProjectMetadata> = emptyList(),
     selectedProjectId: String = "ALL",
+    viewDepartment: String? = null,
     sharedSnapshot: JsonObject? = null,
     lifecycleWorkspace: JsonObject? = null,
     lifecycleWorkspaceError: String? = null,
@@ -160,21 +161,40 @@ fun ProjectDocumentsScreen(
         localSelectedProject
     }
     val selectedProjectObj = projectCatalog.firstOrNull { it.id == activeProjectId }
-    val sharedRole = (sharedSnapshot?.get("membership") as? JsonObject)
-        ?.get("role")?.jsonPrimitive?.contentOrNull.orEmpty()
+    val membership = sharedSnapshot?.get("membership") as? JsonObject
+    val sharedRole = membership?.get("role")?.jsonPrimitive?.contentOrNull.orEmpty()
+    val isAdminProfile = if (isAuthenticated) sharedRole == "admin"
+        else currentRole == com.example.myapplication.data.model.DepartmentRole.ADMIN
     val canCreateSharedDocument = isAuthenticated && sharedRole != "viewer" &&
         SharedAccess.departments(sharedSnapshot).isNotEmpty() && createSharedDocument != null
 
     var selectedTopTab by remember { mutableIntStateOf(0) }
-    val currentDeptCode = when (currentRole.code) {
+    LaunchedEffect(isAuthenticated) {
+        if (isAuthenticated && selectedTopTab > 1) selectedTopTab = 0
+    }
+    val authenticatedDeptCode = membership?.let { SharedAccess.text(it, "department_code") }.orEmpty()
+    val roleDeptCode = if (isAuthenticated) authenticatedDeptCode else currentRole.code
+    val focusedDepartmentCode = viewDepartment?.let { id ->
+        SharedAccess.departments(sharedSnapshot).firstOrNull { SharedAccess.text(it, "id") == id }
+            ?.let { SharedAccess.text(it, "code") }
+    }.orEmpty()
+    val scopedDeptCode = if (isAuthenticated && isAdminProfile && focusedDepartmentCode.isNotBlank()) focusedDepartmentCode else roleDeptCode
+    val currentDeptCode = if (isAuthenticated) scopedDeptCode else when (scopedDeptCode) {
         "ESW" -> "FW"
         "TST" -> "QA"
-        else -> currentRole.code
+        "HR", "OPS", "HR/OPS" -> "HROPS"
+        "EFW" -> "FW"
+        "CSW" -> "SW"
+        else -> scopedDeptCode
     }
-    var selectedDeptFilter by remember(currentRole) {
-        mutableStateOf(if (currentRole == com.example.myapplication.data.model.DepartmentRole.ADMIN) "All" else currentDeptCode)
+    var selectedDeptFilter by remember(currentRole, sharedRole, currentDeptCode, viewDepartment) {
+        mutableStateOf(if (isAdminProfile && viewDepartment == null) "All" else currentDeptCode)
     }
-    val effectiveDeptFilter = if (currentRole != com.example.myapplication.data.model.DepartmentRole.ADMIN && selectedDeptFilter == "All") currentDeptCode else selectedDeptFilter
+    val effectiveDeptFilter = when {
+        isAdminProfile && viewDepartment != null && focusedDepartmentCode.isNotBlank() -> focusedDepartmentCode
+        !isAdminProfile && selectedDeptFilter == "All" -> currentDeptCode
+        else -> selectedDeptFilter
+    }
     var selectedDocForPreview by remember { mutableStateOf<ControlledDoc?>(null) }
     var selectedSharedDocForInspect by remember { mutableStateOf<SharedDocumentItem?>(null) }
     val sharedMembership = sharedSnapshot?.get("membership")?.toString()
@@ -258,27 +278,27 @@ fun ProjectDocumentsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "PROJECT DOSSIER & DOCUMENT CONTROL",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            letterSpacing = 0.8.sp
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = if (isAuthenticated) MaterialTheme.colorScheme.primaryContainer else Color(0xFFFFF3E0)
+                        ) {
                             Text(
-                                text = "PROJECT DOSSIER & DOCUMENT CONTROL",
-                                style = MaterialTheme.typography.labelSmall,
+                                text = if (isAuthenticated) "Authorized Workspace" else "TEST WORKSPACE · SIMULATION",
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                letterSpacing = 0.8.sp
+                                maxLines = 1,
+                                softWrap = false,
+                                color = if (isAuthenticated) MaterialTheme.colorScheme.onPrimaryContainer else Color(0xFFE65100),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = if (isAuthenticated) MaterialTheme.colorScheme.primaryContainer else Color(0xFFFFF3E0)
-                            ) {
-                                Text(
-                                    text = if (isAuthenticated) "Authorized Workspace" else "TEST WORKSPACE · SIMULATION",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isAuthenticated) MaterialTheme.colorScheme.onPrimaryContainer else Color(0xFFE65100),
-                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                )
-                            }
                         }
 
                         if (isAuthenticated) {
@@ -474,14 +494,16 @@ fun ProjectDocumentsScreen(
         // Department filter row
         val depts = if (isAuthenticated) {
             val serverDepts = SharedAccess.departments(sharedSnapshot).map { SharedAccess.text(it, "code") }.filter { it.isNotBlank() }.distinct()
-            if (currentRole == com.example.myapplication.data.model.DepartmentRole.ADMIN) {
+            if (isAdminProfile && viewDepartment == null) {
                 listOf("All") + serverDepts
+            } else if (isAdminProfile && focusedDepartmentCode.isNotBlank()) {
+                listOf(focusedDepartmentCode)
             } else {
-                if (serverDepts.contains(currentDeptCode)) listOf(currentDeptCode) else if (serverDepts.isNotEmpty()) serverDepts else listOf(currentDeptCode)
+                if (currentDeptCode.isNotBlank() && serverDepts.contains(currentDeptCode)) listOf(currentDeptCode) else emptyList()
             }
         } else {
             val availableDepartments = (documents.map { it.dept } + stageDocumentDeliverables.map { it.dept }).distinct().sorted()
-            (if (currentRole == com.example.myapplication.data.model.DepartmentRole.ADMIN) listOf("All") else emptyList()) + availableDepartments
+            (if (isAdminProfile) listOf("All") else emptyList()) + availableDepartments
         }
 
         Row(
@@ -1069,7 +1091,7 @@ fun ProjectDocumentsScreen(
         DraftDocumentDialog(
             scmsRepository = scmsRepository,
             projectId = activeProjectId,
-            initialDepartment = if (currentRole == com.example.myapplication.data.model.DepartmentRole.ADMIN) "EHW" else currentRole.code,
+            initialDepartment = if (isAdminProfile) "EHW" else currentDeptCode,
             onDismiss = { showDraftModal = false },
             onSuccess = { showDraftModal = false }
         )

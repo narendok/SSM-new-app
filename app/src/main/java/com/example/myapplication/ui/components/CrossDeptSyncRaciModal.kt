@@ -134,7 +134,7 @@ fun CrossDeptSyncRaciModal(
                                 }
                             }
                             Text(
-                                text = "PO-TATA-SLCT-2026-9041 · 50,000 units · ₹20.33 Cr · ${activeProject.reference}",
+                                text = "${activeProject.id} · ${activeProject.volume} · ${activeProject.status} · ${activeProject.reference}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -243,16 +243,16 @@ fun CrossDeptSyncRaciModal(
                                 // Grid of 6 Key Metrics matching web
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        MetricCard(modifier = Modifier.weight(1f), label = "Customer PO", value = "PO-TATA-SLCT-2026-9041", tag = "Verified")
-                                        MetricCard(modifier = Modifier.weight(1f), label = "Order Volume", value = activeProject.volume, tag = "Contracted")
+                                        MetricCard(modifier = Modifier.weight(1f), label = "Project Ref", value = activeProject.reference, tag = "Local TEST")
+                                        MetricCard(modifier = Modifier.weight(1f), label = "Scope / Volume", value = activeProject.volume, tag = "Draft Fixture")
                                     }
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        MetricCard(modifier = Modifier.weight(1f), label = "Total Value", value = activeProject.totalValue, tag = "Locked")
-                                        MetricCard(modifier = Modifier.weight(1f), label = "Advance Deposit", value = "₹6.10 Cr", tag = "Reconciled")
+                                        MetricCard(modifier = Modifier.weight(1f), label = "Est. Value", value = activeProject.totalValue, tag = "Illustrative")
+                                        MetricCard(modifier = Modifier.weight(1f), label = "Active Stage", value = activeProject.stage, tag = activeProject.status)
                                     }
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        MetricCard(modifier = Modifier.weight(1f), label = "Linked Project", value = activeProject.reference, tag = activeProject.status)
-                                        MetricCard(modifier = Modifier.weight(1f), label = "Audit Readiness", value = "100% IATF 16949", tag = "0 NCRs")
+                                        MetricCard(modifier = Modifier.weight(1f), label = "Client Scope", value = activeProject.client, tag = "Fictional")
+                                        MetricCard(modifier = Modifier.weight(1f), label = "Lifecycle Model", value = "Phases 0–9 · RACI", tag = "Configurable")
                                     }
                                 }
                             }
@@ -270,14 +270,14 @@ fun CrossDeptSyncRaciModal(
                             }
 
                             val flows = listOf(
-                                Triple("SAL", "Customer SOR & Commercial Quotation Freeze", "Customer SOR (HLPL-AI4T-SAL-SOR-01) and Mutual NDA confirmed. Advance commercial deposit verified."),
-                                Triple("FIN", "Milestone Advance Allocation & Working Capital", "₹6.10 Cr advance reconciled. Stage 4 engineering and SMT tooling working capital released."),
-                                Triple("PUR", "Strategic Long-Lead Procurement Buffers", "Quectel 4G modem (14-wk buffer) & STM32 MCU POs placed with Arrow and Mouser against annual 50k target."),
-                                Triple("EHW", "Hardware Architecture & Schematics Rev 1.2", "PRS HLPL-AI4T-EHW-PRS-01 frozen. Schematics netlist released for DFM and SMT line staging."),
-                                Triple("EMF", "SMT Line 2 Tooling & Control Plan Validation", "Reflow thermal profiling and Control Plan EMF-CP-01 validated for pilot box-build run."),
-                                Triple("QA", "Automotive DVP&R Pre-Compliance Matrix", "18-test automotive testing matrix active (ISO 7637-2 transients, CISPR 25 Class 3, IP67 enclosure seal)."),
-                                Triple("TST", "Production EOL Automated Jig Calibration", "Chroma 8000 automated flashing & CAN telemetry verification jig calibrated for 100% PDI."),
-                                Triple("HR", "Certified Personnel & Skills Matrix Alignment", "IPC-A-610 certified SMT operators and automotive systems engineers assigned.")
+                                Triple("SAL", "Customer SOR & Requirement Intake Flow", "Intake SOR draft (${activeProject.reference}-SAL-SOR) and commercial qualification tracked under Phase TG-0/TG-1."),
+                                Triple("FIN", "Milestone Budget & Expense Governance", "Department budgets, PO milestones, and expense ceilings tracked per pinned web settings revision."),
+                                Triple("PUR", "Component Lead-Time & AVL Sourcing Check", "Distributor lead-time buffers and franchised AVL candidates flagged prior to Phase TG-4 procurement."),
+                                Triple("EHW", "Hardware Architecture & Schematic Gate", "PRS baseline, schematic review, and Gerber package gated behind Stage 3 requirement freeze."),
+                                Triple("EMF", "SMT Pilot Line & Control Plan Prep", "Line readiness, stencil/feeder allocation, and process control plan linked to released BOM revision."),
+                                Triple("QA", "DVP&R Verification & IQC Quarantine Flow", "Incoming material enters IQC hold until QA inspection sign-off; DVP&R matrix tracks lab criteria."),
+                                Triple("TST", "EOL Functional Test Jig Readiness", "Bench continuity and automated EOL fixture verification checklist linked before pilot dispatch."),
+                                Triple("HR", "Department Ownership & Competency Matrix", "Multi-department role assignments, safety acknowledgements, and training completion tracked via HR.")
                             )
 
                             items(flows) { (code, title, detail) ->

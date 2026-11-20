@@ -17,23 +17,32 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.R
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.ui.text.style.TextOverflow
 import com.example.myapplication.ui.components.UnifiedSearchModal
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SupervisorAccount
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,6 +73,7 @@ import com.example.myapplication.ui.components.RoleSwitcherDialog
 import com.example.myapplication.ui.components.SyncBadge
 import com.example.myapplication.ui.components.UniversalScannerModal
 import com.example.myapplication.ui.viewmodel.MainViewModel
+import kotlinx.serialization.json.contentOrNull
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,9 +95,68 @@ fun AppShell(viewModel: MainViewModel) {
     } else com.example.myapplication.data.model.AutomotiveProjects.all
     val pendingApprovalsCount = approvals.count { it.outcome == "Pending" }
 
+    val orgConfig by viewModel.orgConfig.collectAsState()
+    val customerChanges by viewModel.customerChanges.collectAsState()
+    val isAuth = authState is AuthState.Authenticated
+    val activeProjectFilter = if (isAuth && projectCatalog.none { it.id == selectedProject }) "ALL" else selectedProject
+    val activeMembership = sharedSnapshot?.get("membership") as? kotlinx.serialization.json.JsonObject
+    val activeMembershipRole = activeMembership?.let { com.example.myapplication.data.model.SharedAccess.text(it, "role") }.orEmpty()
+    val activeMembershipDepartmentRaw = activeMembership?.let { com.example.myapplication.data.model.SharedAccess.text(it, "department_code") }.orEmpty().uppercase()
+    val activeMembershipDepartment = when (activeMembershipDepartmentRaw) {
+        "EFW" -> "FW"
+        "CSW" -> "SW"
+        "HR", "OPS", "HR/OPS" -> "HROPS"
+        else -> activeMembershipDepartmentRaw
+    }
+    val activeMembershipDepartmentIds = buildSet {
+        activeMembership?.let { com.example.myapplication.data.model.SharedAccess.text(it, "department_id") }
+            ?.takeIf(String::isNotBlank)?.let(::add)
+        (activeMembership?.get("department_ids") as? kotlinx.serialization.json.JsonArray)
+            ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull }
+            ?.filter(String::isNotBlank)?.forEach(::add)
+        com.example.myapplication.data.model.SharedAccess.departments(sharedSnapshot)
+            .filter { com.example.myapplication.data.model.SharedAccess.text(it, "code").equals(activeMembershipDepartment, true) }
+            .map { com.example.myapplication.data.model.SharedAccess.text(it, "id") }
+            .filter(String::isNotBlank).forEach(::add)
+    }
+    fun matchesActiveDepartment(row: kotlinx.serialization.json.JsonObject): Boolean {
+        if (!isAuth) return true
+        if (activeMembershipRole == "admin") return viewDepartment == null ||
+            com.example.myapplication.data.model.SharedAccess.text(row, "department_id") == viewDepartment ||
+                com.example.myapplication.data.model.SharedAccess.text(row, "reviewer_department_id") == viewDepartment
+        return com.example.myapplication.data.model.SharedAccess.text(row, "department_id") in activeMembershipDepartmentIds ||
+            com.example.myapplication.data.model.SharedAccess.text(row, "reviewer_department_id") in activeMembershipDepartmentIds ||
+            com.example.myapplication.data.model.SharedAccess.text(row, "department_code").equals(activeMembershipDepartment, true) ||
+            com.example.myapplication.data.model.SharedAccess.text(row, "reviewer_department_code").equals(activeMembershipDepartment, true)
+    }
+    val sharedRecordsCount = if (isAuth) {
+        com.example.myapplication.data.model.SharedAccess.rows(sharedSnapshot, "records").count(::matchesActiveDepartment)
+    } else null
+    val sharedApprovalsCount = if (isAuth) {
+        com.example.myapplication.data.model.SharedAccess.rows(sharedSnapshot, "approvals")
+            .count { com.example.myapplication.data.model.SharedAccess.canDecide(sharedSnapshot, it) }
+            .let { total ->
+                if (viewDepartment == null || (sharedSnapshot?.get("membership") as? kotlinx.serialization.json.JsonObject)
+                        ?.let { com.example.myapplication.data.model.SharedAccess.text(it, "role") } != "admin") total
+                else com.example.myapplication.data.model.SharedAccess.rows(sharedSnapshot, "approvals")
+                    .count { approval ->
+                        com.example.myapplication.data.model.SharedAccess.canDecide(sharedSnapshot, approval) &&
+                            com.example.myapplication.data.model.SharedAccess.text(approval, "reviewer_department_id") == viewDepartment
+                    }
+            }
+    } else null
+    val lifecycleStagesCount = if (isAuth) {
+        (((lifecycleWorkspace?.get("revision") as? kotlinx.serialization.json.JsonObject)
+            ?.get("definition") as? kotlinx.serialization.json.JsonObject)
+            ?.get("stages") as? kotlinx.serialization.json.JsonArray)?.size ?: 0
+    } else null
+
     var showAuthDialog by remember { mutableStateOf(false) }
     var showSharedWorkspace by remember { mutableStateOf(false) }
+    var showBusinessWorkspace by remember { mutableStateOf(false) }
+    var businessInitialView by remember { mutableStateOf("budgets") }
     var showRoleSwitcherDialog by remember { mutableStateOf(false) }
+    var showAdminDeptDropdown by remember { mutableStateOf(false) }
     var showScannerModal by remember { mutableStateOf(false) }
     var showAiAssistantModal by remember { mutableStateOf(false) }
     var showApprovalsModal by remember { mutableStateOf(false) }
@@ -98,62 +167,202 @@ fun AppShell(viewModel: MainViewModel) {
         return
     }
 
+    if (showBusinessWorkspace && isAuth) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Expenses, Travel & Services",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { showBusinessWorkspace = false }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back to dashboard"
+                            )
+                        }
+                    }
+                )
+            }
+        ) { bizPadding ->
+            Box(modifier = Modifier.padding(bizPadding)) {
+                SharedBusinessScreen(viewModel = viewModel, initialView = businessInitialView)
+            }
+        }
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
+                    val serverRoleRaw = (sharedSnapshot?.get("membership") as? kotlinx.serialization.json.JsonObject)
+                        ?.get("role")?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }.orEmpty()
+                    val membership = sharedSnapshot?.get("membership") as? kotlinx.serialization.json.JsonObject
+                    val serverDepartmentCode = membership?.let { com.example.myapplication.data.model.SharedAccess.text(it, "department_code") }
+                        .orEmpty().uppercase().let { code -> when (code) {
+                            "EFW" -> "FW"
+                            "CSW" -> "SW"
+                            "HR", "OPS", "HR/OPS" -> "HROPS"
+                            else -> code
+                        } }
+                    val isAdmin = (!isAuth && currentRole == com.example.myapplication.data.model.DepartmentRole.ADMIN) || serverRoleRaw == "admin"
+                    val activeRoleCode = when {
+                        !isAuth -> currentRole.code
+                        serverRoleRaw == "admin" -> "ADMIN"
+                        serverRoleRaw == "department_lead" -> "LEAD"
+                        serverRoleRaw == "viewer" -> "VIEW"
+                        serverRoleRaw == "member" -> "USER"
+                        serverRoleRaw.isNotBlank() -> serverRoleRaw.take(5).uppercase()
+                        else -> currentRole.code
+                    }
+                    val activeDeptLabel = when {
+                        isAuth && !isAdmin -> serverDepartmentCode.ifBlank { "My Dept" }
+                        !isAdmin -> activeRoleCode
+                        viewDepartment != null -> {
+                            if (isAuth) {
+                                val depts = com.example.myapplication.data.model.SharedAccess.departments(sharedSnapshot)
+                                if (depts.isEmpty()) {
+                                    "Loading..."
+                                } else {
+                                    val match = depts.firstOrNull { com.example.myapplication.data.model.SharedAccess.text(it, "id") == viewDepartment }
+                                    match?.let {
+                                        val code = com.example.myapplication.data.model.SharedAccess.text(it, "code")
+                                        if (code.isNotBlank()) code else com.example.myapplication.data.model.SharedAccess.text(it, "name")
+                                    } ?: "Unknown Dept"
+                                }
+                            } else {
+                                val localMatch = com.example.myapplication.data.model.DepartmentRole.entries.firstOrNull { it.code.equals(viewDepartment, ignoreCase = true) }
+                                localMatch?.code ?: "Unknown Dept"
+                            }
+                        }
+                        else -> "Admin · All"
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(6.dp),
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(24.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
                                     text = "SS",
                                     color = MaterialTheme.colorScheme.onPrimary,
                                     fontWeight = FontWeight.Black,
-                                    fontSize = 15.sp
+                                    fontSize = 12.sp
                                 )
                             }
                         }
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "SSM Mobile",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = 0.3.sp,
-                                    maxLines = 1
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Surface(
-                                    modifier = Modifier.clickable { showRoleSwitcherDialog = true },
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                        Text(
+                            text = "SSM One",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                        Box {
+                            Surface(
+                            modifier = Modifier.clickable(enabled = isAdmin || !isAuth) {
+                                    if (isAdmin) showAdminDeptDropdown = true else showRoleSwitcherDialog = true
+                                },
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(6.dp)
-                                                .clip(androidx.compose.foundation.shape.CircleShape)
-                                                .background(Color(0xFF2E7D32))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(5.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isAuth) Color(0xFF1565C0) else Color(0xFF2E7D32))
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text(
+                                        text = activeDeptLabel,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.5.sp,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                    if (isAdmin) {
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                        Icon(
+                                            Icons.Default.ArrowDropDown,
+                                            contentDescription = "Select Department",
+                                            modifier = Modifier.size(13.dp),
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer
                                         )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = currentRole.code,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                            maxLines = 1
-                                        )
+                                    }
+                                }
+                            }
+
+                            if (isAdmin || !isAuth) {
+                                DropdownMenu(
+                                    expanded = showAdminDeptDropdown,
+                                    onDismissRequest = { showAdminDeptDropdown = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("All Departments (Executive Admin)", fontWeight = FontWeight.Bold, fontSize = 12.sp) },
+                                        onClick = {
+                                            viewModel.selectDepartment(null)
+                                            if (!isAuth) {
+                                                viewModel.scmsRepository.switchRole(com.example.myapplication.data.model.DepartmentRole.ADMIN)
+                                            }
+                                            showAdminDeptDropdown = false
+                                        }
+                                    )
+                                    HorizontalDivider()
+                                    if (isAuth) {
+                                        val configuredDepts = com.example.myapplication.data.model.SharedAccess.departments(sharedSnapshot)
+                                        if (configuredDepts.isEmpty()) {
+                                            DropdownMenuItem(
+                                                text = { Text("Loading departments...", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                                onClick = { showAdminDeptDropdown = false },
+                                                enabled = false
+                                            )
+                                        } else {
+                                            configuredDepts.forEach { dept ->
+                                                val deptId = com.example.myapplication.data.model.SharedAccess.text(dept, "id")
+                                                val deptCode = com.example.myapplication.data.model.SharedAccess.text(dept, "code").ifBlank { "DEPT" }
+                                                val deptName = com.example.myapplication.data.model.SharedAccess.text(dept, "name")
+                                                val label = if (deptName.isNotBlank()) "$deptCode · $deptName" else deptCode
+                                                DropdownMenuItem(
+                                                    text = { Text(label, fontSize = 12.sp) },
+                                                    onClick = {
+                                                        viewModel.selectDepartment(deptId)
+                                                        showAdminDeptDropdown = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        com.example.myapplication.data.model.DepartmentRole.entries
+                                            .filter { it != com.example.myapplication.data.model.DepartmentRole.ADMIN && !it.isClient }
+                                            .forEach { role ->
+                                                DropdownMenuItem(
+                                                    text = { Text("${role.code} · ${role.title}", fontSize = 12.sp) },
+                                                    onClick = {
+                                                        viewModel.selectDepartment(role.code)
+                                                        viewModel.scmsRepository.switchRole(role)
+                                                        showAdminDeptDropdown = false
+                                                    }
+                                                )
+                                            }
                                     }
                                 }
                             }
@@ -161,94 +370,51 @@ fun AppShell(viewModel: MainViewModel) {
                     }
                 },
                 actions = {
-                    val connectionLabel = when {
-                        authState is AuthState.Authenticating -> "Signing in"
-                        authState !is AuthState.Authenticated -> "Local demo"
-                        sharedBusy && sharedSnapshot == null -> "Loading cloud data"
-                        sharedError != null -> "Cloud read failed"
-                        sharedSnapshot != null -> "Cloud data loaded"
-                        else -> "Not connected"
-                    }
-                    val connectionColor = when (connectionLabel) {
-                        "Cloud data loaded" -> MaterialTheme.colorScheme.tertiary
-                        "Cloud read failed" -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = connectionColor.copy(alpha = 0.10f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, connectionColor.copy(alpha = 0.25f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(androidx.compose.foundation.shape.CircleShape)
-                                    .background(connectionColor)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = connectionLabel,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = connectionColor,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
                     IconButton(
                         onClick = { showAiAssistantModal = true },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(30.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = "Enterprise AI Assistant",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(19.dp)
+                            modifier = Modifier.size(17.dp)
                         )
                     }
                     IconButton(
                         onClick = { showScannerModal = true },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(30.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.QrCodeScanner,
                             contentDescription = "Universal Scanner",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(19.dp)
+                            modifier = Modifier.size(17.dp)
                         )
                     }
                     IconButton(
                         onClick = { viewModel.refreshActiveTab() },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(30.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh",
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(17.dp)
                         )
-                    }
-                    if (authState is AuthState.Authenticated) {
-                        IconButton(onClick = { showSharedWorkspace = true }, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Default.AccountTree, contentDescription = "Shared TEST records")
-                        }
                     }
                     IconButton(
                         onClick = { showAuthDialog = true },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(30.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.AccountCircle,
                             contentDescription = "Account / Sign In",
-                            tint = if (authState is AuthState.Authenticated) {
+                            tint = if (isAuth) {
                                 MaterialTheme.colorScheme.primary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 },
@@ -258,17 +424,17 @@ fun AppShell(viewModel: MainViewModel) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            SmallFloatingActionButton(
                 onClick = { showSearchPopupModal = true },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape,
-                modifier = Modifier.size(52.dp)
+                modifier = Modifier.size(40.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Unified Search & Voice Control",
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         },
@@ -278,41 +444,40 @@ fun AppShell(viewModel: MainViewModel) {
                     selected = selectedTab == 0,
                     onClick = { viewModel.selectTab(0) },
                     icon = { Icon(Icons.Default.Dashboard, contentDescription = "Dashboard") },
-                    label = { Text("Cockpit", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+                    label = { Text("Dashboard", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { viewModel.selectTab(1) },
-                    icon = { Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = "Records") },
-                    label = { Text("Records", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+                    icon = { Icon(Icons.Default.Analytics, contentDescription = "Work") },
+                    label = { Text("Work", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { viewModel.selectTab(2) },
-                    icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                    label = { Text("Search", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+                    icon = { Icon(Icons.Default.ListAlt, contentDescription = "Records") },
+                    label = { Text("Records", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 3,
                     onClick = { viewModel.selectTab(3) },
-                    icon = { Icon(Icons.Default.Folder, contentDescription = "Documents") },
-                    label = { Text("Docs", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+                    icon = { Icon(Icons.Default.Folder, contentDescription = "Vault") },
+                    label = { Text("Vault", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 4,
                     onClick = { viewModel.selectTab(4) },
-                    icon = { Icon(Icons.Default.Forum, contentDescription = "Team & Chat") },
-                    label = { Text("Team", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                    label = { Text("Profile", style = MaterialTheme.typography.labelSmall, maxLines = 1) }
                 )
             }
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            // The authenticated selector scopes the connected task board only. Other tabs
-            // retain their own source until a verified project-link contract is available.
-            if (selectedTab == 0) {
+            // Scoped project selector dropdown: active on Dashboard (Tab 0) and Project Analysis (Tab 1)
+            if (selectedTab == 0 || selectedTab == 1) {
                 com.example.myapplication.ui.components.ProjectFilterDropdown(
-                    selectedProjectId = selectedProject,
+                    selectedProjectId = activeProjectFilter,
                     onProjectSelected = { viewModel.scmsRepository.selectProject(it) },
                     projects = projectCatalog
                 )
@@ -326,14 +491,24 @@ fun AppShell(viewModel: MainViewModel) {
                     isAuthenticated = authState is AuthState.Authenticated,
                     projectCatalog = projectCatalog,
                     sharedTasks = if (authState is AuthState.Authenticated) com.example.myapplication.data.model.SharedAccess.rows(sharedSnapshot, "tasks")
-                        .filter { viewDepartment == null || com.example.myapplication.data.model.SharedAccess.text(it, "department_id") == viewDepartment }
+                        .filter(::matchesActiveDepartment)
                         .map { task ->
                             fun t(key: String) = com.example.myapplication.data.model.SharedAccess.text(task, key)
                             val status = t("status")
                             val projectId = com.example.myapplication.data.model.SharedAccess.projectIdForTask(sharedSnapshot, task)
+                            val deptCode = t("department_code").ifBlank {
+                                com.example.myapplication.data.model.SharedAccess.rows(sharedSnapshot, "departments")
+                                    .firstOrNull { com.example.myapplication.data.model.SharedAccess.text(it, "id") == t("department_id") }
+                                    ?.let { com.example.myapplication.data.model.SharedAccess.text(it, "code") }
+                                    .orEmpty()
+                            }
                             com.example.myapplication.data.model.DailyTaskItem(
-                                id = t("id"), title = t("title"), dept = t("department_code"), priority = t("priority"),
-                                assignee = t("assignee_name").ifBlank { t("assignee") }, dueDate = t("due_at"),
+                                id = t("id"),
+                                title = t("title"),
+                                dept = deptCode,
+                                priority = t("priority").ifBlank { "Normal" },
+                                assignee = t("assignee_name").ifBlank { t("assignee") }.ifBlank { "Dept queue" },
+                                dueDate = t("due_at").take(10).ifBlank { "Unscheduled" },
                                 isCompleted = status.equals("Complete", true) || status.equals("Completed", true),
                                 lane = com.example.myapplication.data.model.SharedAccess.taskLane(status),
                                 projectId = projectId
@@ -363,54 +538,105 @@ fun AppShell(viewModel: MainViewModel) {
                                 })
                             }
                         }
-                    }
+                    },
+                    sharedRecordsCount = sharedRecordsCount,
+                    sharedApprovalsCount = sharedApprovalsCount,
+                    lifecycleStagesCount = lifecycleStagesCount,
+                    onOpenBusinessWorkspace = if (isAuth) ({ section -> businessInitialView = section; showBusinessWorkspace = true }) else null,
+                    sharedSnapshot = sharedSnapshot,
+                    viewDepartment = viewDepartment,
+                    lifecycleWorkspace = lifecycleWorkspace,
+                    onOpenDepartmentRecords = { viewModel.selectTab(2) },
+                    onOpenApprovals = { showApprovalsModal = true },
+                    canReopenSharedTask = { id ->
+                        val task = com.example.myapplication.data.model.SharedAccess.rows(sharedSnapshot, "tasks")
+                            .firstOrNull { com.example.myapplication.data.model.SharedAccess.text(it, "id") == id }
+                        task != null && com.example.myapplication.data.model.SharedAccess.canUpdateTask(sharedSnapshot, task)
+                    },
+                    isSharedBusy = isAuth && sharedBusy
                 )
-                1 -> DepartmentRecordsScreen(
+                1 -> ProjectAnalysisScreen(
                     scmsRepository = viewModel.scmsRepository,
-                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true },
-                    sharedBusinessContent = if(authState is AuthState.Authenticated) { section -> SharedBusinessScreen(viewModel, section) } else null,
-                    projectCatalog = projectCatalog
-                )
-                2 -> UnifiedSearchScreen(
-                    scmsRepository = viewModel.scmsRepository
-                )
-                3 -> ProjectDocumentsScreen(
-                    scmsRepository = viewModel.scmsRepository,
-                    onOpenRoleSwitcher = { showRoleSwitcherDialog = true },
-                    isAuthenticated = authState is AuthState.Authenticated,
+                    selectedProjectId = activeProjectFilter,
                     projectCatalog = projectCatalog,
-                    selectedProjectId = selectedProject,
+                    isAuthenticated = isAuth,
+                    sharedSnapshot = sharedSnapshot,
+                    lifecycleWorkspace = lifecycleWorkspace,
+                    viewDepartment = viewDepartment,
+                    onOpenBusinessWorkspace = { section -> businessInitialView = section; showBusinessWorkspace = true },
+                    onOpenDepartmentRecords = { viewModel.selectTab(2) },
+                    onOpenApprovals = { showApprovalsModal = true }
+                )
+                2 -> DepartmentRecordsHubScreen(
+                    scmsRepository = viewModel.scmsRepository,
+                    isAuthenticated = isAuth,
+                    sharedSnapshot = sharedSnapshot,
+                    lifecycleWorkspace = lifecycleWorkspace,
+                    selectedProjectId = activeProjectFilter,
+                    viewDepartment = viewDepartment,
+                    mainViewModel = viewModel,
+                    projectCatalog = projectCatalog,
+                    onOpenVault = { viewModel.selectTab(3) },
+                    onOpenBusinessWorkspace = { section -> businessInitialView = section; showBusinessWorkspace = true }
+                )
+                3 -> DocumentControlScreen(
+                    scmsRepository = viewModel.scmsRepository,
+                    isAuthenticated = isAuth,
+                    projectCatalog = projectCatalog,
+                    selectedProjectId = activeProjectFilter,
+                    viewDepartment = viewDepartment,
                     sharedSnapshot = sharedSnapshot,
                     lifecycleWorkspace = lifecycleWorkspace,
                     lifecycleWorkspaceError = lifecycleWorkspaceError,
                     lifecycleWorkspaceBusy = lifecycleWorkspaceBusy,
-                    onRefreshLifecycleWorkspace = viewModel::refreshLifecycleWorkspace,
-                    onLinkReusableAsset = viewModel::linkReusableAsset,
-                    loadOriginalRevisions = viewModel::controlledOriginalRevisions,
-                    originalDownload = viewModel::controlledOriginalDownload,
-                    createSharedDocument = viewModel::createSharedDocumentWithOriginal
+                    orgConfig = orgConfig,
+                    customerChanges = customerChanges,
+                    onRefreshLifecycleWorkspace = { viewModel.refreshLifecycleWorkspace() },
+                    onLinkReusableAsset = { projectId, assetRevisionId, assessment ->
+                        viewModel.linkReusableAsset(projectId, assetRevisionId, assessment)
+                    },
+                    loadOriginalRevisions = { documentId -> viewModel.controlledOriginalRevisions(documentId) },
+                    originalDownload = { fileId -> viewModel.controlledOriginalDownload(fileId) },
+                    createSharedDocument = { projectId, departmentId, title, documentType, originalName, contentType, bytes ->
+                        viewModel.createSharedDocumentWithOriginal(
+                            projectId,
+                            departmentId,
+                            title,
+                            documentType,
+                            originalName,
+                            contentType,
+                            bytes
+                        )
+                    },
+                    onOpenBusinessWorkspace = if (isAuth) ({ businessInitialView = "budgets"; showBusinessWorkspace = true }) else null,
+                    onOpenTickets = if (isAuth) ({ businessInitialView = "tickets"; showBusinessWorkspace = true }) else null
                 )
-                4 -> if(authState is AuthState.Authenticated) SharedBusinessScreen(viewModel, "communication") else TeamAndChatScreen(
-                    scmsRepository = viewModel.scmsRepository,
+                4 -> MyProfileAndWorkflowsScreen(
+                    viewModel = viewModel,
                     onOpenRoleSwitcher = { showRoleSwitcherDialog = true },
-                    onOpenAuthDialog = { showAuthDialog = true }
+                    onOpenAuthDialog = { showAuthDialog = true },
+                    onOpenDataWorkspace = if (isAuth) ({ showSharedWorkspace = true }) else null,
+                    onOpenBusinessWorkspace = if (isAuth) ({ section -> businessInitialView = section; showBusinessWorkspace = true }) else null
                 )
             }
             }
         }
     }
-    if (showRoleSwitcherDialog && authState is AuthState.Authenticated) {
+    if (showRoleSwitcherDialog && authState is AuthState.Authenticated &&
+        (sharedSnapshot?.get("membership") as? kotlinx.serialization.json.JsonObject)?.let {
+            com.example.myapplication.data.model.SharedAccess.text(it, "role") == "admin"
+        } == true) {
         androidx.compose.material3.AlertDialog(onDismissRequest = { showRoleSwitcherDialog = false },
             title = { Text("Department view") },
             text = { Column {
                 Text("Navigation only. Your signed-in identity and permissions stay unchanged.")
                 if ((sharedSnapshot?.get("membership") as? kotlinx.serialization.json.JsonObject)?.get("role")?.toString() == "\"admin\"") {
                     androidx.compose.material3.TextButton(onClick = { viewModel.selectDepartment(null); showRoleSwitcherDialog = false }) { Text("All permitted departments") }
-                }
-                com.example.myapplication.data.model.SharedAccess.departments(sharedSnapshot).forEach { dept ->
-                    androidx.compose.material3.TextButton(onClick = {
-                        viewModel.selectDepartment(com.example.myapplication.data.model.SharedAccess.text(dept, "id")); showRoleSwitcherDialog = false
-                    }) { Text(com.example.myapplication.data.model.SharedAccess.text(dept, "name")) }
+                    com.example.myapplication.data.model.SharedAccess.departments(sharedSnapshot).forEach { dept ->
+                        androidx.compose.material3.TextButton(onClick = {
+                            viewModel.selectDepartment(com.example.myapplication.data.model.SharedAccess.text(dept, "id")); showRoleSwitcherDialog = false
+                        }) { Text(com.example.myapplication.data.model.SharedAccess.text(dept, "name")) }
+                    }
                 }
             } }, confirmButton = { androidx.compose.material3.TextButton(onClick = { showRoleSwitcherDialog = false }) { Text("Close") } })
     }
@@ -462,6 +688,7 @@ fun AppShell(viewModel: MainViewModel) {
     if (showSearchPopupModal) {
         UnifiedSearchModal(
             scmsRepository = viewModel.scmsRepository,
+            isAuthenticated = authState is AuthState.Authenticated,
             onDismiss = { showSearchPopupModal = false }
         )
     }
@@ -473,6 +700,7 @@ fun AppShell(viewModel: MainViewModel) {
         ) {
             ApprovalsScreen(
                 scmsRepository = viewModel.scmsRepository,
+                isAuthenticated = authState is AuthState.Authenticated,
                 onBack = { showApprovalsModal = false }
             )
         }

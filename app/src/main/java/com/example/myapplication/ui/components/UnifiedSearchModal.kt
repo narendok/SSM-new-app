@@ -18,6 +18,7 @@ import com.example.myapplication.ui.screens.UnifiedSearchScreen
 @Composable
 fun UnifiedSearchModal(
     scmsRepository: ScmsRepository,
+    isAuthenticated: Boolean = false,
     onDismiss: () -> Unit,
     onRecordSelected: (Any) -> Unit = {}
 ) {
@@ -32,6 +33,7 @@ fun UnifiedSearchModal(
         Box(modifier = Modifier.fillMaxSize()) {
             UnifiedSearchScreen(
                 scmsRepository = scmsRepository,
+                isAuthenticated = isAuthenticated,
                 onRecordSelected = { record ->
                     onRecordSelected(record)
                     onDismiss()

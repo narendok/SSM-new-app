@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,6 +45,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -54,57 +56,108 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.myapplication.data.model.DvprTestItem
 import com.example.myapplication.data.model.IngestionRow
+import com.example.myapplication.data.model.SharedAccess
 import com.example.myapplication.data.repository.ScmsRepository
+import kotlinx.serialization.json.JsonObject
 
 @Composable
 fun AdaptiveIngestionAndQualityScreen(
-    scmsRepository: ScmsRepository
+    scmsRepository: ScmsRepository,
+    isAuthenticated: Boolean = false,
+    sharedSnapshot: JsonObject? = null
 ) {
     val currentRole by scmsRepository.currentRole.collectAsState()
+    val selectedProject by scmsRepository.selectedProject.collectAsState()
     val ingestionRows by scmsRepository.ingestionRows.collectAsState()
     val dvprTests by scmsRepository.dvprTests.collectAsState()
 
-    var selectedTopTab by remember { mutableIntStateOf(0) } // 0: Adaptive Ingestion Gate, 1: DVP&R Pre-Compliance
+    var selectedTopTab by remember { mutableIntStateOf(0) } // 0: Ingestion, 1: QA DVP&R, 2: Device Arch
     var activeDistributorPreset by remember { mutableStateOf("All Presets") }
     var selectedDvprForSignOff by remember { mutableStateOf<DvprTestItem?>(null) }
     var inwardSuccessGrn by remember { mutableStateOf<String?>(null) }
 
     val presets = listOf("All Presets", "Mouser", "Digi-Key", "Custom Harness")
+    val serverRecords = remember(sharedSnapshot, isAuthenticated) {
+        if (!isAuthenticated) emptyList() else SharedAccess.rows(sharedSnapshot, "records")
+    }
+    val membership = sharedSnapshot?.get("membership") as? JsonObject
+    val rawProfileCode = if (isAuthenticated) {
+        if (membership?.let { SharedAccess.text(it, "role") } == "admin") "ADMIN"
+        else membership?.let { SharedAccess.text(it, "department_code") }.orEmpty().uppercase()
+    } else currentRole.code
+    val profileCode = when (rawProfileCode) {
+        "HR", "OPS", "HR/OPS" -> "HROPS"
+        "EFW" -> "FW"
+        "CSW" -> "SW"
+        else -> rawProfileCode
+    }
+    val profileTabs = when (profileCode) {
+        "ADMIN" -> listOf(0, 1, 2)
+        "QA", "TST" -> listOf(0, 1)
+        "EHW", "FW", "SW", "MECH" -> listOf(0, 2)
+        "PUR", "FIN", "EMF", "MMF", "HROPS" -> listOf(0)
+        else -> emptyList()
+    }
+    // Authenticated QA/engineering report authoring is not wired to shared mutations yet.
+    // Keep the shared read-only record view available and never expose local sample sign-offs.
+    val allowedTabs = if (isAuthenticated && profileTabs.isNotEmpty()) listOf(0) else profileTabs
+    val contentTab = selectedTopTab.takeIf { it in allowedTabs } ?: allowedTabs.firstOrNull() ?: -1
+    LaunchedEffect(profileCode, isAuthenticated) {
+        if (selectedTopTab !in allowedTabs) selectedTopTab = allowedTabs.firstOrNull() ?: 0
+    }
+    val visibleRecords = remember(serverRecords, profileCode) {
+        if (profileCode == "ADMIN") serverRecords else when (profileCode) {
+            "PUR" -> serverRecords.filter { SharedAccess.text(it, "record_type") in setOf("Purchase order", "Supplier", "Quotation", "Part", "BOM") }
+            "FIN" -> serverRecords.filter { SharedAccess.text(it, "record_type") in setOf("Purchase order", "Invoice", "Expense", "Payment") }
+            "QA", "TST" -> serverRecords.filter { SharedAccess.text(it, "record_type") in setOf("Inspection", "Test report", "DVP&R", "Calibration", "Engineering change") }
+            "EHW", "FW", "SW", "MECH" -> serverRecords.filter { SharedAccess.text(it, "record_type") in setOf("BOM", "Schematic", "CAD", "Firmware", "Software", "Part", "Engineering change") }
+            "EMF", "MMF" -> serverRecords.filter { SharedAccess.text(it, "record_type") in setOf("Production order", "Part", "Inspection", "Equipment") }
+            "HROPS" -> serverRecords.filter { SharedAccess.text(it, "record_type") in setOf("HR document", "Training", "Compliance") }
+            else -> emptyList()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Tab Row: Ingestion Gate vs QA DVP&R Certification vs Architecture
-        TabRow(
-            selectedTabIndex = selectedTopTab,
+        // Tab Row: compact 1-line tabs
+        if (allowedTabs.isEmpty()) {
+            Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
+                Text("This profile has no mapped ingestion, quality, or engineering report view.", Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall)
+            }
+        } else TabRow(
+            selectedTabIndex = allowedTabs.indexOf(contentTab).coerceAtLeast(0),
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
-            Tab(
+            if (0 in allowedTabs) Tab(
                 selected = selectedTopTab == 0,
                 onClick = { selectedTopTab = 0 },
-                text = { Text("Ingestion Gate", fontWeight = FontWeight.Bold) }
+                text = { Text(if (isAuthenticated) "Shared records" else "Ingestion", fontWeight = FontWeight.Bold, fontSize = 11.5.sp, maxLines = 1, softWrap = false) }
             )
-            Tab(
+            if (1 in allowedTabs) Tab(
                 selected = selectedTopTab == 1,
                 onClick = { selectedTopTab = 1 },
-                text = { Text("QA DVP&R", fontWeight = FontWeight.Bold) }
+                text = { Text("QA DVP&R", fontWeight = FontWeight.Bold, fontSize = 11.5.sp, maxLines = 1, softWrap = false) }
             )
-            Tab(
+            if (2 in allowedTabs) Tab(
                 selected = selectedTopTab == 2,
                 onClick = { selectedTopTab = 2 },
-                text = { Text("Device Architecture", fontWeight = FontWeight.Bold) }
+                text = { Text("Device Arch", fontWeight = FontWeight.Bold, fontSize = 11.5.sp, maxLines = 1, softWrap = false) }
             )
         }
 
-        when (selectedTopTab) {
+        if (contentTab >= 0) when (contentTab) {
             0 -> {
                 // Adaptive Ingestion Staging Gate
                 LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(horizontal = 12.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 84.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Invariant Banner: ZERO Automatic Stock Posting
                 item {
@@ -131,7 +184,10 @@ fun AdaptiveIngestionAndQualityScreen(
                             }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Arbitrary supplier spreadsheets (Mouser, Digi-Key, Arrow, Fabricator) are staged with fuzzy column matching. Accepted inwards strictly generate GRN drafts on 100% IQC Quarantine Hold (IQC-HOLD-STAGE-01) with Qty Accepted = 0 pcs.",
+                                text = if (isAuthenticated)
+                                    "This mobile view is read-only. Shared Smart Upload extraction, review, and GRN draft actions are not connected here; no stock is posted."
+                                else
+                                    "Local sample supplier rows can be staged as GRN drafts on 100% IQC Quarantine Hold. This demo never posts stock.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF2E7D32)
                             )
@@ -140,7 +196,7 @@ fun AdaptiveIngestionAndQualityScreen(
                 }
 
                 // Distributor Presets Filter
-                item {
+                if (!isAuthenticated) item {
                     LazyRow(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -159,96 +215,195 @@ fun AdaptiveIngestionAndQualityScreen(
                     }
                 }
 
-                // Staging Gate Rows
-                items(
-                    ingestionRows.filter {
-                        activeDistributorPreset == "All Presets" || it.distributorPreset.contains(activeDistributorPreset, ignoreCase = true)
-                    }
-                ) { row ->
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (row.isProcessed) Color(0xFFF5F5F5) else MaterialTheme.colorScheme.surfaceContainer
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                if (isAuthenticated) {
+                    item {
+                        val qaRecords = visibleRecords.filter {
+                            SharedAccess.text(it, "record_type") in listOf("Inspection", "Engineering change", "BOM", "Purchase order")
+                        }
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
-                                    text = row.mpn,
-                                    style = MaterialTheme.typography.titleSmall,
+                                    "Server State · ${qaRecords.size} Ingestion/QA Records ($selectedProject)",
+                                    style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                Surface(
-                                    color = if (row.isProcessed) Color(0xFFE0E0E0) else Color(0xFFE8F5E9),
-                                    shape = RoundedCornerShape(4.dp)
-                                ) {
+                                Text(
+                                    "Authenticated TEST view: spreadsheet ingestion & GRN mutation stay on web until dedicated mobile ingestion RPC is deployed.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontSize = 10.5.sp
+                                )
+                            }
+                        }
+                    }
+                    val matchingServer = visibleRecords.filter {
+                        SharedAccess.text(it, "record_type") in listOf("Purchase order", "Inspection", "Engineering change", "Schematic", "CAD")
+                    }
+                    if (matchingServer.isEmpty()) {
+                        item {
+                            Text(
+                                "No permitted procurement or ingestion records returned in your department scope.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        items(matchingServer) { rec ->
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                                        Text(
+                                            SharedAccess.text(rec, "reference").ifBlank { SharedAccess.text(rec, "record_type") },
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Surface(color = Color(0xFFE3F2FD), shape = RoundedCornerShape(4.dp)) {
+                                            Text(
+                                                SharedAccess.text(rec, "status").ifBlank { "Server" },
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF1565C0),
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
                                     Text(
-                                        text = if (row.isProcessed) "✓ Inward Staged" else "⚡ 120% Fuzzy Match",
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        SharedAccess.text(rec, "title"),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    val stageLabel = SharedAccess.text(rec, "stage").trim().let { stageText ->
+                                        when {
+                                            stageText.isBlank() -> null
+                                            stageText.startsWith("Stage", ignoreCase = true) -> stageText
+                                            else -> "Stage $stageText"
+                                        }
+                                    }
+                                    val recSubtitle = listOfNotNull(
+                                        SharedAccess.text(rec, "record_type").ifBlank { null },
+                                        stageLabel
+                                    ).joinToString(" · ")
+                                    Text(
+                                        recSubtitle.ifBlank { "Shared record" },
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (row.isProcessed) Color(0xFF757575) else Color(0xFF2E7D32)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
-                            Text(text = "Vendor: ${row.vendorName}", style = MaterialTheme.typography.bodySmall)
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            // 3-Way Reconciliation Indicators
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Vendor: ${row.vendorStatus}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (row.vendorStatus == "Verified ASL") Color(0xFF2E7D32) else Color(0xFFC62828),
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Catalog: ${row.catalogStatus}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (row.catalogStatus.contains("Exact")) Color(0xFF2E7D32) else Color(0xFFE65100),
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Ordered: ${row.orderedQty} | Billed: ${row.billedQty} pcs",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "Price: $${row.unitPrice} (Var: ${if (row.priceVariancePct > 0) "+${row.priceVariancePct}%" else "0%"})",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (row.priceVariancePct > 0) Color(0xFFC62828) else Color(0xFF2E7D32),
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            if (!row.isProcessed) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(
-                                    onClick = {
-                                        val result = scmsRepository.generateGrnFromIngestion(row.id)
-                                        result.onSuccess { inwardSuccessGrn = it }
-                                    },
-                                    modifier = Modifier.align(Alignment.End),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                                    contentPadding = ButtonDefaults.TextButtonContentPadding
+                        }
+                    }
+                } else {
+                    // Staging Gate Rows (Local TEST Demo)
+                    items(
+                        ingestionRows.filter {
+                            activeDistributorPreset == "All Presets" || it.distributorPreset.contains(activeDistributorPreset, ignoreCase = true)
+                        }
+                    ) { row ->
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (row.isProcessed) Color(0xFFF5F5F5) else MaterialTheme.colorScheme.surfaceContainer
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(imageVector = Icons.Default.Inventory, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Accept Inward to IQC Quarantine Hold")
+                                    Text(
+                                        text = row.mpn,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        color = if (row.isProcessed) Color(0xFFE0E0E0) else Color(0xFFE8F5E9),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = if (row.isProcessed) "✓ Staged" else "⚡ Fuzzy Match",
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (row.isProcessed) Color(0xFF757575) else Color(0xFF2E7D32),
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                                Text(text = "Vendor: ${row.vendorName}", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Spacer(modifier = Modifier.height(3.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = row.vendorStatus,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (row.vendorStatus == "Verified ASL") Color(0xFF2E7D32) else Color(0xFFC62828),
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        text = "Catalog: ${row.catalogStatus}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (row.catalogStatus.contains("Exact")) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1
+                                    )
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Ord: ${row.orderedQty} | Bill: ${row.billedQty} pcs",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "$${row.unitPrice} (${if (row.priceVariancePct > 0) "+${row.priceVariancePct}%" else "0%"} var)",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (row.priceVariancePct > 0) Color(0xFFC62828) else Color(0xFF2E7D32),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                if (!row.isProcessed) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Button(
+                                        onClick = {
+                                            val result = scmsRepository.generateGrnFromIngestion(row.id)
+                                            result.onSuccess { inwardSuccessGrn = it }
+                                        },
+                                        modifier = Modifier.align(Alignment.End).height(32.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(imageVector = Icons.Default.Inventory, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Stage to IQC Hold", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }
@@ -258,10 +413,33 @@ fun AdaptiveIngestionAndQualityScreen(
         }
         1 -> {
             // QA DVP&R Pre-Compliance Certification
-            LazyColumn(
+            if (isAuthenticated) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                    contentPadding = PaddingValues(top = 12.dp, bottom = 84.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        Text("Shared reports", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Only records returned for your signed-in department are shown. Report sign-off is not connected in this mobile view.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    val reports = visibleRecords.filter { SharedAccess.text(it, "record_type") in setOf("Inspection", "Test report", "DVP&R", "Calibration", "Engineering change") }
+                    if (reports.isEmpty()) item { Text("No authorized shared reports are available.", style = MaterialTheme.typography.bodySmall) }
+                    items(reports) { record ->
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(SharedAccess.text(record, "reference").ifBlank { SharedAccess.text(record, "record_type") }, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text(SharedAccess.text(record, "title"), style = MaterialTheme.typography.bodySmall)
+                                Text("${SharedAccess.text(record, "record_type")} · ${SharedAccess.text(record, "status").ifBlank { "Status unavailable" }}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            } else LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 84.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item {
@@ -373,31 +551,64 @@ fun AdaptiveIngestionAndQualityScreen(
             LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(horizontal = 12.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 84.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    item {
+                    if (isAuthenticated) {
+                        val archRecords = visibleRecords.filter {
+                            SharedAccess.text(it, "record_type") in listOf("Schematic", "CAD", "Part", "Firmware", "Software")
+                        }
+                        item {
+                            Surface(
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text(
+                                        "Server Engineering Records (${archRecords.size})",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        "Read-only schematics, CAD & firmware records from get_shared_test_workspace. Authoring remains on web.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 10.5.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (!isAuthenticated) item {
                         Surface(
                             color = MaterialTheme.colorScheme.primaryContainer,
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Column(modifier = Modifier.padding(10.dp)) {
                                 Text(
-                                    text = "HLPL-AI4T-01 Architecture & Block Diagram",
+                                    text = "Hardware Subsystem Blueprint",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontSize = 12.5.sp
                                 )
                                 Text(
-                                    text = "Hardware Subsystem Blueprint for Tata Ace EV 4G Telematics Gateway. Automotive Grade Component Layout.",
+                                    text = if (isAuthenticated) {
+                                    "Automotive-grade telematics gateway subsystem & interface architecture (Shared TEST)."
+                                } else {
+                                    "Automotive-grade telematics gateway subsystem & interface architecture (Local TEST Sample)."
+                                },
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                                    fontSize = 11.sp,
+                                    lineHeight = 14.sp
                                 )
                             }
                         }
                     }
 
-                    item {
+                    if (!isAuthenticated) item {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                             shape = RoundedCornerShape(8.dp)
@@ -418,7 +629,7 @@ fun AdaptiveIngestionAndQualityScreen(
                         }
                     }
 
-                    item {
+                    if (!isAuthenticated) item {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                             shape = RoundedCornerShape(8.dp)
@@ -439,7 +650,7 @@ fun AdaptiveIngestionAndQualityScreen(
                         }
                     }
 
-                    item {
+                    if (!isAuthenticated) item {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                             shape = RoundedCornerShape(8.dp)

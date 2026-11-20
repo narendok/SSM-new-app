@@ -513,12 +513,12 @@ fun ShopfloorToolsScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
                                     Text(
-                                        text = "Tata Motors Limited (EV Fleet Division)",
+                                        text = "Northstar Field Systems · Client View (Local TEST)",
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = "Project: HLPL-AI4T-01 • Tata Ace EV 4G Telematics Gateway",
+                                        text = "Project: HLPL-AI4T-01 · Northstar Field Gateway (Sample)",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 11.sp

@@ -379,7 +379,7 @@ fun FieldServiceScreen(
                                 requesterName = currentRole.leadName,
                                 requesterEmail = currentRole.email,
                                 requesterDepartment = currentRole.code,
-                                clientOrganization = if (currentRole.isClient) "Tata Motors Limited" else null,
+                                clientOrganization = if (currentRole.isClient) "Northstar Mobility Works (TEST)" else null,
                                 subject = subject.trim(),
                                 description = description.trim(),
                                 category = category,

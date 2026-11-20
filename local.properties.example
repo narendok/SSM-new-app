@@ -1,6 +1,7 @@
-# Safe example configuration for SCMS Mobile App
-# Copy this file to local.properties and set your actual keys if needed.
-# DO NOT place service-role keys, database passwords, or JWT secrets here.
-
-SUPABASE_URL=https://yyrvduosyyaluifqvwkr.supabase.co
-SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY_HERE
+# Copy to ignored local.properties and supply matching publishable client keys.
+# Never include service-role keys, database passwords or signing secrets.
+# Default target is the newer shared TEST database (staging). Legacy production requires explicit selection.
+SUPABASE_URL=https://rzskhndweihuczbdhoxk.supabase.co
+SUPABASE_ANON_KEY=YOUR_PRODUCTION_PUBLISHABLE_OR_ANON_KEY
+SUPABASE_STAGING_URL=https://jiqbxcqlywvvmhbgirzl.supabase.co
+SUPABASE_STAGING_PUBLISHABLE_KEY=YOUR_STAGING_PUBLISHABLE_KEY

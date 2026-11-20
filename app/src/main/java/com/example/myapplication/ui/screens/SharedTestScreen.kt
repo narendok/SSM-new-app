@@ -23,6 +23,8 @@ private fun JsonObject.rows(key: String) = (get(key) as? JsonArray)?.mapNotNull 
 @Composable
 fun SharedTestScreen(vm: MainViewModel, onBack: () -> Unit) {
     val snapshot by vm.sharedSnapshot.collectAsState()
+    val lifecycleWorkspace by vm.lifecycleWorkspace.collectAsState()
+    val orgConfig by vm.orgConfig.collectAsState()
     val error by vm.sharedError.collectAsState()
     val busy by vm.sharedBusy.collectAsState()
     val auth by vm.authState.collectAsState()
@@ -70,7 +72,10 @@ fun SharedTestScreen(vm: MainViewModel, onBack: () -> Unit) {
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) vm.refreshSharedWorkspace()
+            if (event == Lifecycle.Event.ON_RESUME) {
+                vm.refreshSharedWorkspace()
+                vm.refreshLifecycleWorkspace()
+            }
         }
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
@@ -78,22 +83,51 @@ fun SharedTestScreen(vm: MainViewModel, onBack: () -> Unit) {
     val member = snapshot?.get("membership") as? JsonObject
     val role = member?.text("role").orEmpty()
     val projects = snapshot?.rows("records").orEmpty().filter { it.text("record_type") == "Project" }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedButton(onClick = onBack) { Text("Back to dashboard") }
-        Text("Shared TEST workspace", style = MaterialTheme.typography.headlineSmall)
-        Text("${member?.text("display_name").orEmpty()} | $role | ${member?.text("department_code").orEmpty()}")
-        Text("Server read: ${snapshot?.text("serverTime").orEmpty()}", style = MaterialTheme.typography.bodySmall)
+    val configuredStagesCount = (((lifecycleWorkspace?.get("revision") as? JsonObject)
+        ?.get("definition") as? JsonObject)
+        ?.get("stages") as? JsonArray)?.size ?: 0
+    val orgDepts = (orgConfig?.get("departments") as? JsonArray)?.size ?: 0
+    val orgLeads = (orgConfig?.get("leads") as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
+    val multiDeptSupportLive = orgLeads.any { it.containsKey("departmentIds") }
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 84.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = onBack, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+            Text("Back to dashboard", style = MaterialTheme.typography.labelSmall)
+        }
+        Text("Shared TEST workspace", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("${member?.text("display_name").orEmpty()} | $role | ${member?.text("department_code").orEmpty()}", style = MaterialTheme.typography.bodySmall)
+        Text("Server read: ${snapshot?.text("serverTime").orEmpty()}", style = MaterialTheme.typography.labelSmall)
+        if (lifecycleWorkspace != null || orgConfig != null) {
+            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small) {
+                Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        "Lifecycle Contract: Fixed Phases 0–9 · $configuredStagesCount configured dept stages · Org: $orgDepts depts, ${orgLeads.size} leads",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        if (multiDeptSupportLive) "Multi-department lead assignment active in server config."
+                        else "Server check: lead assignments use singular departmentId (multi-department lead migration 20261110090000 not yet active on live TEST).",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = vm::refreshSharedWorkspace, enabled = !busy) { Text("Refresh") }
-            OutlinedButton(onClick = { account = true }) { Text("Account / Switch") }
+            OutlinedButton(onClick = { vm.refreshSharedWorkspace(); vm.refreshLifecycleWorkspace() }, enabled = !busy) {
+                Text("Refresh", style = MaterialTheme.typography.labelSmall)
+            }
+            OutlinedButton(onClick = { account = true }) {
+                Text("Account / Switch", style = MaterialTheme.typography.labelSmall)
+            }
         }
         Text("Online shared records. Inventory simulations and local prototype records are separate.", style = MaterialTheme.typography.bodySmall)
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("Projects", "Records", "Tasks", "Approvals", "Documents", "Project Review", "Activity").forEach { name ->
-                FilterChip(selected = tab == name, onClick = { tab = name; title = ""; reference = "" }, label = { Text(name) })
+                FilterChip(selected = tab == name, onClick = { tab = name; title = ""; reference = "" }, label = { Text(name, style = MaterialTheme.typography.labelSmall) })
             }
         }
         if (snapshot == null && tab != "Project Review") Text("Waiting for server records. No local fallback.")
@@ -105,18 +139,21 @@ fun SharedTestScreen(vm: MainViewModel, onBack: () -> Unit) {
                 )
             }
             if (tab == "Projects" && (role == "admin" || (role == "department_lead" && member?.text("department_code") == "SAL"))) {
-                OutlinedTextField(title, { title = it }, label = { Text("New TEST project title") })
-                OutlinedTextField(reference, { reference = it }, label = { Text("Project reference (HLPL-...)") })
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(title, { title = it }, label = { Text("New TEST project title") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(reference, { reference = it }, label = { Text("Project reference (HLPL-...)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(enabled = !busy && title.isNotBlank() && reference.isNotBlank(), onClick = {
                         vm.mutateSharedWorkspace("create_project", buildJsonObject { put("title", title); put("reference", reference) })
-                    }) { Text("Create shared project") }
+                    }) { Text("Create shared project", style = MaterialTheme.typography.labelSmall) }
                     if (role == "admin") {
                         Button(enabled = !busy, onClick = {
                             vm.mutateSharedWorkspace("sync_canonical_sample_pack", buildJsonObject {
                                 put("p_run_id", "LC2-2026-10-28")
                             })
-                        }) { Text("Sync TEST sample pack") }
+                        }) { Text("Sync TEST sample pack", style = MaterialTheme.typography.labelSmall) }
+                        OutlinedButton(enabled = !busy, onClick = {
+                            vm.resetSamplePack("LC2-2026-10-28")
+                        }) { Text("Reset TEST pack", style = MaterialTheme.typography.labelSmall) }
                     }
                 }
             }

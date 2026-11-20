@@ -71,11 +71,16 @@ import com.example.myapplication.data.repository.ScmsRepository
 fun UnifiedSearchScreen(
     scmsRepository: ScmsRepository,
     initialQuery: String = "",
+    isAuthenticated: Boolean = false,
     onRecordSelected: (Any) -> Unit = {}
 ) {
+    val currentRole by scmsRepository.currentRole.collectAsState()
+    val isAdminProfile = currentRole == com.example.myapplication.data.model.DepartmentRole.ADMIN
     var searchQuery by remember { mutableStateOf(initialQuery) }
     var selectedCategory by remember { mutableStateOf("All") }
-    var selectedDepartment by remember { mutableStateOf("All") }
+    var selectedDepartment by remember(currentRole) {
+        mutableStateOf(if (isAdminProfile) "All" else currentRole.code)
+    }
     var selectedStage by remember { mutableStateOf("All") }
     var isVoiceActive by remember { mutableStateOf(false) }
     var selectedRecordForInspect by remember { mutableStateOf<Any?>(null) }
@@ -87,37 +92,59 @@ fun UnifiedSearchScreen(
     val approvals by scmsRepository.approvals.collectAsState()
     val harnesses by scmsRepository.harnesses.collectAsState()
 
+    if (isAuthenticated) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Shared search is not connected yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Local sample parts, documents, orders, tasks and approvals are hidden while signed in. Search will be available here when it reads the authenticated, role-scoped Shared TEST records.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
     val q = searchQuery.trim().lowercase()
+    val departmentFilter = if (isAdminProfile) selectedDepartment else currentRole.code
 
     // Filtered result sets
     val matchedParts = parts.filter { part ->
-        (selectedDepartment == "All" || selectedDepartment == "PUR" || selectedDepartment == "EHW") &&
+        (isAdminProfile && (departmentFilter == "All" || departmentFilter == "PUR" || departmentFilter == "EHW") ||
+            (!isAdminProfile && currentRole.code in listOf("PUR", "EHW") && currentRole.code == departmentFilter)) &&
         (q.isEmpty() || part.mpn.lowercase().contains(q) || part.description.lowercase().contains(q) || part.category.lowercase().contains(q))
     }
 
     val matchedDocs = documents.filter { doc ->
-        (selectedDepartment == "All" || doc.dept.equals(selectedDepartment, ignoreCase = true)) &&
+        (isAdminProfile && (departmentFilter == "All" || doc.dept.equals(departmentFilter, ignoreCase = true)) ||
+            (!isAdminProfile && doc.dept.equals(departmentFilter, ignoreCase = true))) &&
         (selectedStage == "All" || doc.stage.contains(selectedStage, ignoreCase = true)) &&
         (q.isEmpty() || doc.docId.lowercase().contains(q) || doc.title.lowercase().contains(q) || doc.dept.lowercase().contains(q))
     }
 
     val matchedPos = purchaseOrders.filter { po ->
-        (selectedDepartment == "All" || selectedDepartment == "PUR" || selectedDepartment == "FIN") &&
+        (isAdminProfile && (departmentFilter == "All" || departmentFilter == "PUR" || departmentFilter == "FIN") ||
+            (!isAdminProfile && currentRole.code in listOf("PUR", "FIN") && currentRole.code == departmentFilter)) &&
         (q.isEmpty() || po.poNumber.lowercase().contains(q) || po.vendorName.lowercase().contains(q) || po.status.lowercase().contains(q))
     }
 
     val matchedTasks = tasks.filter { task ->
-        (selectedDepartment == "All" || task.dept.equals(selectedDepartment, ignoreCase = true)) &&
+        (isAdminProfile && (departmentFilter == "All" || task.dept.equals(departmentFilter, ignoreCase = true)) ||
+            (!isAdminProfile && task.dept.equals(departmentFilter, ignoreCase = true))) &&
         (q.isEmpty() || task.title.lowercase().contains(q) || task.assignee.lowercase().contains(q) || task.dept.lowercase().contains(q))
     }
 
     val matchedApprovals = approvals.filter { approval ->
-        (selectedDepartment == "All" || approval.department.equals(selectedDepartment, ignoreCase = true)) &&
+        (isAdminProfile && (departmentFilter == "All" || approval.department.equals(departmentFilter, ignoreCase = true)) ||
+            (!isAdminProfile && approval.department.equals(departmentFilter, ignoreCase = true))) &&
         (q.isEmpty() || approval.title.lowercase().contains(q) || approval.requester.lowercase().contains(q) || approval.id.lowercase().contains(q))
     }
 
     val matchedHarnesses = harnesses.filter { h ->
-        (selectedDepartment == "All" || selectedDepartment == "MECH") &&
+        (isAdminProfile && (departmentFilter == "All" || departmentFilter == "MECH") ||
+            (!isAdminProfile && currentRole.code == "MECH" && departmentFilter == "MECH")) &&
         (q.isEmpty() || h.assemblyId.lowercase().contains(q) || h.name.lowercase().contains(q))
     }
 
@@ -287,7 +314,7 @@ fun UnifiedSearchScreen(
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.outline
                     )
-                    listOf("All", "EHW", "PUR", "MECH", "QA", "EMF", "FIN").forEach { dept ->
+                    (if (isAdminProfile) listOf("All", "EHW", "PUR", "MECH", "QA", "EMF", "FIN") else listOf(currentRole.code)).forEach { dept ->
                         val isDept = selectedDepartment == dept
                         Surface(
                             shape = RoundedCornerShape(4.dp),

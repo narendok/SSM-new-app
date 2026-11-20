@@ -18,6 +18,24 @@ class SharedTestRepository(private val invoke: suspend (String, String, String) 
         return json.parseToJsonElement(invoke("get_lifecycle_workspace", "{}", token).getOrThrow()).jsonObject
     }
     /** Links one exact server-owned revision to a project; it never changes physical stock. */
+    suspend fun loadOrganizationConfiguration(token: String): JsonObject {
+        require(token.isNotBlank()) { "Authentication required" }
+        return json.parseToJsonElement(invoke("get_organization_configuration", "{}", token).getOrThrow()).jsonObject
+    }
+    suspend fun loadCustomerChangeRequests(token: String): JsonObject {
+        require(token.isNotBlank()) { "Authentication required" }
+        return json.parseToJsonElement(invoke("get_customer_change_requests", "{}", token).getOrThrow()).jsonObject
+    }
+    suspend fun resetSamplePack(token: String, runId: String, requestId: String): JsonObject {
+        require(token.isNotBlank()) { "Authentication required" }
+        require(runCatching { java.util.UUID.fromString(requestId).toString() == requestId.lowercase() }.getOrDefault(false)) {
+            "A stable request ID is required"
+        }
+        return json.parseToJsonElement(invoke("reset_shared_test_sample_pack", buildJsonObject {
+            put("p_run_id", runId)
+            put("p_request_id", requestId)
+        }.toString(), token).getOrThrow()).jsonObject
+    }
     suspend fun linkReusableAsset(token: String, payload: JsonObject, requestId: String): JsonObject {
         require(token.isNotBlank()) { "Authentication required" }
         require(runCatching { java.util.UUID.fromString(requestId).toString() == requestId.lowercase() }.getOrDefault(false)) {

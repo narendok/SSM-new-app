@@ -80,11 +80,32 @@ import java.util.Locale
 @Composable
 fun ApprovalsScreen(
     scmsRepository: ScmsRepository,
+    isAuthenticated: Boolean = false,
     onBack: (() -> Unit)? = null
 ) {
     val approvals by scmsRepository.approvals.collectAsState()
     val travelPolicyRules by scmsRepository.travelPolicyRules.collectAsState()
     val currentRole by scmsRepository.currentRole.collectAsState()
+
+    if (isAuthenticated) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Shared approvals are not connected in this view yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Local sample approvals and decision buttons are hidden while signed in. Shared requests must be loaded and decided through the authenticated, reviewer-scoped server contract.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    val profileApprovals = remember(approvals, currentRole) {
+        if (currentRole == com.example.myapplication.data.model.DepartmentRole.ADMIN) approvals
+        else approvals.filter { it.department.equals(currentRole.code, ignoreCase = true) }
+    }
 
     var statusFilter by remember { mutableStateOf("ALL") }
     var selectedCategory by remember { mutableStateOf<ApprovalCategory?>(null) }
@@ -95,7 +116,7 @@ fun ApprovalsScreen(
     var actionReasonNotes by remember { mutableStateOf("") }
     var showTravelPolicyDetailModal by remember { mutableStateOf(false) }
 
-    val filteredApprovals = approvals.filter { record ->
+    val filteredApprovals = profileApprovals.filter { record ->
         val matchesStatus = (statusFilter == "ALL") || record.outcome.equals(statusFilter, ignoreCase = true)
         val matchesCategory = (selectedCategory == null) || (record.category == selectedCategory)
         val matchesQuery = if (searchQuery.isBlank()) true else {
@@ -110,9 +131,9 @@ fun ApprovalsScreen(
         matchesStatus && matchesCategory && matchesQuery
     }
 
-    val pendingCount = approvals.count { it.outcome == "Pending" }
-    val approvedCount = approvals.count { it.outcome == "Approved" }
-    val rejectedReturnedCount = approvals.count { it.outcome == "Rejected" || it.outcome == "Returned" }
+    val pendingCount = profileApprovals.count { it.outcome == "Pending" }
+    val approvedCount = profileApprovals.count { it.outcome == "Approved" }
+    val rejectedReturnedCount = profileApprovals.count { it.outcome == "Rejected" || it.outcome == "Returned" }
 
     val inrFormat = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
 
@@ -297,7 +318,7 @@ fun ApprovalsScreen(
                                 )
                             ) {
                                 Text(
-                                    text = "All Types (${approvals.size})",
+                                    text = "All Types (${profileApprovals.size})",
                                     modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = if (selectedCategory == null) FontWeight.Bold else FontWeight.Normal,
@@ -308,7 +329,7 @@ fun ApprovalsScreen(
 
                         items(ApprovalCategory.values()) { cat ->
                             val isSelected = selectedCategory == cat
-                            val count = approvals.count { it.category == cat }
+                            val count = profileApprovals.count { it.category == cat }
                             Surface(
                                 modifier = Modifier.clickable {
                                     selectedCategory = if (isSelected) null else cat

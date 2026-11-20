@@ -12,7 +12,7 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 
-val ssmBackend = providers.gradleProperty("ssmBackend").orElse("production").get().lowercase()
+val ssmBackend = providers.gradleProperty("ssmBackend").orElse("staging").get().lowercase()
 require(ssmBackend == "production" || ssmBackend == "staging") {
     "ssmBackend must be either 'production' or 'staging'."
 }

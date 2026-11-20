@@ -99,10 +99,10 @@ fun TeamAndChatScreen(
 
     val channels = remember(currentRole.code) {
         if (currentRole.code == "CLIENT") {
-            listOf("hlpl-ai4t-01" to "#hlpl-ai4t-01 (Tata Ace EV)")
+            listOf("hlpl-ai4t-01" to "#hlpl-ai4t-01 (Northstar Field Gateway)")
         } else if (currentRole.code in listOf("ADMIN", "MD")) {
             listOf(
-                "hlpl-ai4t-01" to "#hlpl-ai4t-01 (Tata Ace EV)",
+                "hlpl-ai4t-01" to "#hlpl-ai4t-01 (Northstar Field Gateway)",
                 "chan-general" to "#general",
                 "chan-engineering-hw" to "#engineering-hw",
                 "chan-purchasing-scm" to "#purchasing-scm",
@@ -112,7 +112,7 @@ fun TeamAndChatScreen(
             )
         } else {
             val base = mutableListOf(
-                "hlpl-ai4t-01" to "#hlpl-ai4t-01 (Tata Ace EV)",
+                "hlpl-ai4t-01" to "#hlpl-ai4t-01 (Northstar Field Gateway)",
                 "chan-general" to "#general",
                 "cross-dept-sync" to "#cross-dept-sync"
             )
@@ -216,7 +216,7 @@ fun TeamAndChatScreen(
 
         // TOP TABS
         ScrollableTabRow(
-            selectedTabIndex = selectedTopTab,
+            selectedTabIndex = selectedTopTab.coerceIn(0, 2),
             edgePadding = 12.dp,
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.primary
@@ -443,6 +443,7 @@ fun TeamAndChatScreen(
             2 -> {
                 // TAB 2: MY PROFILE & ACCOUNT
                 val profileSubTabs = listOf("Letters & Policies", "Training & Surveys", "Assets & Claims", "My Tasks")
+                val activeProfileSubTab = myProfileSubTab.coerceIn(0, profileSubTabs.lastIndex)
                 val myLetters = employeeLetters.filter {
                     it.title.contains(currentRole.title, ignoreCase = true) || currentRole.code in listOf("ADMIN", "MD")
                 }
@@ -579,7 +580,7 @@ fun TeamAndChatScreen(
                     // Profile Sub-tab Selector
                     item {
                         ScrollableTabRow(
-                            selectedTabIndex = myProfileSubTab,
+                            selectedTabIndex = activeProfileSubTab,
                             edgePadding = 0.dp,
                             containerColor = MaterialTheme.colorScheme.surface,
                             contentColor = MaterialTheme.colorScheme.primary,
@@ -587,13 +588,13 @@ fun TeamAndChatScreen(
                         ) {
                             profileSubTabs.forEachIndexed { idx, title ->
                                 Tab(
-                                    selected = myProfileSubTab == idx,
+                                    selected = activeProfileSubTab == idx,
                                     onClick = { myProfileSubTab = idx },
                                     text = {
                                         Text(
                                             text = title,
                                             fontSize = 11.sp,
-                                            fontWeight = if (myProfileSubTab == idx) FontWeight.Bold else FontWeight.Medium
+                                            fontWeight = if (activeProfileSubTab == idx) FontWeight.Bold else FontWeight.Medium
                                         )
                                     }
                                 )
@@ -601,7 +602,7 @@ fun TeamAndChatScreen(
                         }
                     }
 
-                    when (myProfileSubTab) {
+                    when (activeProfileSubTab) {
                         0 -> {
                             // Sub-tab 0: Letters & Policies
                             item {

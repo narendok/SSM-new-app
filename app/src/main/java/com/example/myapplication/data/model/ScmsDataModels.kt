@@ -29,7 +29,7 @@ enum class DepartmentRole(
     FIN("FIN", "Accounts & Finance", "Priya Voss", "priya.voss@example.com", "Demo@FIN2026"),
     SIT("SIT", "Service & IT Infrastructure", "Kai Morgan", "kai.morgan@example.com", "Demo@SIT2026"),
     HROPS("HROPS", "HR & Operations", "Taylor Quinn", "taylor.quinn@example.com", "Demo@HR2026"),
-    CLIENT("CLIENT", "Client OEM Portal (Tata Motors)", "Rohan Verma", "rohan.verma@example.com", "Tata@Client2026", isClient = true);
+    CLIENT("CLIENT", "Client Portal (Northstar TEST)", "Rohan Verma", "rohan.verma@example.com", "Client@Test2026", isClient = true);
 
     companion object {
         fun fromCode(code: String): DepartmentRole {
@@ -304,6 +304,7 @@ data class AssetEquipment(
     val assetTag: String,
     val serialNumber: String,
     val name: String,
+    val departmentCode: String = "",
     val category: String, // "SMT Line", "Wire Harness Tooling", "Testing Jig", "IMTE Instrument"
     val location: String,
     val custodian: String,
@@ -463,7 +464,10 @@ data class DailyTaskItem(
     val isCompleted: Boolean,
     val isOverdue: Boolean = false,
     val lane: String = "Today", // "Today", "Tomorrow", "Review", "Completed"
-    val projectId: String = "HLPL-AI4T-01"
+    val projectId: String = "HLPL-AI4T-01",
+    val roleLevel: String? = null, // "L1 Lead", "L2 Senior Specialist", "L3 Associate", "L4 Operator", null for unassigned
+    val estimatedHours: Double = 4.0,
+    val loggedSeconds: Long = 0L
 )
 
 /**
@@ -803,7 +807,7 @@ data class SalesOpportunity(
     val clientName: String,
     val volume: Int,
     val projectedValueInr: String,
-    val status: String, // "Contract Locked", "Feasibility Review", "Enquiry Intake"
+    val status: String, // "Local TEST Active", "Feasibility Review", "Enquiry Intake"
     val sorDocId: String,
     val isOpportunity: Boolean = true // true = Active Opportunity, false = Pending Enquiry
 )
@@ -1536,7 +1540,7 @@ object CanonicalLifecycleEngine {
     val SAMPLES = listOf(
         CanonicalSampleProject("LC2-P01", CanonicalProjectTrack.CUSTOM_HARDWARE, "Internal Hexense Labs — Plant Tooling Division", "PRJ-INT-001", "Internal Harness & EOL Test Jig"),
         CanonicalSampleProject("LC2-E02", CanonicalProjectTrack.HARDWARE_FIRMWARE, "Nordic Fleet Logistics AB", null, "Declined Extended-Temperature Tracker Enquiry", isDeclinedEnquiry = true),
-        CanonicalSampleProject("LC2-P03", CanonicalProjectTrack.HARDWARE_FIRMWARE, "Tata Motors Limited · EV Fleet Division", "PRJ-POC-001", "Fleet OBD Tracker PoC (10 units)"),
+        CanonicalSampleProject("LC2-P03", CanonicalProjectTrack.HARDWARE_FIRMWARE, "Northstar Field Systems · Fleet Division (TEST)", "PRJ-POC-001", "Fleet OBD Tracker PoC (10 units)"),
         CanonicalSampleProject("LC2-P04", CanonicalProjectTrack.FULL_SYSTEM, "Apex Logistics Solutions", "PRJ-GW-001", "Commercial Vehicle Gateway Pilot"),
         CanonicalSampleProject("LC2-P05", CanonicalProjectTrack.FIRMWARE_ONLY, "PharmaCold Express Ltd", "PRJ-CC-001", "Cold-Chain Tracker Firmware Refinement"),
         CanonicalSampleProject("LC2-P06", CanonicalProjectTrack.HARDWARE_FIRMWARE, "Bharat Heavy Logistics Ltd", "PRJ-PROD-001", "Rugged Fleet Tracker Bulk Production"),

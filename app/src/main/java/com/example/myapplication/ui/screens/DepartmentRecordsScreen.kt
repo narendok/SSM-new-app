@@ -70,6 +70,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -148,7 +149,10 @@ fun DepartmentRecordsScreen(
         else -> listOf("All Inventory", "Service Tickets", "Dept Budgets", "Expense Claims", "Capital Assets", "Orders (POs)", "Wire Harnesses", "DVP&R Tests")
     }
 
-    val activeSubTabIndex = if (selectedSubTab >= subTabs.size) 0 else selectedSubTab
+    val activeSubTabIndex = selectedSubTab.coerceIn(0, (subTabs.size - 1).coerceAtLeast(0))
+    LaunchedEffect(currentRole.code, subTabs.size) {
+        if (selectedSubTab !in subTabs.indices) selectedSubTab = 0
+    }
 
     val sharedSection = when(subTabs[activeSubTabIndex]) {
         "Dept Budgets", "Expense Claims" -> "budgets"
@@ -242,7 +246,7 @@ fun DepartmentRecordsScreen(
 
         // Sub-tabs Row
         ScrollableTabRow(
-            selectedTabIndex = activeSubTabIndex,
+            selectedTabIndex = activeSubTabIndex.coerceIn(0, (subTabs.size - 1).coerceAtLeast(0)),
             edgePadding = 12.dp,
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.primary,

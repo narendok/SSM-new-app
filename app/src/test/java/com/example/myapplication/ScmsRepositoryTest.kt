@@ -127,7 +127,7 @@ class ScmsRepositoryTest {
             ecoNumber = "ECO-2026-005",
             rationale = "Testing baseline promotion"
         )
-        // Must be blocked per IATF Â§8.3.6
+        // Must be blocked per IATF §8.3.6
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull()?.message?.contains("ECO Promotion Blocked") == true)
     }
@@ -258,7 +258,7 @@ class ScmsRepositoryTest {
             title = "Hero Electric Smart Fleet 4G Module",
             clientName = "Hero Electric Vehicles",
             volume = 30000,
-            projectedValueInr = "â‚¹12.20 Cr",
+            projectedValueInr = "₹12.20 Cr",
             status = "Enquiry Intake",
             sorDocId = "HLPL-HEV-RFQ-2026",
             isOpportunity = true

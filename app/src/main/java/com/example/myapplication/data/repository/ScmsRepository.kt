@@ -107,7 +107,7 @@ interface ScmsRepository {
     // Stage 10: AI Procedural Queries
     val aiQueries: StateFlow<List<AiProceduralQuery>>
 
-    // Human Approvals & Governance Center (Master Plan Â§26.3)
+    // Human Approvals & Governance Center (Master Plan §26.3)
     val approvals: StateFlow<List<ApprovalDecisionRecord>>
     val travelPolicyRules: StateFlow<List<TravelPolicyRule>>
     val serviceTickets: StateFlow<List<ServiceTicket>>
@@ -245,10 +245,10 @@ class ScmsRepositoryImpl(
             reference = "TKT-2026-0101",
             source = "Client",
             requesterName = "Rohan Verma",
-            requesterEmail = "rohan.verma@tatamotors.com",
-            clientOrganization = "Tata Motors Limited",
-            subject = "AIS-140 GPS fix dropping intermittently on Ace EV Pilot Batch",
-            description = "During highway road trials between Pune and Mumbai, GPS NMEA fix drops for 3-5 seconds after aggressive regenerative braking.",
+            requesterEmail = "rohan.verma@northstar-test.example",
+            clientOrganization = "Northstar Field Systems (TEST)",
+            subject = "AIS-140 GPS fix dropping intermittently on Field Gateway Pilot Batch",
+            description = "During highway road trials, GPS NMEA fix drops for 3-5 seconds after regenerative braking.",
             category = "Hardware Fault",
             priority = "High",
             projectId = "HLPL-AI4T-01",
@@ -271,7 +271,7 @@ class ScmsRepositoryImpl(
                     authorName = "Kai Morgan",
                     authorRole = "SIT Lead",
                     isInternalNote = false,
-                    message = "Diagnostic firmware patch v1.0.4 dispatched to Tata Motors test vehicles to capture CAN J1939 logs.",
+                    message = "Diagnostic firmware patch v1.0.4 dispatched to Northstar test vehicles to capture CAN J1939 logs.",
                     createdAt = "2026-10-20 14:15"
                 )
             )
@@ -499,7 +499,7 @@ class ScmsRepositoryImpl(
             current = "8.4 mA active",
             aecRating = "AEC-Q100 Grade 1",
             clockSpeed = "64 MHz",
-            tempRange = "-40Â°C to +125Â°C",
+            tempRange = "-40°C to +125°C",
             dimensions = "14.0 x 14.0 x 1.4 mm",
             massGrams = 0.65,
             ipRating = "N/A (Board Mounted)",
@@ -530,7 +530,7 @@ class ScmsRepositoryImpl(
             current = "580 mA peak Tx",
             aecRating = "AIS-140 / TAC Certified",
             clockSpeed = "Baseband Processor",
-            tempRange = "-40Â°C to +85Â°C",
+            tempRange = "-40°C to +85°C",
             dimensions = "29.0 x 32.0 x 2.4 mm",
             massGrams = 4.2,
             ipRating = "N/A (Board Mounted)",
@@ -561,7 +561,7 @@ class ScmsRepositoryImpl(
             current = "45 mA Dominant",
             aecRating = "AEC-Q100 Grade 1",
             clockSpeed = "5 Mbps CAN-FD",
-            tempRange = "-55Â°C to +125Â°C",
+            tempRange = "-55°C to +125°C",
             dimensions = "4.9 x 3.91 x 1.75 mm",
             massGrams = 0.08,
             ipRating = "N/A",
@@ -592,7 +592,7 @@ class ScmsRepositoryImpl(
             current = "5A Continuous Output",
             aecRating = "AEC-Q100 Grade 1",
             clockSpeed = "200 kHz - 2.5 MHz",
-            tempRange = "-40Â°C to +125Â°C",
+            tempRange = "-40°C to +125°C",
             dimensions = "5.0 x 4.0 x 1.7 mm",
             massGrams = 0.12,
             ipRating = "N/A",
@@ -623,7 +623,7 @@ class ScmsRepositoryImpl(
             current = "93A Peak Pulse",
             aecRating = "AEC-Q101 Qualified",
             clockSpeed = "ISO 16750-2 Clamping",
-            tempRange = "-55Â°C to +175Â°C",
+            tempRange = "-55°C to +175°C",
             dimensions = "15.5 x 10.0 x 5.0 mm",
             massGrams = 2.6,
             ipRating = "N/A",
@@ -656,7 +656,7 @@ class ScmsRepositoryImpl(
             dimensions = "42.5 x 31.2 x 26.8 mm",
             massGrams = 14.8,
             ipRating = "IP67 / IP6K9K",
-            wireGauge = "FLRY-B 0.50mmÂ² to 1.50mmÂ²",
+            wireGauge = "FLRY-B 0.50mm² to 1.50mm²",
             matingForce = "75 N max engagement",
             leadTimeWeeks = 8,
             mouserStock = 12000,
@@ -678,7 +678,7 @@ class ScmsRepositoryImpl(
                 assemblyId = "HLPL-HARN-AI4T-PWR-01",
                 name = "Main Power & CAN Interface Harness (16-Pin Sealed)",
                 projectId = "HLPL-AI4T-01",
-                wireGauge = "FLRY-B 0.75mmÂ² (Red/Black) + 0.50mmÂ² (Twisted Pair)",
+                wireGauge = "FLRY-B 0.75mm² (Red/Black) + 0.50mm² (Twisted Pair)",
                 connectors = "Molex MX150 16-Pin <-> TE Mate-N-Lok",
                 pinCount = 16,
                 matingRetentionForce = "85 N with CPA lock",
@@ -689,7 +689,7 @@ class ScmsRepositoryImpl(
                 assemblyId = "HLPL-HARN-OBD-02",
                 name = "OBD-II Diagnostic Extension Harness with Molded Strain Relief",
                 projectId = "HLPL-AI4T-01",
-                wireGauge = "FLRY-A 0.35mmÂ² / ISO 6722 compliant",
+                wireGauge = "FLRY-A 0.35mm² / ISO 6722 compliant",
                 connectors = "J1962 Male Plug <-> Micro-Fit 3.0",
                 pinCount = 16,
                 matingRetentionForce = "60 N",
@@ -707,7 +707,7 @@ class ScmsRepositoryImpl(
                 id = "ALLOC-2026-001",
                 partMpn = "STM32G0B1VCT6",
                 recipient = "Avery Vale",
-                department = "EHW Â· Hardware Lead",
+                department = "EHW · Hardware Lead",
                 projectId = "HLPL-AI4T-01",
                 issuedQuantity = 50,
                 returnedQuantity = 0,
@@ -718,7 +718,7 @@ class ScmsRepositoryImpl(
                 id = "ALLOC-2026-002",
                 partMpn = "EG915N-EU",
                 recipient = "Elena Rostova",
-                department = "EHW Â· RF Engineer",
+                department = "EHW · RF Engineer",
                 projectId = "HLPL-AI4T-01",
                 issuedQuantity = 20,
                 returnedQuantity = 0,
@@ -729,7 +729,7 @@ class ScmsRepositoryImpl(
                 id = "ALLOC-2026-003",
                 partMpn = "HLPL-HARN-AI4T-PWR-01",
                 recipient = "Devon Lane",
-                department = "ESW Â· Firmware Lead",
+                department = "ESW · Firmware Lead",
                 projectId = "HLPL-AI4T-01",
                 issuedQuantity = 5,
                 returnedQuantity = 0,
@@ -782,6 +782,7 @@ class ScmsRepositoryImpl(
                 assetTag = "EQ-SMT-001",
                 serialNumber = "YAM-2024-9982-A",
                 name = "Yamaha YSM20R High-Speed Modular SMT Mounter Line 2",
+                departmentCode = "EMF",
                 category = "SMT Line",
                 location = "Cleanroom Facility 1",
                 custodian = "Casey Rowan (EMF)",
@@ -794,6 +795,7 @@ class ScmsRepositoryImpl(
                 assetTag = "EQ-CRIMP-002",
                 serialNumber = "SCH-36S-2025-11",
                 name = "Schleuniger CrimpCenter 36S Automated Harness Machine",
+                departmentCode = "MECH",
                 category = "Wire Harness Tooling",
                 location = "Harness Fabrication Bay B",
                 custodian = "Samira Holt (MECH)",
@@ -806,6 +808,7 @@ class ScmsRepositoryImpl(
                 assetTag = "EQ-JIG-003",
                 serialNumber = "CHR-8000-04",
                 name = "Chroma 8000 Automated EOL Telematics Functional Test Jig",
+                departmentCode = "QA",
                 category = "Testing Jig",
                 location = "Testing & Quality Lab",
                 custodian = "Mina Cross (TST)",
@@ -818,6 +821,7 @@ class ScmsRepositoryImpl(
                 assetTag = "EQ-IMTE-004",
                 serialNumber = "KEY-DSOX-3024T",
                 name = "Keysight InfiniiVision 200MHz 4-Ch Digital Storage Oscilloscope",
+                departmentCode = "EHW",
                 category = "IMTE Instrument",
                 location = "R&D Bench 3",
                 custodian = "Avery Vale (EHW)",
@@ -965,7 +969,7 @@ class ScmsRepositoryImpl(
                 testId = "DVP-01",
                 standard = "ISO 7637-2",
                 testTitle = "Conducted Electrical Transient Immunity (Pulse 1, 2a, 3a/b)",
-                condition = "Pulse 1: -100V, Pulse 2a: +37V, Pulse 3a/b: Â±150V",
+                condition = "Pulse 1: -100V, Pulse 2a: +37V, Pulse 3a/b: ±150V",
                 acceptanceCriteria = "Status II (No malfunction, auto recovery)",
                 lab = "Internal Lab (XYZ Pvt Ltd)",
                 status = "Passed",
@@ -998,7 +1002,7 @@ class ScmsRepositoryImpl(
                 testId = "DVP-04",
                 standard = "ISO 10605",
                 testTitle = "Electrostatic Discharge (ESD) Immunity",
-                condition = "Â±8 kV contact discharge, Â±15 kV air discharge",
+                condition = "±8 kV contact discharge, ±15 kV air discharge",
                 acceptanceCriteria = "Class A performance; zero memory corruption",
                 lab = "Internal Lab (XYZ Pvt Ltd)",
                 status = "Passed",
@@ -1009,7 +1013,7 @@ class ScmsRepositoryImpl(
                 testId = "DVP-05",
                 standard = "ISO 16750-4",
                 testTitle = "Rapid Thermal Shock & Temperature Cycling",
-                condition = "-40Â°C to +85Â°C, 250 cycles, 30 min dwell",
+                condition = "-40°C to +85°C, 250 cycles, 30 min dwell",
                 acceptanceCriteria = "Solder joint integrity under 3D X-ray; no cracks",
                 lab = "Outsourced Lab (ICAT Manesar)",
                 status = "In Progress",
@@ -1426,7 +1430,7 @@ class ScmsRepositoryImpl(
     private val _raciMatrix = MutableStateFlow(
         listOf(
             RaciRow(1, "Intake & Opportunity", "SAL (Sales & BD)", "Managing Director", "EHW, PUR, FIN", "All Departments"),
-            RaciRow(2, "Feasibility & Contract Review", "EHW, ESW, MECH, PUR, QA & Testing, FIN", "QA & Testing Lead (Jordan Blake)", "Executive Admin", "Client (Tata Motors)"),
+            RaciRow(2, "Feasibility & Contract Review", "EHW, ESW, MECH, PUR, QA & Testing, FIN", "QA & Testing Lead (Jordan Blake)", "Executive Admin", "Client (Northstar TEST)"),
             RaciRow(3, "Requirement & Commercial Lock", "HR/OPS & SAL", "Executive Admin", "EHW, ESW, MECH, FIN & PUR", "Engineering Team"),
             RaciRow(4, "Engineering Design & Schematics", "EHW (Avery Vale)", "EHW Lead", "QA, MECH, PUR", "EMF (Manufacturing)"),
             RaciRow(5, "SMT Pilot Build & Proto Tooling", "EMF (Casey Rowan)", "EMF Lead", "EHW, PUR, TST", "Executive Admin"),
@@ -1442,18 +1446,18 @@ class ScmsRepositoryImpl(
     private fun buildInitialTasks(): List<DailyTaskItem> = listOf(
         DailyTaskItem("TSK-01", "Complete ISO 7637-2 Transient Pulse 1 verification sign-off", "QA", "Critical", "Jordan Blake", "2026-03-20", isCompleted = true, lane = "Completed"),
         DailyTaskItem("TSK-02", "Reconcile Mouser Order LOT-2026-MOU-0881 against PO-2026-042", "PUR", "High", "Morgan Reed", "2026-03-20", isCompleted = true, lane = "Completed"),
-        DailyTaskItem("TSK-03", "Review EHW-SCH-01 Schematics netlist for SMT Pilot Gate unlock", "EHW", "Critical", "Avery Vale", "Today", isCompleted = false, isOverdue = false, lane = "Today"),
-        DailyTaskItem("TSK-04", "Calibrate Chroma 8000 EOL test jig before Stage 5 pilot batch", "TST", "High", "Mina Cross", "Yesterday", isCompleted = false, isOverdue = true, lane = "Today"),
-        DailyTaskItem("TSK-05", "Inspect 16-Pin Wire Harness crimp pull force (USCAR-2 spec)", "MECH", "Normal", "Samira Holt", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-SLCT-01"),
-        DailyTaskItem("TSK-06", "CAN J1939 Telemetry bootloader bring-up & security token test", "FW", "Critical", "Devon Lane", "Today", isCompleted = false, isOverdue = false, lane = "Today"),
-        DailyTaskItem("TSK-07", "SMT Line 2 10-zone reflow profile validation with thermocouples", "EMF", "High", "Casey Rowan", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow"),
-        DailyTaskItem("TSK-08", "Review PPAP Level 3 documentation package for ARAI audit", "QA", "High", "Jordan Blake", "Friday", isCompleted = false, isOverdue = false, lane = "Review", projectId = "HLPL-SLCT-01"),
-        DailyTaskItem("TSK-09", "Finance milestone advance sign-off for EV Fleet delivery batch", "FIN", "Critical", "Priya Voss", "Thursday", isCompleted = false, isOverdue = false, lane = "Review"),
-        DailyTaskItem("TSK-10", "Issue component allocation for BMS prototype harness to Avery Vale", "PUR", "Normal", "Morgan Reed", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-XLINK-03"),
-        DailyTaskItem("TSK-11", "AIS-140 Annexure 3 GPS tracking firmware lock", "FW", "Critical", "Devon Lane", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "HLPL-SLCT-01"),
-        DailyTaskItem("TSK-12", "Select Motors vendor quote review for SOS button & buzzer", "PUR", "High", "Morgan Reed", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-SLCT-01"),
-        DailyTaskItem("TSK-13", "Dual-CAN transceiver thermal simulation report for Commercial Fleet", "MECH", "High", "Samira Holt", "Friday", isCompleted = false, isOverdue = false, lane = "Review", projectId = "HLPL-XLINK-03"),
-        DailyTaskItem("TSK-14", "OBD-II J1939 diagnostic protocol stack feasibility sign-off", "SW", "Critical", "Siddharth Roy", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "HLPL-XLINK-03"),
+        DailyTaskItem("TSK-03", "Review EHW-SCH-01 Schematics netlist for SMT Pilot Gate unlock", "EHW", "Critical", "Avery Vale", "Today", isCompleted = false, isOverdue = false, lane = "Today", roleLevel = "L1 Lead", estimatedHours = 6.0),
+        DailyTaskItem("TSK-04", "Calibrate Chroma 8000 EOL test jig before Stage 5 pilot batch", "TST", "High", "Mina Cross", "Yesterday", isCompleted = false, isOverdue = true, lane = "Today", roleLevel = "L2 Senior Specialist", estimatedHours = 4.0),
+        DailyTaskItem("TSK-05", "Inspect 16-Pin Wire Harness crimp pull force (USCAR-2 spec)", "MECH", "Normal", "Samira Holt", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-SLCT-01", roleLevel = "L3 Associate", estimatedHours = 3.5),
+        DailyTaskItem("TSK-06", "CAN J1939 Telemetry bootloader bring-up & security token test", "FW", "Critical", "Devon Lane", "Today", isCompleted = false, isOverdue = false, lane = "Today", roleLevel = "L1 Lead", estimatedHours = 8.0),
+        DailyTaskItem("TSK-07", "SMT Line 2 10-zone reflow profile validation with thermocouples", "EMF", "High", "Casey Rowan", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", roleLevel = "L4 Operator", estimatedHours = 2.0),
+        DailyTaskItem("TSK-08", "Review PPAP Level 3 documentation package for ARAI audit", "QA", "High", "Jordan Blake", "Friday", isCompleted = false, isOverdue = false, lane = "Review", projectId = "HLPL-SLCT-01", roleLevel = "L1 Lead", estimatedHours = 5.0),
+        DailyTaskItem("TSK-09", "Finance milestone advance sign-off for EV Fleet delivery batch", "FIN", "Critical", "Priya Voss", "Thursday", isCompleted = false, isOverdue = false, lane = "Review", roleLevel = "L1 Lead", estimatedHours = 2.0),
+        DailyTaskItem("TSK-10", "Issue component allocation for BMS prototype harness to Avery Vale", "PUR", "Normal", "Unassigned", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-XLINK-03", roleLevel = null, estimatedHours = 1.5),
+        DailyTaskItem("TSK-11", "AIS-140 Annexure 3 GPS tracking firmware lock", "FW", "Critical", "Devon Lane", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "HLPL-SLCT-01", roleLevel = "L1 Lead", estimatedHours = 6.0),
+        DailyTaskItem("TSK-12", "Cedar Ridge vendor quote review for SOS button & buzzer", "PUR", "High", "Morgan Reed", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "HLPL-SLCT-01", roleLevel = "L2 Senior Specialist", estimatedHours = 3.0),
+        DailyTaskItem("TSK-13", "Dual-CAN transceiver thermal simulation report for Commercial Fleet", "MECH", "High", "Samira Holt", "Friday", isCompleted = false, isOverdue = false, lane = "Review", projectId = "HLPL-XLINK-03", roleLevel = "L2 Senior Specialist", estimatedHours = 4.0),
+        DailyTaskItem("TSK-14", "OBD-II J1939 diagnostic protocol stack feasibility sign-off", "SW", "Critical", "Siddharth Roy", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "HLPL-XLINK-03", roleLevel = "L1 Lead", estimatedHours = 5.0),
         // Connected DEMO-PROJ-010 Operational Tasks (Enquiry -> Feasibility -> Freeze -> Proto)
         DailyTaskItem("TSK-10-01", "Log initial enquiry & statement of requirements from Northstar Field Systems", "SAL", "Normal", "Aakash Verma", "2026-10-28", isCompleted = true, lane = "Completed", projectId = "DEMO-PROJ-010"),
         DailyTaskItem("TSK-10-02", "Draft initial power budget and battery capacity options (3.7V 2600mAh Li-ion)", "EHW", "High", "Avery Vale", "2026-10-29", isCompleted = true, lane = "Completed", projectId = "DEMO-PROJ-010"),
@@ -1482,7 +1486,7 @@ class ScmsRepositoryImpl(
         DailyTaskItem("TSK-HF-05", "Cloud MQTT integration testing (BLOCKED: awaiting carrier APN activation)", "SW", "Normal", "Pooja Verma", "Next Week", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "DEMO-PORT-04-HF"),
         // Portfolio Stage 6: QA / PoC & Service Feedback Loop (DEMO-PORT-06-QA)
         DailyTaskItem("TSK-QA-01", "ISO 7637-2 electrical transient pulses 1, 2a, 3a/b pass report", "QA", "Critical", "Jordan Blake", "2026-10-24", isCompleted = true, lane = "Completed", projectId = "DEMO-PORT-06-QA"),
-        DailyTaskItem("TSK-QA-02", "Thermal chamber cycling (-40Â°C to +85Â°C) 48-hour soak test", "QA", "High", "Rohit Kulkarni", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "DEMO-PORT-06-QA"),
+        DailyTaskItem("TSK-QA-02", "Thermal chamber cycling (-40°C to +85°C) 48-hour soak test", "QA", "High", "Rohit Kulkarni", "Today", isCompleted = false, isOverdue = false, lane = "Today", projectId = "DEMO-PORT-06-QA"),
         DailyTaskItem("TSK-QA-03", "Investigate Field RMA Ticket TKT-2026-0201 for sensor reading drift", "SIT", "High", "Preeti Joshi", "Tomorrow", isCompleted = false, isOverdue = false, lane = "Review", projectId = "DEMO-PORT-06-QA"),
         DailyTaskItem("TSK-QA-04", "PPAP Level 3 PSW sign-off (BLOCKED: awaiting thermal cycling completion)", "QA", "Critical", "Jordan Blake", "Next Week", isCompleted = false, isOverdue = false, lane = "Tomorrow", projectId = "DEMO-PORT-06-QA")
     )
@@ -1638,7 +1642,7 @@ class ScmsRepositoryImpl(
             fromDept = "SAL",
             toDept = "EHW",
             projectId = "DEMO-PORT-03-FRZ",
-            deliverableTitle = "Select Motors Frozen PRS-01 & Pinout Constraint Document",
+            deliverableTitle = "Cedar Ridge Frozen PRS-01 & Pinout Constraint Document",
             status = "Accepted",
             initiatedBy = "Aakash Verma (SAL Lead)",
             targetLead = "Avery Vale (EHW Lead)",
@@ -1716,7 +1720,7 @@ class ScmsRepositoryImpl(
     )
     override val notifications: StateFlow<List<AppNotification>> = _notifications.asStateFlow()
 
-    // 17. 6 HOD Feasibility & Contract Review (Master Plan Â§4 & Â§5, Stage 2 Gate)
+    // 17. 6 HOD Feasibility & Contract Review (Master Plan §4 & §5, Stage 2 Gate)
     private fun buildInitialFeasibilityReviews(): List<FeasibilityReview> = listOf(
         FeasibilityReview(
             deptCode = "EHW",
@@ -1725,8 +1729,8 @@ class ScmsRepositoryImpl(
             verdict = "FEASIBLE",
             scopeSummary = "Automotive Telematics Gateway schematic with STM32H753 MCU, Quectel EG915N-EU LTE Cat-1, dual CAN-FD, and ISO 7637-2 power protection.",
             internalRemarks = "Custom 4-layer FR4 stackup satisfies thermal & EMC targets. Quectel module requires early PO due to 14-week lead time. ATECC608B hardware secure element locked for TLS client cert storage.",
-            clientHighlights = "Architecture complies with Tata Motors SOR v1.4 telematics specifications. 100% AEC-Q100 Grade 2 active silicon selected.",
-            keyParameters = mapOf("MCU Clock" to "480 MHz", "Operating Temp" to "-40Â°C to +85Â°C", "Deep Sleep Current" to "< 1.8 mA", "CAN Channels" to "2x CAN-FD with Wake-up"),
+            clientHighlights = "Architecture complies with Northstar SOR v1.4 telematics specifications (Local TEST). 100% AEC-Q100 Grade 2 active silicon selected.",
+            keyParameters = mapOf("MCU Clock" to "480 MHz", "Operating Temp" to "-40°C to +85°C", "Deep Sleep Current" to "< 1.8 mA", "CAN Channels" to "2x CAN-FD with Wake-up"),
             signedAt = "2026-03-12 14:30",
             signatureHash = "SHA256:8f9a2b1c4e7d0f3e8291a0c4f1e5",
             projectId = "HLPL-AI4T-01"
@@ -1737,7 +1741,7 @@ class ScmsRepositoryImpl(
             leadName = "Devon Lane",
             verdict = "FEASIBLE",
             scopeSummary = "Automotive FreeRTOS kernel with dual-bank secure bootloader, UDS on CAN diagnostics, and TLS 1.3 MQTT edge telemetry.",
-            internalRemarks = "Dual-bank flash architecture allocated for seamless A/B rollback. Cryptographic signature check verified in <350ms on cold boot. Tata Motors proprietary CAN matrix dbc imported.",
+            internalRemarks = "Dual-bank flash architecture allocated for seamless A/B rollback. Cryptographic signature check verified in <350ms on cold boot. Client sample CAN matrix dbc imported.",
             clientHighlights = "AUTOSAR classic stack compatibility with real-time AIS-140 emergency health telemetry and remote Over-The-Air (FOTA) delta updates.",
             keyParameters = mapOf("RTOS" to "FreeRTOS v10.5", "Bootloader" to "Dual-Bank A/B Secure", "FOTA Compression" to "Courgette Delta", "Cloud Protocol" to "MQTT over TLS 1.3"),
             signedAt = "2026-03-12 15:15",
@@ -1750,9 +1754,9 @@ class ScmsRepositoryImpl(
             leadName = "Elena Rostova",
             verdict = "FEASIBLE",
             scopeSummary = "IP67 Die-cast ADC12 aluminum housing, dual silicone compression gasket, and Molex MX150 automotive interface.",
-            internalRemarks = "Thermal FEA simulation shows junction temp stays < 72Â°C at 50Â°C ambient engine-bay conditions. Tooling quote approved for â‚¹8.5 Lakhs with 4-week T0 sample turnaround.",
-            clientHighlights = "Rigid IP67 water/dust proof enclosure designed for Tata Ace EV chassis mounting, vibration certified to ISO 16750-3 (10G RMS).",
-            keyParameters = mapOf("Ingress Protection" to "IP67 Immersion Rated", "Housing Material" to "ADC12 Die-Cast Aluminum", "Vibration Rating" to "ISO 16750-3 (10G RMS)", "Operating Temp" to "-40Â°C to +105Â°C"),
+            internalRemarks = "Thermal FEA simulation shows junction temp stays < 72°C at 50°C ambient engine-bay conditions. Tooling quote approved for ₹8.5 Lakhs with 4-week T0 sample turnaround.",
+            clientHighlights = "Rigid IP67 water/dust proof enclosure designed for Northstar Field Gateway chassis mounting, vibration certified to ISO 16750-3 (10G RMS).",
+            keyParameters = mapOf("Ingress Protection" to "IP67 Immersion Rated", "Housing Material" to "ADC12 Die-Cast Aluminum", "Vibration Rating" to "ISO 16750-3 (10G RMS)", "Operating Temp" to "-40°C to +105°C"),
             signedAt = "2026-03-12 16:00",
             signatureHash = "SHA256:112233445566778899aabbccddee",
             projectId = "HLPL-AI4T-01"
@@ -1764,7 +1768,7 @@ class ScmsRepositoryImpl(
             verdict = "FEASIBLE_WITH_CONDITIONS",
             scopeSummary = "Dual-source supply chain verification, Mouser/Digi-Key inventory locking, and volume vendor allocation.",
             internalRemarks = "Long lead-time on TI TCAN1042 transceivers mitigated by locking 10,000 pcs reel stock with Mouser. Alternate NXP TJA1051T qualified as secondary source. Target BOM locked at .80.",
-            clientHighlights = "94% of active BOM lines validated with Tier-1 franchised distributors. Committed piece price â‚¹4,066/unit (.80) within client commercial ceiling.",
+            clientHighlights = "94% of active BOM lines validated with Tier-1 franchised distributors. Committed piece price ₹4,066/unit (\$48.80) within client commercial ceiling.",
             keyParameters = mapOf("Locked Unit BOM" to ".80", "AVL Coverage" to "94%", "Long-Lead Lines" to "2 Lines (Reel Reserved)", "Payment Terms" to "Net 30 franchised"),
             signedAt = "2026-03-13 10:00",
             signatureHash = "SHA256:99aabbccddeeff00112233445566",
@@ -1788,10 +1792,10 @@ class ScmsRepositoryImpl(
             deptName = "Finance & Commercial Contracts",
             leadName = "Rajesh Sharma",
             verdict = "FEASIBLE",
-            scopeSummary = "Commercial evaluation of â‚¹20.33 Cr multi-year contract, volume price commitments, and milestone cash flows.",
-            internalRemarks = "NRE budget â‚¹45.00 Lakhs covers tooling, ARAI testing, and prototype runs with 35% advance milestone. Project gross margin modeled at 34.2%.",
+            scopeSummary = "Commercial evaluation of ₹20.33 Cr multi-year contract, volume price commitments, and milestone cash flows.",
+            internalRemarks = "NRE budget ₹45.00 Lakhs covers tooling, ARAI testing, and prototype runs with 35% advance milestone. Project gross margin modeled at 34.2%.",
             clientHighlights = "Contract volume locked for 50,000 units with progressive delivery schedules and milestone-linked payment terms.",
-            keyParameters = mapOf("Total Contract" to "â‚¹20.33 Cr", "Order Volume" to "50,000 Units", "NRE Milestone" to "â‚¹45.00 Lakhs", "Gross Margin Target" to "34.2%"),
+            keyParameters = mapOf("Total Contract" to "₹20.33 Cr", "Order Volume" to "50,000 Units", "NRE Milestone" to "₹45.00 Lakhs", "Gross Margin Target" to "34.2%"),
             signedAt = "2026-03-13 14:00",
             signatureHash = "SHA256:abcdef0123456789abcdef012345",
             projectId = "HLPL-AI4T-01"
@@ -1882,56 +1886,56 @@ class ScmsRepositoryImpl(
     )
     override val engineeringSquad: StateFlow<List<String>> = _engineeringSquad.asStateFlow()
 
-    // 20. Customer Register & Accounts (Master Plan Â§4 & Â§6)
+    // 20. Customer Register & Accounts (Master Plan §4 & §6)
     private val _customers = MutableStateFlow(
         listOf(
             CustomerAccount(
-                id = "CUST-TATA-01",
-                name = "Tata Motors Limited",
-                division = "EV Fleet & Commercial Vehicle Division",
-                contactPerson = "Rajiv Mehta (Head of Procurement)",
-                email = "rajiv.mehta@tatamotors.com",
-                phone = "+91 22 6665 8282",
-                location = "Bombay House, Mumbai / Pune Plant",
-                activeProjects = listOf("HLPL-AI4T-01 (Tata Ace EV 4G Gateway)"),
-                ndaStatus = "Active & Executed",
-                tierRating = "Tier-1 OEM"
+                id = "CUST-NORTH-01",
+                name = "Northstar Field Systems (TEST)",
+                division = "Fleet & Commercial Telemetry Division",
+                contactPerson = "Rajiv Mehta (Procurement Lead · Sample)",
+                email = "rajiv.mehta@northstar-test.example",
+                phone = "+91 22 0000 8282",
+                location = "Pune Test Facility, Maharashtra",
+                activeProjects = listOf("HLPL-AI4T-01 (Northstar Field Gateway)"),
+                ndaStatus = "Active Draft (Local TEST)",
+                tierRating = "Tier-1 Fleet Partner (Sample)"
             ),
             CustomerAccount(
-                id = "CUST-AL-02",
-                name = "Ashok Leyland Limited",
-                division = "Electric Commercial Vehicles (e-Dost)",
-                contactPerson = "K. Sundaram (VP SCM & Electronics)",
-                email = "k.sundaram@ashokleyland.com",
-                phone = "+91 44 2530 1818",
-                location = "Guindy, Chennai, Tamil Nadu",
-                activeProjects = listOf("HLPL-EV-AL-02 (e-Dost Fleet V2X)"),
-                ndaStatus = "Active & Executed",
-                tierRating = "Tier-1 OEM"
+                id = "CUST-REDWOOD-02",
+                name = "Redwood Transport Tech (TEST)",
+                division = "Connected Commercial Mobility",
+                contactPerson = "K. Sundaram (SCM Lead · Sample)",
+                email = "k.sundaram@redwood-test.example",
+                phone = "+91 44 0000 1818",
+                location = "Chennai Test Hub, Tamil Nadu",
+                activeProjects = listOf("HLPL-EV-RW-02 (Redwood V2X Node)"),
+                ndaStatus = "Active Draft (Local TEST)",
+                tierRating = "Tier-1 Fleet Partner (Sample)"
             ),
             CustomerAccount(
-                id = "CUST-ME-03",
-                name = "Mahindra Electric Mobility Ltd",
+                id = "CUST-JUNIPER-03",
+                name = "Juniper E-Mobility (TEST)",
                 division = "Last-Mile Commercial Mobility",
-                contactPerson = "Priya Deshmukh (Technical Lead)",
-                email = "deshmukh.priya@mahindra.com",
-                phone = "+91 80 6799 4000",
-                location = "Electronic City, Bengaluru, Karnataka",
-                activeProjects = listOf("HLPL-T3-ME-01 (Treo Telematics Retrofit)"),
-                ndaStatus = "Active & Executed",
-                tierRating = "Tier-1 OEM"
+                contactPerson = "Priya Deshmukh (Tech Lead · Sample)",
+                email = "deshmukh.priya@juniper-test.example",
+                phone = "+91 80 0000 4000",
+                location = "Bengaluru Test Lab, Karnataka",
+                activeProjects = listOf("DEMO-PORT-04-HF (Juniper E-Mobility)"),
+                ndaStatus = "Active Draft (Local TEST)",
+                tierRating = "Tier-1 Fleet Partner (Sample)"
             ),
             CustomerAccount(
-                id = "CUST-SEL-04",
-                name = "Select Motors & Conversions",
-                division = "Retrofit Fleet Electrification",
-                contactPerson = "Vikram Singh (Managing Partner)",
-                email = "vikram@selectmotors.co.in",
-                phone = "+91 124 459 2000",
-                location = "Gurugram, Haryana",
-                activeProjects = emptyList(),
+                id = "CUST-CEDAR-04",
+                name = "Cedar Ridge Telemetry Systems (TEST)",
+                division = "Retrofit Fleet Connectivity",
+                contactPerson = "Vikram Singh (Partner · Sample)",
+                email = "vikram@cedarridge-test.example",
+                phone = "+91 12 0000 2000",
+                location = "Gurugram Test Office, Haryana",
+                activeProjects = listOf("HLPL-SLCT-01 (Cedar Ridge GPS Gateway)"),
                 ndaStatus = "Pending Renewal",
-                tierRating = "Tier-2 Retrofit Partner"
+                tierRating = "Tier-2 Partner (Sample)"
             )
         )
     )
@@ -1942,32 +1946,32 @@ class ScmsRepositoryImpl(
         listOf(
             SalesOpportunity(
                 id = "OPP-2026-001",
-                title = "Tata Ace EV 4G Telematics Gateway",
-                clientName = "Tata Motors Limited",
+                title = "Northstar Field 4G Telematics Gateway (Sample)",
+                clientName = "Northstar Field Systems (TEST)",
                 volume = 50000,
-                projectedValueInr = "â‚¹20.33 Cr",
-                status = "Contract Locked",
+                projectedValueInr = "₹20.33 Cr",
+                status = "Feasibility Review (Local TEST)",
                 sorDocId = "HLPL-AI4T-01-MKT-SOR-01",
                 isOpportunity = true
             ),
             SalesOpportunity(
                 id = "OPP-2026-002",
-                title = "Ashok Leyland 5G V2X Fleet Gateway",
-                clientName = "Ashok Leyland Limited",
+                title = "Redwood Transport 5G V2X Gateway (Sample)",
+                clientName = "Redwood Transport Tech (TEST)",
                 volume = 15000,
-                projectedValueInr = "â‚¹8.75 Cr",
+                projectedValueInr = "₹8.75 Cr",
                 status = "Feasibility Review",
-                sorDocId = "HLPL-AL-RFQ-2026-08",
+                sorDocId = "HLPL-RW-RFQ-2026-08",
                 isOpportunity = true
             ),
             SalesOpportunity(
                 id = "ENQ-2026-009",
-                title = "Mahindra Treo 3W Telematics Retrofit",
-                clientName = "Mahindra Electric Mobility Ltd",
+                title = "Juniper 3W Telematics Retrofit (Sample)",
+                clientName = "Juniper E-Mobility (TEST)",
                 volume = 25000,
-                projectedValueInr = "â‚¹6.50 Cr",
+                projectedValueInr = "₹6.50 Cr",
                 status = "Enquiry Intake",
-                sorDocId = "HLPL-ME-ENQ-2026-09",
+                sorDocId = "HLPL-JP-ENQ-2026-09",
                 isOpportunity = false
             )
         )
@@ -2075,18 +2079,18 @@ class ScmsRepositoryImpl(
     )
     override val purchaseOrders: StateFlow<List<PurchaseOrder>> = _purchaseOrders.asStateFlow()
 
-    // 24. Client OEM Deliverables & Document Vault (Master Plan Â§3)
+    // 24. Client OEM Deliverables & Document Vault (Master Plan §3)
     private fun buildInitialClientDeliverables(): List<ClientDeliverable> = listOf(
         ClientDeliverable(
             id = "DELIV-SOR-01",
             code = "HLPL-AI4T-01-MKT-SOR-01",
             title = "System Requirement Specification (SOR)",
             category = "Requirements",
-            standard = "Tata Motors SOR v1.4",
-            status = "Signed & Locked",
+            standard = "Northstar Field SOR v1.4 (Local TEST)",
+            status = "Draft · local test",
             date = "2026-02-15",
-            owner = "Rajiv Mehta (Client)",
-            description = "Core functional specifications for Tata Ace EV Telematics Gateway.",
+            owner = "Rajiv Mehta (Sample Client)",
+            description = "Sample functional specifications for Northstar Field Gateway (Local TEST).",
             projectId = "HLPL-AI4T-01"
         ),
         ClientDeliverable(
@@ -2095,10 +2099,10 @@ class ScmsRepositoryImpl(
             title = "Mutual Non-Disclosure Agreement",
             category = "Legal",
             standard = "Bilateral Corporate NDA",
-            status = "Executed",
+            status = "Draft · local test",
             date = "2026-02-10",
             owner = "Legal & Compliance",
-            description = "Mutual proprietary IP, schematic confidentiality, and trade secret protections.",
+            description = "Sample bilateral IP and schematic confidentiality template (Local TEST).",
             projectId = "HLPL-AI4T-01"
         ),
         ClientDeliverable(
@@ -2106,11 +2110,11 @@ class ScmsRepositoryImpl(
             code = "HLPL-AI4T-01-FIN-QUO-01",
             title = "Commercial Quotation & Cost Breakdown",
             category = "Commercial",
-            standard = "Volume 50k Locked Pricing",
-            status = "Locked",
+            standard = "Sample Volume Estimate (50k)",
+            status = "Review · local test",
             date = "2026-03-01",
             owner = "Rajesh Sharma (CFO)",
-            description = "Piece price â‚¹4,066/unit (.80) + NRE â‚¹45.00 Lakhs locked across 50,000 units.",
+            description = "Sample estimate ₹4,066/unit ($48.80) + NRE ₹45.00 Lakhs across 50,000 units.",
             projectId = "HLPL-AI4T-01"
         ),
         ClientDeliverable(
@@ -2130,7 +2134,7 @@ class ScmsRepositoryImpl(
             code = "HLPL-AI4T-01-MFG-PDI-01",
             title = "Pre-Delivery Inspection Checklist",
             category = "Manufacturing",
-            standard = "IATF 16949 Â§8.6",
+            standard = "IATF 16949 §8.6",
             status = "Ready",
             date = "2026-03-15",
             owner = "Production Quality Lead",
@@ -2215,13 +2219,13 @@ class ScmsRepositoryImpl(
         ClientDeliverable(
             id = "DELIV-FRZ-01",
             code = "DEMO-PORT-03-FRZ-SAL-SOR-01",
-            title = "Select Motors Signed System Requirement Specification (SOR v2.0)",
+            title = "Cedar Ridge System Requirement Baseline (SOR v2.0)",
             category = "Requirements",
-            standard = "Select Motors SOR v2.0",
-            status = "Signed & Locked",
+            standard = "Cedar Ridge SOR v2.0 (Local TEST)",
+            status = "Draft · Local TEST",
             date = "2026-10-20",
             owner = "Aakash Verma (SAL)",
-            description = "Two-wheeler telematics unit requirement baseline and commercial commitment.",
+            description = "Two-wheeler telematics unit requirement baseline and illustrative local scope.",
             projectId = "DEMO-PORT-03-FRZ"
         ),
         ClientDeliverable(
@@ -2230,7 +2234,7 @@ class ScmsRepositoryImpl(
             title = "Hardware Product Requirement Specification (PRS)",
             category = "Engineering",
             standard = "AIS-140 Rev B",
-            status = "Frozen",
+            status = "In Review · Local TEST",
             date = "2026-10-22",
             owner = "Avery Vale (EHW)",
             description = "Electrical architecture, 50-ohm antenna matching, and power budget.",
@@ -2295,7 +2299,7 @@ class ScmsRepositoryImpl(
             status = "In Validation",
             date = "2026-10-24",
             owner = "Jordan Blake (QA)",
-            description = "Thermal chamber soak (-40Â°C to +85Â°C) and vibration test compliance record.",
+            description = "Thermal chamber soak (-40°C to +85°C) and vibration test compliance record.",
             projectId = "DEMO-PORT-06-QA"
         ),
         ClientDeliverable(
@@ -2456,7 +2460,7 @@ class ScmsRepositoryImpl(
             ProductionWorkOrder(
                 workOrderNo = "WO-2026-AI4T-001",
                 projectId = "HLPL-AI4T-01",
-                title = "Tata Ace EV 4G Telematics Gateway - Pilot Batch (100 units)",
+                title = "Northstar Field Gateway 4G Telematics - Pilot Batch (100 units)",
                 batchQuantity = 100,
                 completedQuantity = 0,
                 currentStationNo = 2,
@@ -2501,7 +2505,7 @@ class ScmsRepositoryImpl(
                 priority = "Normal",
                 scheduledDate = "2026-10-25",
                 stoppageHours = 0.0,
-                remarks = "Routine 30-day preventive maintenance per IATF 16949 Â§8.5.1.5"
+                remarks = "Routine 30-day preventive maintenance per IATF 16949 §8.5.1.5"
             ),
             MaintenanceLogRecord(
                 logId = "MNT-2026-002",
@@ -2543,7 +2547,7 @@ class ScmsRepositoryImpl(
                 standardAgency = "NABL Accredited Calibration Lab #1042",
                 calibrationDate = "2026-05-10",
                 validUntil = "2026-11-10",
-                uncertaintySpec = "Â±0.5% DC Gain Accuracy",
+                uncertaintySpec = "±0.5% DC Gain Accuracy",
                 status = "Valid / Certified",
                 certificateUrl = "https://example.invalid/certs/CAL-2026-089.pdf"
             ),
@@ -2554,7 +2558,7 @@ class ScmsRepositoryImpl(
                 standardAgency = "Fluke Metrology Services",
                 calibrationDate = "2025-11-20",
                 validUntil = "2026-11-20",
-                uncertaintySpec = "Â±0.02 N (CPK > 1.67)",
+                uncertaintySpec = "±0.02 N (CPK > 1.67)",
                 status = "Expiring (< 30d)",
                 certificateUrl = "https://example.invalid/certs/CAL-2026-091.pdf"
             )
@@ -2568,7 +2572,7 @@ class ScmsRepositoryImpl(
             VisitorLogEntry(
                 visitorId = "VIS-2026-042",
                 fullName = "Rajesh Kulkarni",
-                company = "Tata Motors Commercial EV Division",
+                company = "Northstar Mobility Works (TEST Visitor)",
                 hostEmployee = "Avery Vale (EHW)",
                 purpose = "Stage 4 Schematics & Design Lock Review",
                 badgeNumber = "BADGE-V-104",
@@ -2714,7 +2718,7 @@ class ScmsRepositoryImpl(
                 queryId = "AI-Q-001",
                 queryText = "What is the mandatory quarantine procedure for ICs received on reel packaging?",
                 detectedTopic = "Receiving IQC & MSL Governance",
-                answerText = "Per SOP-IQC-004 Â§3.2, all semiconductors arriving on tape & reel must undergo 100% ESD inspection, desiccant verification, and MSL floor life calculation before transfer out of IQC-HOLD-STAGE-01.",
+                answerText = "Per SOP-IQC-004 §3.2, all semiconductors arriving on tape & reel must undergo 100% ESD inspection, desiccant verification, and MSL floor life calculation before transfer out of IQC-HOLD-STAGE-01.",
                 referencedSop = "SOP-IQC-004 (Electronic Component Receiving & IQC)",
                 confidencePct = 98
             ),
@@ -2722,15 +2726,15 @@ class ScmsRepositoryImpl(
                 queryId = "AI-Q-002",
                 queryText = "Can an operator sign off Stage 5 SMT Pilot Build without Stage 4 Schematics approval?",
                 detectedTopic = "APQP Stage-Gate Interlock Rules",
-                answerText = "Strictly prohibited. Per IATF 16949 Â§6.1, Stage Gate 5 is hard-interlocked and remains cryptographically locked in Room/Supabase until Controlled Document EHW-SCH-01 receives Lead sign-off.",
-                referencedSop = "IATF 16949 Â§6.1 Automotive Stage-Gate Interlock Governance",
+                answerText = "Strictly prohibited. Per IATF 16949 §6.1, Stage Gate 5 is hard-interlocked and remains cryptographically locked in Room/Supabase until Controlled Document EHW-SCH-01 receives Lead sign-off.",
+                referencedSop = "IATF 16949 §6.1 Automotive Stage-Gate Interlock Governance",
                 confidencePct = 100
             )
         )
     )
     override val aiQueries: StateFlow<List<AiProceduralQuery>> = _aiQueries.asStateFlow()
 
-    // 35. Web-Configured Travel Policy Rules (Customizable on Web Portal per Master Plan Â§26.3)
+    // 35. Web-Configured Travel Policy Rules (Customizable on Web Portal per Master Plan §26.3)
     private val _travelPolicyRules = MutableStateFlow(
         listOf(
             TravelPolicyRule(
@@ -2755,7 +2759,7 @@ class ScmsRepositoryImpl(
     )
     override val travelPolicyRules: StateFlow<List<TravelPolicyRule>> = _travelPolicyRules.asStateFlow()
 
-    // 36. Approvals & Governance Decision Queue (Master Plan Â§26.3 & Enterprise Categories)
+    // 36. Approvals & Governance Decision Queue (Master Plan §26.3 & Enterprise Categories)
     private val _approvals = MutableStateFlow(
         listOf(
             // 1. Expense Request
@@ -2768,10 +2772,10 @@ class ScmsRepositoryImpl(
                 updatedAt = "2026-10-18 14:30",
                 requester = "Casey Rowan",
                 department = "EMF",
-                project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
+                project = "HLPL-AI4T-01 (Northstar Field Gateway)",
                 description = "Procurement of specialized Henkel Loctite 3880 thermal adhesive and high-temperature lead-free SAC305 solder paste for SMT pilot line testing.",
                 riskLevel = "Medium",
-                iatfClause = "IATF 16949 Â§8.5.1 (Tooling & Consumables Release)",
+                iatfClause = "IATF 16949 §8.5.1 (Tooling & Consumables Release)",
                 amountInr = 42500.0,
                 expenseReasonDetails = "Urgent consumable replenishment for SMT Line 2 pilot run. Standard lead time via bulk vendor was 4 weeks; local supplier expedited for trial.",
                 vendorOrBeneficiary = "Sumitron Exports Pvt Ltd",
@@ -2788,12 +2792,12 @@ class ScmsRepositoryImpl(
                 updatedAt = "2026-10-18 11:15",
                 requester = "Devon Lane",
                 department = "ESW",
-                project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
-                description = "On-site engineering calibration and CAN J1939 telemetry logging at Tata Motors Pune Chakan Plant over 3 days.",
+                project = "HLPL-AI4T-01 (Northstar Field Gateway)",
+                description = "On-site engineering calibration and CAN J1939 telemetry logging at Northstar Mobility Works test facility over 3 days.",
                 riskLevel = "Medium",
-                iatfClause = "ISO 9001 Â§8.4 (Travel & Field Engineering Authorization)",
+                iatfClause = "ISO 9001 §8.4 (Travel & Field Engineering Authorization)",
                 amountInr = 28400.0,
-                expenseReasonDetails = "Flight: BLR-PNQ round trip (â‚¹14,200), Hotel: 2 nights at Lemon Tree Chakan (â‚¹9,200), Local taxi & per diem food (â‚¹5,000). Total claimed â‚¹28,400.",
+                expenseReasonDetails = "Flight: BLR-PNQ round trip (₹14,200), Hotel: 2 nights (₹9,200), Local taxi & per diem (₹5,000). Total claimed ₹28,400.",
                 vendorOrBeneficiary = "Devon Lane (Employee Reimbursement)",
                 travelPolicyCompliant = true,
                 travelPolicyNotes = "Complies with Web Travel Policy POL-TRV-01: Hotel tier verified, corporate discount applied, advance booking within window."
@@ -2808,13 +2812,13 @@ class ScmsRepositoryImpl(
                 updatedAt = "2026-10-18 09:40",
                 requester = "Avery Vale",
                 department = "EHW",
-                project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
+                project = "HLPL-AI4T-01 (Northstar Field Gateway)",
                 description = "Formal sign-off of Stage 4 Schematics after addressing TI Buck regulator thermal relief and transient suppression diode footprint.",
                 riskLevel = "Critical",
-                iatfClause = "IATF 16949 Â§8.3.4 (Design Review & Verification Gate)",
+                iatfClause = "IATF 16949 §8.3.4 (Design Review & Verification Gate)",
                 amountInr = 0.0,
                 expenseReasonDetails = "Non-monetary engineering gateway task. Approving this gate unlocks Stage 5 SMT Pilot Build in the APQP Stepper.",
-                vendorOrBeneficiary = "XYZ Pvt Ltd Internal Engineering",
+                vendorOrBeneficiary = "Hexense Internal Engineering (TEST)",
                 travelPolicyCompliant = true,
                 travelPolicyNotes = "N/A - Quality Gate Approval"
             ),
@@ -2828,12 +2832,12 @@ class ScmsRepositoryImpl(
                 updatedAt = "2026-10-18 15:10",
                 requester = "Morgan Reed",
                 department = "PUR",
-                project = "HLPL-SLCT-01 (AIS-140 Gateway)",
+                project = "HLPL-SLCT-01 (Cedar Ridge Gateway)",
                 description = "Deviation to permit Vishay SM6T36CA (AEC-Q101) as drop-in alternative for Littelfuse TPSMAJ36A due to global 16-week allocation delay.",
                 riskLevel = "High",
-                iatfClause = "IATF 16949 Â§8.7.1.1 (Customer / Engineering Concession & Deviation)",
+                iatfClause = "IATF 16949 §8.7.1.1 (Customer / Engineering Concession & Deviation)",
                 amountInr = 185000.0,
-                expenseReasonDetails = "Price variance: +â‚¹1.20 per unit for 15,000 pcs lot. EHW team reviewed clamping voltage and confirmed 100% pin-to-pin and electrical compatibility.",
+                expenseReasonDetails = "Price variance: +₹1.20 per unit for 15,000 pcs lot. EHW team reviewed clamping voltage and confirmed 100% pin-to-pin and electrical compatibility.",
                 vendorOrBeneficiary = "Arrow Electronics India Pvt Ltd",
                 travelPolicyCompliant = true,
                 travelPolicyNotes = "Procurement SCM Concession"
@@ -2848,12 +2852,12 @@ class ScmsRepositoryImpl(
                 updatedAt = "2026-10-18 16:20",
                 requester = "Morgan Reed",
                 department = "PUR",
-                project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
+                project = "HLPL-AI4T-01 (Northstar Field Gateway)",
                 description = "Commercial PO release for 5,000 pcs EG915N-EU cellular modules under contracted Master Pricing Agreement.",
                 riskLevel = "Critical",
-                iatfClause = "ISO 9001 Â§8.4 (Purchasing Authorization & Supplier Control)",
+                iatfClause = "ISO 9001 §8.4 (Purchasing Authorization & Supplier Control)",
                 amountInr = 5177000.0,
-                expenseReasonDetails = "Batch procurement for Pilot SMT Build and ARAI Type Approval testing batch. Rate locked at â‚¹1,035.40/unit with 30-day net credit terms.",
+                expenseReasonDetails = "Batch procurement for Pilot SMT Build and ARAI Type Approval testing batch. Rate locked at ₹1,035.40/unit with 30-day net credit terms.",
                 vendorOrBeneficiary = "Quectel Wireless Solutions Co., Ltd.",
                 travelPolicyCompliant = true,
                 travelPolicyNotes = "Standard PO Disbursement"
@@ -2868,10 +2872,10 @@ class ScmsRepositoryImpl(
                 updatedAt = "2026-10-18 12:00",
                 requester = "Priya Voss",
                 department = "FIN",
-                project = "HLPL-AI4T-01 (Tata Ace EV 4G)",
+                project = "HLPL-AI4T-01 (Northstar Field Gateway)",
                 description = "40% advance release for precision steel tooling molds for automotive IP67 sealed multi-pin connectors.",
                 riskLevel = "High",
-                iatfClause = "ISO 9001 Â§8.4.3 (Financial Release & Milestone Settlement)",
+                iatfClause = "ISO 9001 §8.4.3 (Financial Release & Milestone Settlement)",
                 amountInr = 1450000.0,
                 expenseReasonDetails = "Contractual Phase 1 Tooling Advance against Proforma Invoice PI-MOL-9921 with bank guarantee validated by Accounts.",
                 vendorOrBeneficiary = "Molex India Tooling Division",
@@ -2891,7 +2895,7 @@ class ScmsRepositoryImpl(
                 project = "Plant Facility Expansion (XYZ Pvt Ltd Line 2)",
                 description = "Procurement and installation of 4x dual-fan overhead ionizing blowers (Desco/Simco-Ion) for manual inspection and repair benches.",
                 riskLevel = "Medium",
-                iatfClause = "IATF 16949 Â§7.1.3.1 (Plant, Facility & Equipment Planning)",
+                iatfClause = "IATF 16949 §7.1.3.1 (Plant, Facility & Equipment Planning)",
                 amountInr = 85000.0,
                 expenseReasonDetails = "Required to meet ANSI/ESD S20.20 and IATF 16949 zero-ESD audit findings prior to customer plant audit next month.",
                 vendorOrBeneficiary = "Static Control Solutions India",
@@ -2978,11 +2982,11 @@ class ScmsRepositoryImpl(
                 requesterDept = "SAL",
                 category = "Travel & Transport",
                 amount = 24800.0,
-                purpose = "Customer commercial technical sign-off meeting at Tata Motors EV Fleet Division, Pune",
+                purpose = "Customer technical sign-off review with Northstar Field Systems (Local TEST)",
                 projectId = "HLPL-AI4T-01",
                 status = "Approved",
                 currentApproverRole = "FIN Lead",
-                travelDetails = "Tata Motors Ltd, Pune (Advance: ₹20,000)"
+                travelDetails = "Northstar Field Systems Lab, Pune (Local TEST Advance: ₹20,000)"
             ),
             com.example.myapplication.data.model.ExpenseRequestItem(
                 requestId = "EXP-2026-003",
@@ -3505,7 +3509,7 @@ class ScmsRepositoryImpl(
                 channel = "cross-dept-sync",
                 senderName = "Priya Sharma",
                 senderDept = "SAL",
-                message = "Tata Motors fleet manager Rohan Verma requested update on ARAI AIS-140 TAC certificate delivery schedule.",
+                message = "Northstar fleet manager Rohan Verma requested update on ARAI AIS-140 TAC certificate delivery schedule (Local TEST).",
                 timestamp = "16:05",
                 isUrgent = true,
                 referenceId = "HLPL-AI4T-SAL-SOR-01",
@@ -3662,7 +3666,7 @@ class ScmsRepositoryImpl(
         }
 
         if (ecoNumber.isBlank()) {
-            return Result.failure(IllegalArgumentException("Engineering Change Order (ECO) Number is mandatory under IATF 16949 Â§8.3.6."))
+            return Result.failure(IllegalArgumentException("Engineering Change Order (ECO) Number is mandatory under IATF 16949 §8.3.6."))
         }
 
         val promoted = tentative.copy(
@@ -4071,7 +4075,7 @@ class ScmsRepositoryImpl(
         val newLog = AuditLogEntry(
             id = "LOG-${UUID.randomUUID().toString().take(6)}",
             timestamp = currentTime(),
-            actor = "Tata Motors Limited (Client Representative)",
+            actor = "Northstar Field Systems (Local TEST Client)",
             action = "ClientTicketSubmission",
             partMpn = ticketId,
             quantityDelta = 0,
@@ -4294,12 +4298,12 @@ class ScmsRepositoryImpl(
         val (topic, ans, sop) = when {
             pLower.contains("esd") || pLower.contains("msl") || pLower.contains("moisture") -> Triple(
                 "ESD & Moisture Sensitivity (J-STD-033)",
-                "Components rated MSL-3 have 168 hours floor life at â‰¤30Â°C/60% RH. If unsealed > 168 hours, bake at 125Â°C for 24 hours prior to SMT reflow per J-STD-033C.",
+                "Components rated MSL-3 have 168 hours floor life at ≤30°C/60% RH. If unsealed > 168 hours, bake at 125°C for 24 hours prior to SMT reflow per J-STD-033C.",
                 "SOP-ESD-002 Electronic Static Discharge & Baking Control"
             )
             pLower.contains("calibration") || pLower.contains("imte") -> Triple(
                 "IMTE Instrument Calibration Frequency",
-                "Per IATF 16949 Â§7.1.5.2, all measuring instruments (oscilloscopes, LCR meters, calipers) require annual NABL/ISO 17025 accredited calibration. Calibration certificates must be uploaded to the private vault before status can change to Certified.",
+                "Per IATF 16949 §7.1.5.2, all measuring instruments (oscilloscopes, LCR meters, calipers) require annual NABL/ISO 17025 accredited calibration. Calibration certificates must be uploaded to the private vault before status can change to Certified.",
                 "SOP-QA-008 Calibration Management System"
             )
             pLower.contains("visitor") || pLower.contains("gate") || pLower.contains("security") -> Triple(
@@ -4349,7 +4353,7 @@ class ScmsRepositoryImpl(
                     "Released" to "${matchingPart.released} pcs",
                     "IQC Hold" to "${matchingPart.iqcHold} pcs",
                     "Manufacturer" to matchingPart.manufacturer,
-                    "Unit Cost" to "$${matchingPart.unitCostUsd} (â‚¹${matchingPart.unitCostInr})"
+                    "Unit Cost" to "$${matchingPart.unitCostUsd} (₹${matchingPart.unitCostInr})"
                 ),
                 actionLabel = "View in Governed Inventory",
                 actionRoute = "inventory"
@@ -4403,7 +4407,7 @@ class ScmsRepositoryImpl(
                 rawCode = q,
                 entityType = ScannedEntityType.PLANT_ASSET,
                 primaryTitle = asset.name,
-                secondarySubtitle = "${asset.assetTag} Â· ${asset.category}",
+                secondarySubtitle = "${asset.assetTag} · ${asset.category}",
                 details = mapOf(
                     "Serial Number" to asset.serialNumber,
                     "Location" to asset.location,
@@ -4424,7 +4428,7 @@ class ScmsRepositoryImpl(
                 rawCode = q,
                 entityType = ScannedEntityType.GATE_PASS,
                 primaryTitle = "${gp.passNumber} (${gp.passType})",
-                secondarySubtitle = "${gp.vehicleNumber} Â· ${gp.transporterName}",
+                secondarySubtitle = "${gp.vehicleNumber} · ${gp.transporterName}",
                 details = mapOf(
                     "Driver" to gp.driverName,
                     "Reference Doc" to gp.referenceDoc,
@@ -4445,7 +4449,7 @@ class ScmsRepositoryImpl(
                 rawCode = q,
                 entityType = ScannedEntityType.EMPLOYEE_BADGE,
                 primaryTitle = "${emp.name} (${emp.employeeId})",
-                secondarySubtitle = "${emp.roleTitle} Â· ${emp.deptName}",
+                secondarySubtitle = "${emp.roleTitle} · ${emp.deptName}",
                 details = mapOf(
                     "Department" to emp.deptCode,
                     "Competency Level" to emp.skillMatrixLevel,
@@ -4461,18 +4465,18 @@ class ScmsRepositoryImpl(
         // 7. Check Calibration Certificate (Stage 7)
         val matchingCert = _calibrationCerts.value.find { it.certId.equals(qUpper, ignoreCase = true) }
         if (matchingCert != null || qUpper.startsWith("CAL-")) {
-            val cert = matchingCert ?: CalibrationCertificate(qUpper, "EQ-IMTE-004", "Keysight InfiniiVision Oscilloscope", "NABL Lab", "2026-01-01", "2027-01-01", "Â±0.5% DC Gain", "Valid / Certified")
+            val cert = matchingCert ?: CalibrationCertificate(qUpper, "EQ-IMTE-004", "Keysight InfiniiVision Oscilloscope", "NABL Lab", "2026-01-01", "2027-01-01", "±0.5% DC Gain", "Valid / Certified")
             return ResolvedScanResult(
                 rawCode = q,
                 entityType = ScannedEntityType.CALIBRATION_CERT,
-                primaryTitle = "${cert.certId} Â· ${cert.status}",
+                primaryTitle = "${cert.certId} · ${cert.status}",
                 secondarySubtitle = "${cert.instrumentName} (${cert.assetTag})",
                 details = mapOf(
                     "Accredited Agency" to cert.standardAgency,
                     "Calibrated On" to cert.calibrationDate,
                     "Valid Until" to cert.validUntil,
                     "Uncertainty" to cert.uncertaintySpec,
-                    "Compliance" to "IATF 16949 Â§7.1.5.2 Certified"
+                    "Compliance" to "IATF 16949 §7.1.5.2 Certified"
                 ),
                 actionLabel = "View Signed Certificate",
                 actionRoute = "assets"
@@ -4506,7 +4510,7 @@ class ScmsRepositoryImpl(
                 rawCode = q,
                 entityType = ScannedEntityType.LOT_GRN,
                 primaryTitle = grn.grnNumber,
-                secondarySubtitle = "Lot ${grn.lotNumber} Â· ${grn.vendorName}",
+                secondarySubtitle = "Lot ${grn.lotNumber} · ${grn.vendorName}",
                 details = mapOf(
                     "Billed Qty" to "${grn.totalBilledQty} pcs",
                     "IQC Hold" to "${grn.quantityHeld} pcs",
@@ -4576,7 +4580,7 @@ class ScmsRepositoryImpl(
             action = "APPROVE_GOVERNANCE_GATE",
             partMpn = "${target.id} (${target.recordId})",
             quantityDelta = if (target.amountInr > 0) target.amountInr.toInt() else 1,
-            reason = "Approved gate '${target.title}' [${target.category.label}]. Notes: $notes. Clause: ${target.iatfClause}. Amount: â‚¹${target.amountInr}",
+            reason = "Approved gate '${target.title}' [${target.category.label}]. Notes: $notes. Clause: ${target.iatfClause}. Amount: ₹${target.amountInr}",
             lotNumber = target.recordId
         )
         _auditLogs.value = listOf(auditEntry) + _auditLogs.value

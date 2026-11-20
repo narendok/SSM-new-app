@@ -65,6 +65,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -103,11 +104,14 @@ import com.example.myapplication.data.model.MaterialAllocation
 import com.example.myapplication.data.model.PartComponent
 import com.example.myapplication.data.model.PickingItem
 import com.example.myapplication.data.model.ReceivingDraftVoucher
+import com.example.myapplication.data.model.SharedAccess
 import com.example.myapplication.data.model.Stage5ReceivingAvailability
 import com.example.myapplication.data.model.VisitorLogEntry
 import com.example.myapplication.data.model.WireHarness
 import com.example.myapplication.data.repository.ScmsRepository
 import com.example.myapplication.ui.components.Stage5ReceivingUnavailableCard
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 
 enum class InventoryPreset(val label: String, val targetDept: String) {
     UNIVERSAL("Universal", "All"),
@@ -119,9 +123,27 @@ enum class InventoryPreset(val label: String, val targetDept: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GovernedInventoryScreen(
-    scmsRepository: ScmsRepository
+    scmsRepository: ScmsRepository,
+    isAuthenticated: Boolean = false,
+    sharedSnapshot: JsonObject? = null,
+    lifecycleWorkspace: JsonObject? = null,
+    mainViewModel: com.example.myapplication.ui.viewmodel.MainViewModel? = null,
+    viewDepartment: String? = null,
+    selectedProjectId: String = "ALL"
 ) {
+    // Authenticated users must read the server-authorized shared inventory contract.
+    // Keep the legacy/demo inventory below for local preview only.
+    if (isAuthenticated && mainViewModel != null) {
+        SharedInventoryMobileScreen(
+            viewModel = mainViewModel,
+            sharedSnapshot = sharedSnapshot,
+            viewDepartment = viewDepartment,
+            selectedProjectId = selectedProjectId
+        )
+        return
+    }
     val currentRole by scmsRepository.currentRole.collectAsState()
+    val selectedProject by scmsRepository.selectedProject.collectAsState()
     val parts by scmsRepository.parts.collectAsState()
     val harnesses by scmsRepository.harnesses.collectAsState()
     val allocations by scmsRepository.allocations.collectAsState()
@@ -147,17 +169,37 @@ fun GovernedInventoryScreen(
     var showVisitorModal by remember { mutableStateOf(false) }
 
     val tabs = listOf(
-        "1. Parts Register",
-        "2. Wire Harnesses",
+        "1. Parts",
+        "2. Harness",
         "3. Allocations",
-        "4. GRN & IQC Hold",
+        "4. IQC Hold",
         "5. Cycle & Pick",
-        "6. Receiving Drafts",
-        "7. Plant & Maintenance",
-        "8. Security & Gatehouse",
-        "9. Staff & Skill Matrix",
-        "10. Audit Ledger"
+        "6. Receiving",
+        "7. Plant",
+        "8. Security",
+        "9. Staff",
+        "10. Audit"
     )
+    val profileCode = if (isAuthenticated) {
+        val membership = sharedSnapshot?.get("membership") as? JsonObject
+        if (membership?.let { SharedAccess.text(it, "role") } == "admin") "ADMIN"
+        else membership?.let { SharedAccess.text(it, "department_code") }.orEmpty().uppercase()
+    } else currentRole.code
+    val visibleTabIndices = if (isAuthenticated) {
+        if (profileCode in setOf("ADMIN", "PUR", "EHW", "EMF", "QA", "MECH", "MMF")) listOf(0) else emptyList()
+    } else when (profileCode) {
+        "ADMIN" -> tabs.indices.toList()
+        "PUR" -> listOf(0, 2, 3, 4, 5, 9)
+        "EHW", "MECH" -> listOf(0, 1, 2, 6, 9)
+        "EMF", "MMF" -> listOf(0, 1, 2, 4, 6, 9)
+        "QA", "TST" -> listOf(3, 6, 9)
+        "SIT" -> listOf(7, 8, 9)
+        "HROPS" -> listOf(8, 9)
+        else -> emptyList()
+    }
+    LaunchedEffect(profileCode, isAuthenticated) {
+        if (selectedTabIndex !in visibleTabIndices.indices) selectedTabIndex = 0
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Quick Action Bar
@@ -169,7 +211,7 @@ fun GovernedInventoryScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -182,7 +224,7 @@ fun GovernedInventoryScreen(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "IATF 16949 • HLPL-AI4T-01",
+                        text = if (isAuthenticated) "Live TEST Server · $selectedProject" else if (selectedProject.isBlank() || selectedProject == "ALL") "Local TEST · Universal" else "Local TEST · $selectedProject",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -191,57 +233,61 @@ fun GovernedInventoryScreen(
                 }
                 Spacer(modifier = Modifier.width(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    FilledTonalButton(
+                    if (!isAuthenticated) FilledTonalButton(
                         onClick = {},
                         enabled = Stage5ReceivingAvailability.isAvailable,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(32.dp)
+                        modifier = Modifier.height(30.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.CallReceived, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Icon(imageVector = Icons.Default.CallReceived, contentDescription = null, modifier = Modifier.size(13.dp))
                         Spacer(modifier = Modifier.width(3.dp))
                         Text("Receive", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
                     }
-                    FilledTonalButton(
-                        onClick = { showRegisterModal = true },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(32.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text("Register", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-                    }
-                    OutlinedButton(
-                        onClick = { showIssueModal = true },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(32.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.Outbox, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text("Issue", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                    if (!isAuthenticated) {
+                        FilledTonalButton(
+                            onClick = { showRegisterModal = true },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.height(30.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("Register", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                        }
+                        OutlinedButton(
+                            onClick = { showIssueModal = true },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.height(30.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Outbox, contentDescription = null, modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("Issue", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
         }
 
         // Governed Tabs
-        ScrollableTabRow(
-            selectedTabIndex = selectedTabIndex,
+        if (visibleTabIndices.isNotEmpty()) ScrollableTabRow(
+            selectedTabIndex = selectedTabIndex.coerceIn(0, visibleTabIndices.lastIndex),
             modifier = Modifier.fillMaxWidth(),
-            edgePadding = 12.dp,
+            edgePadding = 10.dp,
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
-            tabs.forEachIndexed { index, title ->
+            visibleTabIndices.forEachIndexed { visibleIndex, index ->
+                val title = tabs[index]
                 Tab(
-                    selected = selectedTabIndex == index,
-                    onClick = { selectedTabIndex = index },
+                    selected = selectedTabIndex == visibleIndex,
+                    onClick = { selectedTabIndex = visibleIndex },
                     text = {
                         Text(
                             text = title,
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (selectedTabIndex == visibleIndex) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1
                         )
                     }
                 )
@@ -250,10 +296,19 @@ fun GovernedInventoryScreen(
 
         // Content Area per Tab
         Box(modifier = Modifier.weight(1f)) {
-            when (selectedTabIndex) {
+            when (visibleTabIndices.getOrNull(selectedTabIndex) ?: -1) {
+                -1 -> Text(
+                    "No inventory workspace is mapped to this profile yet.",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 0 -> PartsRegisterTab(
                     parts = parts,
                     preset = activePreset,
+                    isAuthenticated = isAuthenticated,
+                    sharedSnapshot = sharedSnapshot,
+                    lifecycleWorkspace = lifecycleWorkspace,
                     onPresetChange = { activePreset = it },
                     onPartClick = { selectedPartForDetail = it }
                 )
@@ -367,7 +422,10 @@ fun PartsRegisterTab(
     parts: List<PartComponent>,
     preset: InventoryPreset,
     onPresetChange: (InventoryPreset) -> Unit,
-    onPartClick: (PartComponent) -> Unit
+    onPartClick: (PartComponent) -> Unit,
+    isAuthenticated: Boolean = false,
+    sharedSnapshot: JsonObject? = null,
+    lifecycleWorkspace: JsonObject? = null
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val filteredParts = remember(parts, searchQuery) {
@@ -385,11 +443,37 @@ fun PartsRegisterTab(
             }
         }
     }
+    val membership = sharedSnapshot?.get("membership") as? JsonObject
+    val profileCode = if (membership?.let { SharedAccess.text(it, "role") } == "admin") "ADMIN"
+        else membership?.let { SharedAccess.text(it, "department_code") }.orEmpty().uppercase()
+    val query = searchQuery.trim().lowercase()
+    val allowedTypes = when (profileCode) {
+        "ADMIN" -> setOf("Part", "Tooling", "Production order", "Equipment")
+        "PUR" -> setOf("Part", "Tooling", "Production order")
+        "EHW", "MECH" -> setOf("Part", "Tooling", "Equipment")
+        "EMF", "MMF" -> setOf("Part", "Production order", "Equipment")
+        "QA" -> setOf("Part", "Equipment", "Inspection")
+        else -> emptySet()
+    }
+    val serverInventoryRows = if (isAuthenticated) SharedAccess.rows(sharedSnapshot, "records")
+        .filter { SharedAccess.text(it, "record_type") in allowedTypes }
+        .filter { row -> query.isBlank() || listOf("title", "reference", "record_type", "status").any { SharedAccess.text(row, it).lowercase().contains(query) } }
+    else emptyList()
+    val serverReusableAssets = if (isAuthenticated) ((lifecycleWorkspace?.get("assets") as? JsonArray)
+        ?.mapNotNull { it as? JsonObject }.orEmpty())
+        .filter { asset ->
+            val def = asset["definition"] as? JsonObject
+            val title = def?.let { SharedAccess.text(it, "title") }.orEmpty()
+            val source = SharedAccess.text(asset, "sourceProject")
+            query.isBlank() || title.lowercase().contains(query) || source.lowercase().contains(query)
+        }
+    else emptyList()
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 14.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(top = 6.dp, bottom = 84.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
@@ -400,7 +484,12 @@ fun PartsRegisterTab(
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
                 placeholder = {
-                    Text("Search MPN, description, manufacturer, bin...", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Search MPN, bin, supplier...",
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 },
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Search, contentDescription = "Search Parts")
@@ -416,7 +505,7 @@ fun PartsRegisterTab(
                 shape = RoundedCornerShape(10.dp)
             )
         }
-        item {
+        if (!isAuthenticated) item {
             LazyRow(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -447,7 +536,7 @@ fun PartsRegisterTab(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${filteredParts.size} parts found",
+                    text = if (isAuthenticated) "${serverInventoryRows.size + serverReusableAssets.size} shared inventory records" else "${filteredParts.size} parts found",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -462,6 +551,125 @@ fun PartsRegisterTab(
                 }
             }
         }
+        if (isAuthenticated) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Shared TEST Inventory · ${serverInventoryRows.size} server records · ${serverReusableAssets.size} reusable assets",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Scoped by server membership on TEST Supabase; local demo part register is hidden while signed in.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            if (serverInventoryRows.isEmpty() && serverReusableAssets.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("No permitted Part / Tooling / Production records match", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text("Try clearing search filters or check department permissions in Shared TEST.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            } else {
+                items(serverInventoryRows) { row ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${SharedAccess.text(row, "reference").ifBlank { "REC" }} · ${SharedAccess.text(row, "title")}",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(4.dp)) {
+                                    Text(
+                                        text = SharedAccess.text(row, "status").ifBlank { SharedAccess.text(row, "record_type") },
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "Type: ${SharedAccess.text(row, "record_type")} · Stage: ${SharedAccess.text(row, "stage").ifBlank { "Active" }}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                items(serverReusableAssets) { asset ->
+                    val def = asset["definition"] as? JsonObject
+                    val title = def?.let { SharedAccess.text(it, "title") }.orEmpty().ifBlank { "Reusable Asset" }
+                    val rev = def?.let { SharedAccess.text(it, "revision") }.orEmpty().ifBlank { "1" }
+                    val status = def?.let { SharedAccess.text(it, "status") }.orEmpty().ifBlank { "Draft" }
+                    val kind = def?.let { SharedAccess.text(it, "kind") }.orEmpty().ifBlank { "Hardware" }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "$title · r$rev",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = RoundedCornerShape(4.dp)) {
+                                    Text(
+                                        text = status,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "$kind · Source project: ${SharedAccess.text(asset, "sourceProject").ifBlank { "Catalog" }}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
         if (filteredParts.isEmpty()) {
             item {
                 Card(
@@ -546,77 +754,105 @@ fun PartsRegisterTab(
                         InventoryPreset.UNIVERSAL -> {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "On-Hand: ${part.onHand} | Released: ${part.released}",
+                                    text = "On-Hand: ${part.onHand} | Rel: ${part.released}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Bin: ${part.binCoordinate} (${part.storageLocation})",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                         }
                         InventoryPreset.EHW -> {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = "⚡ ${part.voltage} | ${part.current}",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF1565C0)
+                                    color = Color(0xFF1565C0),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "AEC: ${part.aecRating}",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF2E7D32)
+                                    color = Color(0xFF2E7D32),
+                                    maxLines = 1
                                 )
                             }
                         }
                         InventoryPreset.PUR -> {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Cost: $${part.unitCostUsd} (₹${part.unitCostInr}) | LT: ${part.leadTimeWeeks}w",
+                                    text = "$${part.unitCostUsd} (₹${part.unitCostInr}) · LT ${part.leadTimeWeeks}w",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Medium,
-                                    color = Color(0xFFE65100)
+                                    color = Color(0xFFE65100),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Mouser Stock: ${part.mouserStock}",
+                                    text = "Mouser: ${part.mouserStock}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1
                                 )
                             }
                         }
                         InventoryPreset.MECH -> {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Dim: ${part.dimensions} | Mass: ${part.massGrams}g",
+                                    text = "Dim: ${part.dimensions} · ${part.massGrams}g",
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "IP: ${part.ipRating} | Force: ${part.matingForce}",
+                                    text = "IP: ${part.ipRating} · ${part.matingForce}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
                     }
                 }
             }
+        }
         }
         }
     }
@@ -627,7 +863,8 @@ fun WireHarnessesTab(harnesses: List<WireHarness>) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(14.dp),
+            .padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 84.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(harnesses) { harness ->
@@ -689,7 +926,8 @@ fun AllocationsTab(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(14.dp),
+            .padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 84.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(allocations) { alloc ->
@@ -753,7 +991,8 @@ fun GrnIqcHoldTab(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(14.dp),
+            .padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 84.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
@@ -895,6 +1134,7 @@ fun PlantAndMaintenanceTab(
             0 -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 84.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(assets) { asset ->
@@ -983,6 +1223,7 @@ fun PlantAndMaintenanceTab(
                     Spacer(modifier = Modifier.height(8.dp))
                     LazyColumn(
                         modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(bottom = 84.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(maintenanceLogs) { log ->
@@ -1069,6 +1310,7 @@ fun PlantAndMaintenanceTab(
             2 -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 84.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(calibrationCerts) { cert ->
@@ -1186,6 +1428,7 @@ fun SecurityAndGatehouseTab(
             0 -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 84.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(gatePasses) { pass ->
@@ -1295,6 +1538,7 @@ fun SecurityAndGatehouseTab(
                     Spacer(modifier = Modifier.height(8.dp))
                     LazyColumn(
                         modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(bottom = 84.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(visitorLogs) { entry ->
@@ -1419,6 +1663,7 @@ fun StaffAndSkillMatrixTab(
 
         LazyColumn(
             modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(bottom = 84.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(filteredList) { emp ->
@@ -1700,7 +1945,8 @@ fun AuditLogTab(auditLogs: List<AuditLogEntry>) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(14.dp),
+            .padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 84.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         items(auditLogs) { log ->
@@ -2112,7 +2358,8 @@ fun CycleCountAndPickingTab(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 84.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // Sub-navigation pills
@@ -2449,7 +2696,8 @@ fun ReceivingDraftsTab(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 84.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {

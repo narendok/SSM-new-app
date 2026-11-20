@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.data.model.AutomotiveProjects
@@ -93,7 +94,7 @@ fun ProjectFilterDropdown(
         ) {
             if (projectCatalog.isEmpty()) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    modifier = Modifier.weight(1f).padding(horizontal = 10.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -110,9 +111,10 @@ fun ProjectFilterDropdown(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            } else Box {
+            } else Box(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier
+                        .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .clickable { expanded = true }
                         .background(MaterialTheme.colorScheme.surface)
@@ -144,7 +146,9 @@ fun ProjectFilterDropdown(
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
@@ -185,7 +189,9 @@ fun ProjectFilterDropdown(
                                             text = proj.status,
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = if (proj.status == "Active") Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = if (proj.status == "Active") Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(2.dp))
@@ -193,13 +199,17 @@ fun ProjectFilterDropdown(
                                         text = proj.title,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         text = listOf(proj.stage, proj.status).filter(String::isNotBlank).joinToString(" · "),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontSize = 10.sp
+                                        fontSize = 10.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             },
@@ -252,36 +262,6 @@ fun ProjectFilterDropdown(
                 }
             }
 
-            // Quick Stage Badge on the right
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = if (currentProject.status == "Active") Color(0xFFE8F5E9) else MaterialTheme.colorScheme.secondaryContainer,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (currentProject.status == "Active") Color(0xFFC8E6C9) else MaterialTheme.colorScheme.outlineVariant
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(if (currentProject.status == "Active") Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (projectCatalog.isEmpty()) "No projects"
-                            else if (effectiveProjectId == "ALL") "View filter only"
-                            else currentProject.stage.substringBefore(":"),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (currentProject.status == "Active") Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-            }
         }
     }
 }

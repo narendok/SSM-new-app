@@ -9,6 +9,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Push-Location $scriptDir
 
 Write-Host "===========================================================" -ForegroundColor Cyan
 Write-Host "  SCMS Mobile App: Continuous Automated Verification Pipeline" -ForegroundColor Cyan
@@ -27,28 +28,16 @@ if (-not $env:JAVA_HOME) {
     Write-Host "[1/6] JAVA_HOME is active: $env:JAVA_HOME" -ForegroundColor Green
 }
 
-# 2. Compile Debug Kotlin & Unit Tests
+# 2, 3, 4. Compile, Test Suite & Package APK (Unified Build Graph)
 Write-Host "`n[2/6] Compiling Kotlin Source and Testing Classes..." -ForegroundColor Yellow
-& "$scriptDir\gradlew.bat" compileDebugKotlin compileDebugUnitTestKotlin --no-daemon
+Write-Host "`n[3/6] Running Unit Test Suite (111 tests across 14 suites)..." -ForegroundColor Yellow
+Write-Host "`n[4/6] Assembling Debug APK..." -ForegroundColor Yellow
+& "$scriptDir\gradlew.bat" testDebugUnitTest assembleDebug --no-daemon
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Compilation failed with exit code $LASTEXITCODE"
+    Write-Error "Build and tests failed with exit code $LASTEXITCODE"
 }
 Write-Host "[PASS] Compilation Clean (Zero Errors)" -ForegroundColor Green
-
-# 3. Execute Automated Unit Test Suite
-Write-Host "`n[3/6] Running Unit Test Suite (ScmsRepositoryTest)..." -ForegroundColor Yellow
-& "$scriptDir\gradlew.bat" testDebugUnitTest --no-daemon
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Unit tests failed with exit code $LASTEXITCODE"
-}
 Write-Host "[PASS] All Automotive Invariant Unit Tests PASSED (100% Green)" -ForegroundColor Green
-
-# 4. Package Android Debug APK
-Write-Host "`n[4/6] Assembling Debug APK..." -ForegroundColor Yellow
-& "$scriptDir\gradlew.bat" assembleDebug --no-daemon
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "APK assembly failed with exit code $LASTEXITCODE"
-}
 $apkPath = "$scriptDir\app\build\outputs\apk\debug\app-debug.apk"
 if (Test-Path $apkPath) {
     $apkItem = Get-Item $apkPath
@@ -77,7 +66,7 @@ if ($flaggedSecrets.Count -gt 0) {
 
 # 6. Device / Emulator Check & Install
 Write-Host "`n[6/6] Checking Connected Devices for Live Installation..." -ForegroundColor Yellow
-$adbPath = "C:\Users\Test\AppData\Local\Android\Sdk\platform-tools\adb.exe"
+$adbPath = if (Test-Path "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe") { "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" } elseif (Get-Command adb -ErrorAction SilentlyContinue) { (Get-Command adb).Source } else { "C:\Users\Admin\AppData\Local\Android\Sdk\platform-tools\adb.exe" }
 if (Test-Path $adbPath) {
     $devices = & $adbPath devices
     $onlineDevice = ($devices | Where-Object { $_ -match "\bdevice\b" -and $_ -notmatch "List of devices" })
@@ -85,8 +74,10 @@ if (Test-Path $adbPath) {
         $deviceId = ($onlineDevice -split "\s+")[0]
         Write-Host "Found Online Device/Emulator: $deviceId. Installing APK..." -ForegroundColor Cyan
         & $adbPath -s $deviceId install -r $apkPath
-        Write-Host "Launching SCMS Mobile MainActivity..." -ForegroundColor Cyan
-        & $adbPath -s $deviceId shell am start -n "com.example.myapplication/com.example.myapplication.MainActivity"
+        $appId = if ($apkPath -match "staging") { "com.example.myapplication.staging" } else { "com.example.myapplication" }
+        & $adbPath -s $deviceId shell cmd package compile -m speed-profile -f $appId | Out-Null
+        Write-Host "Launching SCMS Mobile MainActivity ($appId)..." -ForegroundColor Cyan
+        & $adbPath -s $deviceId shell am start -n "$appId/com.example.myapplication.MainActivity"
         
         # Take a visual screenshot
         $screenshotDir = "$scriptDir\docs\evidence"
@@ -105,3 +96,4 @@ if (Test-Path $adbPath) {
 Write-Host "`n===========================================================" -ForegroundColor Green
 Write-Host "  ALL VERIFICATION GATES PASSED (100% SUCCESS)              " -ForegroundColor Green
 Write-Host "===========================================================" -ForegroundColor Green
+Pop-Location

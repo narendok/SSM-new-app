@@ -107,6 +107,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
     private val _sharedSnapshot = MutableStateFlow<JsonObject?>(null)
     val sharedSnapshot: StateFlow<JsonObject?> = _sharedSnapshot.asStateFlow()
+    private val _orgConfig = MutableStateFlow<JsonObject?>(null)
+    val orgConfig: StateFlow<JsonObject?> = _orgConfig.asStateFlow()
+    private val _customerChanges = MutableStateFlow<JsonObject?>(null)
+    val customerChanges: StateFlow<JsonObject?> = _customerChanges.asStateFlow()
     private val _lifecycleWorkspace = MutableStateFlow<JsonObject?>(null)
     val lifecycleWorkspace: StateFlow<JsonObject?> = _lifecycleWorkspace.asStateFlow()
     private val _lifecycleWorkspaceError = MutableStateFlow<String?>(null)
@@ -174,35 +178,208 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _viewDepartment = MutableStateFlow<String?>(null)
     val viewDepartment: StateFlow<String?> = _viewDepartment.asStateFlow()
     fun selectDepartment(id: String?) {
-        val snapshot = _sharedSnapshot.value ?: return
+        val snapshot = _sharedSnapshot.value
+        if (snapshot == null) {
+            _viewDepartment.value = id
+            return
+        }
         val member = snapshot["membership"] as? JsonObject ?: return
-        if (id == null && member["role"]?.jsonPrimitive?.content == "admin") _viewDepartment.value = null
-        else if (com.example.myapplication.data.model.SharedAccess.departments(snapshot).any { it["id"]?.jsonPrimitive?.content == id }) _viewDepartment.value = id
+        if (id == null && member["role"]?.jsonPrimitive?.content == "admin") {
+            _viewDepartment.value = null
+        } else if (com.example.myapplication.data.model.SharedAccess.departments(snapshot).any { it["id"]?.jsonPrimitive?.content == id }) {
+            _viewDepartment.value = id
+        }
     }
     private val businessRepository = com.example.myapplication.data.repository.SharedBusinessRepository(supabaseClient)
+    private val sharedInventoryRepository = com.example.myapplication.data.repository.SharedInventoryRepository(supabaseClient)
+    private val _sharedInventorySnapshot = MutableStateFlow<JsonObject?>(null)
+    val sharedInventorySnapshot: StateFlow<JsonObject?> = _sharedInventorySnapshot.asStateFlow()
+    private val _sharedInventoryBusy = MutableStateFlow(false)
+    val sharedInventoryBusy: StateFlow<Boolean> = _sharedInventoryBusy.asStateFlow()
+    private val _sharedInventoryError = MutableStateFlow<String?>(null)
+    val sharedInventoryError: StateFlow<String?> = _sharedInventoryError.asStateFlow()
+
+    fun refreshSharedInventory() {
+        if (BuildConfig.SCMS_BACKEND != "staging" || authState.value !is AuthState.Authenticated || _sharedInventoryBusy.value) return
+        val epoch = sharedEpoch
+        _sharedInventoryBusy.value = true
+        viewModelScope.launch {
+            try {
+                val result = sharedInventoryRepository.load(authRepository.validAccessToken())
+                if (epoch == sharedEpoch) { _sharedInventorySnapshot.value = result; _sharedInventoryError.value = null }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (epoch == sharedEpoch) { _sharedInventorySnapshot.value = null; _sharedInventoryError.value = e.message ?: "Shared TEST inventory could not be loaded" }
+            } finally {
+                if (epoch == sharedEpoch) _sharedInventoryBusy.value = false
+            }
+        }
+    }
+
+    fun recordSharedInventoryEvent(action: String, payload: JsonObject) {
+        if (BuildConfig.SCMS_BACKEND != "staging") { _sharedInventoryError.value = "Shared inventory actions are restricted to TEST."; return }
+        val userId = (authState.value as? AuthState.Authenticated)?.session?.user?.id ?: return
+        if (_sharedInventoryBusy.value) return
+        val signature = "shared_inventory:" + action + payload.toString()
+        val requestId = try { secureStorage.sharedRequestId(userId, signature) } catch (e: Exception) {
+            _sharedInventoryError.value = "Could not preserve a safe retry ID. Nothing was sent."; return
+        }
+        val eventPayload = kotlinx.serialization.json.buildJsonObject { payload.forEach { (key, value) -> put(key, value) }; put("requestId", requestId) }
+        val epoch = sharedEpoch
+        _sharedInventoryBusy.value = true
+        _sharedInventoryError.value = null
+        viewModelScope.launch {
+            try {
+                val receipt = sharedInventoryRepository.recordEvent(action, eventPayload, authRepository.validAccessToken())
+                require(receipt["eventId"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true) { "Shared TEST did not confirm the inventory event." }
+                if (epoch == sharedEpoch) {
+                    secureStorage.completeSharedRequest(userId, signature)
+                    _sharedInventorySnapshot.value = sharedInventoryRepository.load(authRepository.validAccessToken())
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (epoch == sharedEpoch) _sharedInventoryError.value = e.message ?: "Shared inventory save failed; retry is safe."
+            } finally {
+                if (epoch == sharedEpoch) _sharedInventoryBusy.value = false
+            }
+        }
+    }
+
+    fun issueSharedInventoryBomKit(payload: JsonObject) {
+        if (BuildConfig.SCMS_BACKEND != "staging") { _sharedInventoryError.value = "BOM kit issues are restricted to TEST."; return }
+        val userId = (authState.value as? AuthState.Authenticated)?.session?.user?.id ?: return
+        if (_sharedInventoryBusy.value) return
+        val signature = "shared_inventory_kit_issue:" + payload.toString()
+        val requestId = try { secureStorage.sharedRequestId(userId, signature) } catch (e: Exception) {
+            _sharedInventoryError.value = "Could not preserve a safe retry ID. Nothing was sent."; return
+        }
+        val requestPayload = buildJsonObject { payload.forEach { (key, value) -> put(key, value) }; put("requestId", requestId) }
+        val epoch = sharedEpoch
+        _sharedInventoryBusy.value = true
+        _sharedInventoryError.value = null
+        viewModelScope.launch {
+            try {
+                val receipt = sharedInventoryRepository.issueBomKit(requestPayload, authRepository.validAccessToken())
+                require(receipt["kitIssueId"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true) {
+                    "Shared TEST did not confirm the BOM kit issue."
+                }
+                if (epoch == sharedEpoch) {
+                    secureStorage.completeSharedRequest(userId, signature)
+                    _sharedInventorySnapshot.value = sharedInventoryRepository.load(authRepository.validAccessToken())
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (epoch == sharedEpoch) _sharedInventoryError.value = e.message ?: "BOM kit issue failed; retry is safe."
+            } finally {
+                if (epoch == sharedEpoch) _sharedInventoryBusy.value = false
+            }
+        }
+    }
+
     private val _expenseCategories = MutableStateFlow<List<String>>(emptyList())
     val expenseCategories: StateFlow<List<String>> = _expenseCategories.asStateFlow()
     private val _expenseServices = MutableStateFlow<List<JsonObject>>(emptyList())
     val expenseServices: StateFlow<List<JsonObject>> = _expenseServices.asStateFlow()
+    private val _expenseSuppliers = MutableStateFlow<List<JsonObject>>(emptyList())
+    val expenseSuppliers: StateFlow<List<JsonObject>> = _expenseSuppliers.asStateFlow()
+    private val _expenseLocations = MutableStateFlow<List<JsonObject>>(emptyList())
+    val expenseLocations: StateFlow<List<JsonObject>> = _expenseLocations.asStateFlow()
+    private val _expenseCatalogueBusy = MutableStateFlow(false)
+    val expenseCatalogueBusy: StateFlow<Boolean> = _expenseCatalogueBusy.asStateFlow()
+    private val _expenseCatalogueLoaded = MutableStateFlow(false)
+    val expenseCatalogueLoaded: StateFlow<Boolean> = _expenseCatalogueLoaded.asStateFlow()
+    private val _expenseCatalogueError = MutableStateFlow<String?>(null)
+    val expenseCatalogueError: StateFlow<String?> = _expenseCatalogueError.asStateFlow()
+    private val _travelPolicy = MutableStateFlow<JsonObject?>(null)
+    val travelPolicy: StateFlow<JsonObject?> = _travelPolicy.asStateFlow()
+    private val _travelPolicyError = MutableStateFlow<String?>(null)
+    val travelPolicyError: StateFlow<String?> = _travelPolicyError.asStateFlow()
+    private val _travelPolicySaving = MutableStateFlow(false)
+    val travelPolicySaving: StateFlow<Boolean> = _travelPolicySaving.asStateFlow()
+    private val _travelPolicySaveMessage = MutableStateFlow<String?>(null)
+    val travelPolicySaveMessage: StateFlow<String?> = _travelPolicySaveMessage.asStateFlow()
     private var expenseOptionsScope: String? = null
-    fun refreshExpenseCategories(departmentId: String?, organizationId: String?) {
+    fun refreshExpenseCategories(departmentId: String?, organizationId: String?, force: Boolean = false) {
         val scope = departmentId?.takeIf { it.isNotBlank() }
         val requestScope = "${organizationId.orEmpty()}|${scope ?: "company"}"
-        if (_expenseCategories.value.isNotEmpty() && expenseOptionsScope == requestScope) return
+        if (!force && _expenseCatalogueLoaded.value && expenseOptionsScope == requestScope) return
         if (authState.value !is AuthState.Authenticated) return
         _expenseCategories.value = emptyList()
         _expenseServices.value = emptyList()
+        _expenseSuppliers.value = emptyList()
+        _expenseLocations.value = emptyList()
         expenseOptionsScope = requestScope
+        _expenseCatalogueBusy.value = true
+        _expenseCatalogueLoaded.value = false
+        _expenseCatalogueError.value = null
         viewModelScope.launch {
             try {
                 val result = businessRepository.loadExpenseCatalogue(authRepository.validAccessToken(), scope)
                 val categories = (result["categories"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }.orEmpty()
                 val services = (result["services"] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
-                if (expenseOptionsScope == requestScope) { _expenseCategories.value = categories; _expenseServices.value = services }
+                val suppliers = (result["suppliers"] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
+                val locations = (result["locations"] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
+                if (expenseOptionsScope == requestScope) {
+                    _expenseCategories.value = categories
+                    _expenseServices.value = services
+                    _expenseSuppliers.value = suppliers
+                    _expenseLocations.value = locations
+                    _expenseCatalogueLoaded.value = true
+                }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                _businessError.value = e.message ?: "Expense categories could not be loaded"
+                if (expenseOptionsScope == requestScope) {
+                    _expenseCatalogueError.value = e.message ?: "Expense categories could not be loaded"
+                    _expenseCatalogueLoaded.value = true
+                }
+            } finally {
+                if (expenseOptionsScope == requestScope) _expenseCatalogueBusy.value = false
             }
+        }
+    }
+    private val _expenseLocationRequestBusy = MutableStateFlow(false)
+    val expenseLocationRequestBusy: StateFlow<Boolean> = _expenseLocationRequestBusy.asStateFlow()
+    private val _expenseLocationRequestSaved = MutableStateFlow(0)
+    val expenseLocationRequestSaved: StateFlow<Int> = _expenseLocationRequestSaved.asStateFlow()
+    private val _expenseLocationRequestError = MutableStateFlow<String?>(null)
+    val expenseLocationRequestError: StateFlow<String?> = _expenseLocationRequestError.asStateFlow()
+    fun requestExpenseLocation(name:String,city:String,reason:String,departmentId:String?,organizationId:String?) {
+        val user=(authState.value as? AuthState.Authenticated)?.session?.user?.id ?: return
+        if(_expenseLocationRequestBusy.value) return
+        val signature="expense-location-request:$name|$city|$reason"
+        val requestId=try{secureStorage.sharedRequestId(user,signature)}catch(e:Exception){_expenseLocationRequestError.value="Cannot preserve retry identity. Nothing was sent.";return}
+        val epoch=sharedEpoch
+        _expenseLocationRequestBusy.value=true;_expenseLocationRequestError.value=null
+        viewModelScope.launch {
+            try {
+                businessRepository.requestExpenseLocation(authRepository.validAccessToken(),name.trim(),city.trim(),reason.trim(),requestId)
+                if(epoch==sharedEpoch){secureStorage.completeSharedRequest(user,signature);_expenseLocationRequestSaved.value++;refreshExpenseCategories(departmentId,organizationId,true)}
+            } catch(e:Exception){if(e is kotlinx.coroutines.CancellationException) throw e;if(epoch==sharedEpoch)_expenseLocationRequestError.value=e.message?:"Location request failed; retry safely."}
+            finally {if(epoch==sharedEpoch)_expenseLocationRequestBusy.value=false}
+        }
+    }
+    fun refreshTravelPolicy(departmentId:String?,force:Boolean=false) {
+        if (authState.value !is AuthState.Authenticated) return
+        if (!force && _travelPolicy.value != null) return
+        val epoch=sharedEpoch
+        viewModelScope.launch {
+            try { val policy=businessRepository.loadTravelPolicy(authRepository.validAccessToken(),departmentId);if(epoch==sharedEpoch){_travelPolicy.value=policy;_travelPolicyError.value=null} }
+            catch(e:Exception){if(e is kotlinx.coroutines.CancellationException) throw e;if(epoch==sharedEpoch){_travelPolicy.value=null;_travelPolicyError.value=e.message ?: "Travel policy could not be loaded"}}
+        }
+    }
+    fun saveTravelPolicy(departmentId:String?,value:JsonObject,version:Int,publish:Boolean) {
+        if (authState.value !is AuthState.Authenticated || _travelPolicySaving.value) return
+        val epoch=sharedEpoch
+        _travelPolicySaving.value=true
+        _travelPolicySaveMessage.value=null
+        viewModelScope.launch {
+            try {
+                val saved=businessRepository.saveTravelPolicy(authRepository.validAccessToken(),departmentId,value,version,publish)
+                if(epoch==sharedEpoch){_travelPolicy.value=saved;_travelPolicyError.value=null;_travelPolicySaveMessage.value=if(publish)"Shared travel policy published." else "Shared travel policy saved."}
+            } catch(e:Exception) {
+                if(e is kotlinx.coroutines.CancellationException) throw e
+                if(epoch==sharedEpoch)_travelPolicySaveMessage.value=e.message ?: "Travel policy save failed; reload before retrying."
+            } finally { if(epoch==sharedEpoch)_travelPolicySaving.value=false }
         }
     }
     private val _businessSnapshot = MutableStateFlow<JsonObject?>(null)
@@ -248,6 +425,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private var sharedEpoch = 0
 
+    private fun loadOptionalSharedFeeds(epoch: Int) {
+        if (authState.value !is AuthState.Authenticated) return
+        viewModelScope.launch {
+            runCatching { sharedRepository.loadOrganizationConfiguration(authRepository.validAccessToken()) }
+                .onSuccess { if (epoch == sharedEpoch) _orgConfig.value = it }
+        }
+        viewModelScope.launch {
+            runCatching { sharedRepository.loadCustomerChangeRequests(authRepository.validAccessToken()) }
+                .onSuccess { if (epoch == sharedEpoch) _customerChanges.value = it }
+        }
+    }
+
+    fun resetSamplePack(runId: String = "LC2-2026-10-28") {
+        val userId = (authState.value as? AuthState.Authenticated)?.session?.user?.id ?: return
+        if (_sharedBusy.value) return
+        val signature = "reset_sample_pack:$runId"
+        val requestId = try { secureStorage.sharedRequestId(userId, signature) } catch (e: Exception) {
+            _sharedError.value = "Cannot preserve retry identity. Reset was not sent."; return
+        }
+        val epoch = sharedEpoch
+        _sharedBusy.value = true
+        viewModelScope.launch {
+            try {
+                sharedRepository.resetSamplePack(authRepository.validAccessToken(), runId, requestId)
+                if (epoch == sharedEpoch) {
+                    secureStorage.completeSharedRequest(userId, signature)
+                    _sharedSaved.value++
+                    _sharedError.value = null
+                    _sharedSnapshot.value = sharedRepository.load(authRepository.validAccessToken())
+                    refreshLifecycleWorkspace()
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (epoch == sharedEpoch) _sharedError.value = e.message ?: "Reset TEST pack failed"
+            } finally { if (epoch == sharedEpoch) _sharedBusy.value = false }
+        }
+    }
+
     fun refreshSharedWorkspace() {
         val token = (authState.value as? AuthState.Authenticated)?.session?.accessToken ?: return
         if (_sharedBusy.value) return
@@ -256,7 +471,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 val snapshot = sharedRepository.load(authRepository.validAccessToken())
-                if (epoch == sharedEpoch) { _sharedSnapshot.value = snapshot; _sharedError.value = null }
+                if (epoch == sharedEpoch) {
+                    _sharedSnapshot.value = snapshot
+                    _sharedError.value = null
+                    loadOptionalSharedFeeds(epoch)
+                }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 if (epoch == sharedEpoch) _sharedError.value = e.message ?: "Shared read failed"
@@ -323,15 +542,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 priorIdentity = identity
                 sharedEpoch++
                 _businessSnapshot.value = null; _businessError.value = null; _businessBusy.value = false; _businessSaved.value = 0
-                _expenseCategories.value = emptyList(); _expenseServices.value = emptyList(); expenseOptionsScope = null
+                _sharedInventorySnapshot.value = null; _sharedInventoryError.value = null; _sharedInventoryBusy.value = false
+                _expenseCategories.value = emptyList(); _expenseServices.value = emptyList(); _expenseSuppliers.value = emptyList(); expenseOptionsScope = null
+                _expenseCatalogueBusy.value = false; _expenseCatalogueLoaded.value = false; _expenseCatalogueError.value = null
+                _travelPolicy.value = null; _travelPolicyError.value = null; _travelPolicySaving.value = false; _travelPolicySaveMessage.value = null
                 _viewDepartment.value = null
                 _selectedTab.value = 0
                 _sharedSnapshot.value = null; _sharedError.value = null; _sharedBusy.value = false
+                _orgConfig.value = null; _customerChanges.value = null
                 _lifecycleWorkspace.value = null; _lifecycleWorkspaceError.value = null; _lifecycleWorkspaceBusy.value = false
                 _projectCoordination.value = null; _projectCoordinationError.value = null; _projectCoordinationBusy.value = false
                 if (state is AuthState.Authenticated) {
                     state.session.testMembership?.workspaceRole()?.let { scmsRepository.switchRole(it) }
                     refreshSharedWorkspace()
+                    refreshLifecycleWorkspace()
                 }
             }
         }

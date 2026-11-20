@@ -8,15 +8,31 @@ import org.junit.Test
 class SharedBusinessRepositoryTest {
  @Test fun expenseCategoriesComeFromTheSharedAuthenticatedCatalogue() = runBlocking {
   var method="";var args=buildJsonObject{}
-  val repository=SharedBusinessRepository { name,body,_ -> method=name;args=Json.parseToJsonElement(body).jsonObject;Result.success("""{"categories":["Travel & Transport","Software & Subscriptions"],"services":[{"id":"github","name":"GitHub subscription","category":"Software & Subscriptions","provider":"GitHub","cycle":"Monthly","owner":"Software lead"}]}""") }
+  val repository=SharedBusinessRepository { name,body,_ -> method=name;args=Json.parseToJsonElement(body).jsonObject;Result.success("""{"categories":["Travel & Transport","Software & Subscriptions"],"services":[{"id":"github","name":"GitHub subscription","category":"Software & Subscriptions","provider":"GitHub","cycle":"Monthly","owner":"Software lead"}],"suppliers":[{"id":"supplier-uuid","reference":"SUP-01","title":"Canonical Supplier Ltd","status":"Approved"}]}""") }
   val result=repository.loadExpenseCatalogue("test-token","department-uuid")
   assertEquals("get_expense_catalogue",method);assertEquals("department-uuid",args["p_department"]?.jsonPrimitive?.content)
   assertEquals(listOf("Travel & Transport","Software & Subscriptions"),result["categories"]?.jsonArray?.map{it.jsonPrimitive.content})
   assertEquals("GitHub subscription",result["services"]?.jsonArray?.first()?.jsonObject?.get("name")?.jsonPrimitive?.content)
+  assertEquals("supplier-uuid",result["suppliers"]?.jsonArray?.first()?.jsonObject?.get("id")?.jsonPrimitive?.content)
  }
  @Test fun readFailureNeverSubstitutesLocalExamples() = runBlocking {
   val repository=SharedBusinessRepository { _,_,_->Result.failure(IllegalStateException("Denied")) }
   try { repository.load("token");fail("Expected authorization failure") } catch(e:IllegalStateException){assertEquals("Denied",e.message)}
+ }
+ @Test fun travelPolicySaveUsesTheSharedVersionedAdminOrOpsRpc() = runBlocking {
+  var method="";var args=buildJsonObject{}
+  val repository=SharedBusinessRepository { name,body,token->
+   method=name;assertEquals("finance-token",token);args=Json.parseToJsonElement(body).jsonObject
+   Result.success("""{"company":{"currency":"INR","status":"Draft","advancePercent":80,"oneOpenAdvance":true,"cityTiers":[],"bands":[]},"companyVersion":3,"departmentVersion":0,"scopeDepartment":null,"isAdmin":true,"canView":true,"ownDepartment":null,"canManageCompany":true,"canManageDepartment":false}""")
+  }
+  val value=buildJsonObject { put("currency","INR");put("status","Draft");put("advancePercent",80);put("oneOpenAdvance",true) }
+  val result=repository.saveTravelPolicy("finance-token",null,value,2,false)
+  assertEquals("save_travel_policy",method)
+  assertTrue(args["p_department"] is JsonNull)
+  assertEquals(2,args["p_version"]?.jsonPrimitive?.int)
+  assertEquals(false,args["p_publish"]?.jsonPrimitive?.boolean)
+  assertEquals(value,args["p_value"]?.jsonObject)
+  assertEquals(3,result["companyVersion"]?.jsonPrimitive?.int)
  }
  @Test fun mutationUsesTheSameRpcIdentityAndRequestIdAsWeb() = runBlocking {
   val calls=mutableListOf<JsonObject>()

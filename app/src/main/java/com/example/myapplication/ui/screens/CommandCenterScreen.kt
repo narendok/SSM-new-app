@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.AssignmentTurnedIn
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Engineering
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PrecisionManufacturing
@@ -53,6 +55,8 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -61,8 +65,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -70,9 +76,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.model.ApqpStage
+import com.example.myapplication.data.model.BudgetDisplayState
+import com.example.myapplication.data.model.BudgetScopePolicy
 import com.example.myapplication.data.model.ClientDeliverable
 import com.example.myapplication.data.model.DepartmentRole
 import com.example.myapplication.data.model.FeasibilityReview
@@ -87,22 +96,56 @@ fun CommandCenterScreen(
     onSharedTaskToggle: ((String) -> Unit)? = null,
     isAuthenticated: Boolean = false,
     projectCatalog: List<com.example.myapplication.data.model.ProjectMetadata> = com.example.myapplication.data.model.AutomotiveProjects.all,
-    onSharedTaskMove: ((String, String) -> Unit)? = null
+    onSharedTaskMove: ((String, String) -> Unit)? = null,
+    sharedRecordsCount: Int? = null,
+    sharedApprovalsCount: Int? = null,
+    lifecycleStagesCount: Int? = null,
+    onOpenBusinessWorkspace: ((String) -> Unit)? = null,
+    sharedSnapshot: kotlinx.serialization.json.JsonObject? = null,
+    viewDepartment: String? = null,
+    lifecycleWorkspace: kotlinx.serialization.json.JsonObject? = null,
+    onOpenDepartmentRecords: (() -> Unit)? = null,
+    onOpenApprovals: (() -> Unit)? = null,
+    canReopenSharedTask: ((String) -> Boolean)? = null,
+    isSharedBusy: Boolean = false
 ) {
     val currentRole by scmsRepository.currentRole.collectAsState()
-    val stages by scmsRepository.apqpStages.collectAsState()
     val selectedProject by scmsRepository.selectedProject.collectAsState()
-    val demoTasks by scmsRepository.tasks.collectAsState()
-    val allTasks = if (isAuthenticated) sharedTasks.orEmpty() else demoTasks
     val activeProjectId = if (projectCatalog.any { it.id == selectedProject }) selectedProject else "ALL"
+
+    val sharedMembership = sharedSnapshot?.get("membership") as? kotlinx.serialization.json.JsonObject
+    val sharedRoleCode = sharedMembership?.let { com.example.myapplication.data.model.SharedAccess.text(it, "department_code") }.orEmpty()
+    val sharedMembershipRole = sharedMembership?.let { com.example.myapplication.data.model.SharedAccess.text(it, "role") }.orEmpty()
+    val isAdminProfile = if (isAuthenticated) sharedMembershipRole == "admin" else currentRole == DepartmentRole.ADMIN
+    val isClientProfile = if (isAuthenticated) sharedRoleCode.equals("CLIENT", true) || sharedMembershipRole == "viewer" || sharedMembershipRole.equals("client", true)
+        else currentRole == DepartmentRole.CLIENT
+    val stages by scmsRepository.apqpStages.collectAsState()
+    val demoTasks by scmsRepository.tasks.collectAsState()
+    val allTasks = if (isAuthenticated) {
+        val member = sharedSnapshot?.get("membership") as? kotlinx.serialization.json.JsonObject
+        val memberRole = member?.let { com.example.myapplication.data.model.SharedAccess.text(it, "role") }.orEmpty()
+        val allowedDepartmentCodes = com.example.myapplication.data.model.SharedAccess.departments(sharedSnapshot)
+            .map { com.example.myapplication.data.model.SharedAccess.text(it, "code") }
+        sharedTasks.orEmpty().filter { task ->
+            memberRole == "admin" || allowedDepartmentCodes.any { it.equals(task.dept, ignoreCase = true) }
+        }
+    } else {
+        demoTasks.filter { task ->
+            currentRole == DepartmentRole.ADMIN || task.dept.equals(currentRole.code, ignoreCase = true)
+        }
+    }
     val tasks = allTasks.filter { activeProjectId == "ALL" || it.projectId == activeProjectId }
     val raciMatrix by scmsRepository.raciMatrix.collectAsState()
     val feasibilityReviews by scmsRepository.feasibilityReviews.collectAsState()
     val hardwarePath by scmsRepository.hardwarePath.collectAsState()
     val engineeringSquad by scmsRepository.engineeringSquad.collectAsState()
     val clientDeliverables by scmsRepository.clientDeliverables.collectAsState()
+    val documents by scmsRepository.documents.collectAsState()
     val approvals by scmsRepository.approvals.collectAsState()
-    val pendingApprovalsCount = approvals.count { it.outcome == "Pending" }
+    val pendingApprovalsCount = if (isAuthenticated) (sharedApprovalsCount ?: 0) else approvals.count {
+        it.outcome == "Pending" && (currentRole == DepartmentRole.ADMIN || it.department.equals(currentRole.code, ignoreCase = true))
+    }
+    val activeProjectObj = projectCatalog.firstOrNull { it.id == activeProjectId }
     val teamMembers by scmsRepository.teamMembers.collectAsState()
 
     var selectedStageForDetail by remember { mutableStateOf<ApqpStage?>(null) }
@@ -131,18 +174,31 @@ fun CommandCenterScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(top = 6.dp, bottom = 84.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // 1. Dynamic Project Overview Intelligence Banner
-        item {
-            com.example.myapplication.ui.components.ProjectOverviewBanner(
-                projectId = activeProjectId,
-                projects = projectCatalog,
-                onResetWorkspace = if (!isAuthenticated && currentRole == DepartmentRole.ADMIN && activeProjectId == "DEMO-PROJ-010") {
-                    { scmsRepository.resetSampleWorkspace() }
-                } else null
-            )
+        // Signed-in users keep the established dashboard task and workflow layout.
+        // The first card changes between department and project analytics from the top selector.
+        if (isAuthenticated) {
+            item {
+                DashboardAnalyticsSummary(
+                    snapshot = sharedSnapshot,
+                    projectId = activeProjectId,
+                    projectCatalog = projectCatalog,
+                    viewDepartment = viewDepartment
+                )
+            }
+        } else {
+            item {
+                com.example.myapplication.ui.components.ProjectOverviewBanner(
+                    projectId = activeProjectId,
+                    projects = projectCatalog,
+                    onResetWorkspace = if (currentRole == DepartmentRole.ADMIN && activeProjectId == "DEMO-PROJ-010") {
+                        { scmsRepository.resetSampleWorkspace() }
+                    } else null
+                )
+            }
         }
 
         // 1b. Human Approvals & Governance Decision Center Banner (Master Plan §26.3)
@@ -231,8 +287,275 @@ fun CommandCenterScreen(
             }
         }
 
-        // 2. Executive Cross-Dept Sync & RACI Order Hub Action Card
+        // 1b. Department Operating Budget & Capacity (Phase 3 Follow-up: Strict Scope & Labeling)
         item {
+            val allocations by scmsRepository.departmentAllocations.collectAsState()
+            val budgetState = remember(isAuthenticated, sharedSnapshot, viewDepartment, currentRole, allocations) {
+                BudgetScopePolicy.resolveBudgetState(
+                    isAuthenticated = isAuthenticated,
+                    sharedSnapshot = sharedSnapshot,
+                    viewDepartment = viewDepartment,
+                    currentRole = currentRole,
+                    localAllocations = allocations
+                )
+            }
+
+            when (budgetState) {
+                is BudgetDisplayState.AuthenticatedUnavailable -> {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccountBalance,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "${budgetState.departmentTitle} Operating Budget",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant
+                                ) {
+                                    Text(
+                                        text = "Not Configured / Unavailable",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = budgetState.reason,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                is BudgetDisplayState.LocalAllDeptsUnmodeled -> {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccountBalance,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "All Departments Operating Budget",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = Color(0xFFFFF3E0)
+                                ) {
+                                    Text(
+                                        text = "Sample Unmodeled",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFE65100),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = budgetState.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                is BudgetDisplayState.LocalSample -> {
+                    val alloc = budgetState.allocation
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccountBalance,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "[Local Sample] ${alloc.departmentCode} Budget · ${alloc.period}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = Color(0xFFE3F2FD)
+                                ) {
+                                    Text(
+                                        text = "Local TEST Sample",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF1565C0),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            // Financial breakdown row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text("Allocated", fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("₹%,.0f".format(alloc.allocatedAmount), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Column {
+                                    Text("Committed", fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("₹%,.0f".format(alloc.committedAmount), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
+                                }
+                                Column {
+                                    Text("Spent", fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("₹%,.0f".format(alloc.spentAmount), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
+                                }
+                                Column {
+                                    Text("Available", fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("₹%,.0f".format(alloc.availableAmount), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                                }
+                            }
+
+                            // Progress bar
+                            val consumedPct = if (alloc.allocatedAmount > 0) ((alloc.committedAmount + alloc.spentAmount) / alloc.allocatedAmount).toFloat().coerceIn(0f, 1f) else 0f
+                            LinearProgressIndicator(
+                                progress = { consumedPct },
+                                modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                                color = if (consumedPct > 0.85f) Color(0xFFC62828) else MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            Text(
+                                text = "Sample Category: ${alloc.category} · Approver: ${alloc.approvedBy} [Local sample only - not live shared backend]",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 9.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                is BudgetDisplayState.AuthenticatedServerBudget -> {
+                    val alloc = budgetState.allocation
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccountBalance,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "${budgetState.departmentTitle} Operating Budget · ${alloc.period}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = Color(0xFFE8F5E9)
+                                ) {
+                                    Text(
+                                        text = "Server Verified",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF2E7D32),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            // Breakdown
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text("Allocated", fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("₹%,.0f".format(alloc.allocatedAmount), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Column {
+                                    Text("Committed", fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("₹%,.0f".format(alloc.committedAmount), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
+                                }
+                                Column {
+                                    Text("Spent", fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("₹%,.0f".format(alloc.spentAmount), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
+                                }
+                                Column {
+                                    Text("Available", fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("₹%,.0f".format(alloc.availableAmount), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // The cross-department coordination hub is an Admin overview. Leads
+        // use their department-scoped Work and Records views instead.
+        if (!isAuthenticated) item {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surface,
@@ -276,13 +599,13 @@ fun CommandCenterScreen(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Surface(
                                     shape = RoundedCornerShape(3.dp),
-                                    color = Color(0xFFE8F5E9)
+                                    color = if (isAuthenticated) Color(0xFFE3F2FD) else Color(0xFFE8F5E9)
                                 ) {
                                     Text(
-                                        text = "Verified",
+                                        text = if (isAuthenticated) "Live Sync" else "Local TEST",
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF2E7D32),
+                                        color = if (isAuthenticated) Color(0xFF1565C0) else Color(0xFF2E7D32),
                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                     )
                                 }
@@ -317,39 +640,86 @@ fun CommandCenterScreen(
             }
         }
 
+        if (isAuthenticated && onOpenBusinessWorkspace != null) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    onOpenBusinessWorkspace.let { openBiz ->
+                        OutlinedButton(
+                            onClick = { openBiz("budgets") },
+                            modifier = Modifier.weight(1f).height(34.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "Expenses & Biz",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // 2b. Specialized Client OEM Customer Portal (Master Plan §3)
-        if (currentRole == DepartmentRole.CLIENT) {
+        if (isClientProfile) {
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
+                    Column(modifier = Modifier.padding(12.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Tata Motors OEM Portal (§3)",
-                                style = MaterialTheme.typography.titleMedium,
+                                text = activeProjectObj?.title ?: "Client Portal (Local TEST)",
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.weight(1f)
                             )
-                            Button(
-                                onClick = { showClientTicketModal = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                            ) {
-                                Text("+ Support Ticket", style = MaterialTheme.typography.labelSmall)
+                            if (!isAuthenticated) {
+                                Button(
+                                    onClick = { showClientTicketModal = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                    modifier = Modifier.height(30.dp)
+                                ) {
+                                    Text("+ Support Ticket", style = MaterialTheme.typography.labelSmall)
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Commercial Vehicle Telematics Division · 50,000 units · ₹20.33 Cr Locked",
+                            text = "${activeProjectObj?.client ?: "Northstar Field Systems (TEST)"} · ${activeProjectObj?.status ?: "Illustrative TEST View"}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                         )
                         Spacer(modifier = Modifier.height(10.dp))
+                        if (isAuthenticated) {
+                            Text(
+                                "Client deliverables are not available in this view. Tickets are created and tracked in the shared workspace.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            if (onOpenBusinessWorkspace != null) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                OutlinedButton(
+                                    onClick = { onOpenBusinessWorkspace("tickets") },
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                    modifier = Modifier.height(34.dp)
+                                ) {
+                                    Text("Open shared tickets", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        } else {
                         Text(
                             text = "Client Deliverables & Verification Dossier:",
                             style = MaterialTheme.typography.labelSmall,
@@ -390,6 +760,7 @@ fun CommandCenterScreen(
                                     }
                                 }
                             }
+                        }
                         }
                     }
                 }
@@ -554,6 +925,7 @@ fun CommandCenterScreen(
                                     task = task,
                                     currentLane = selectedTaskLane,
                                     onToggleComplete = {
+                                        if (!task.isCompleted) showCompletedTasks = true
                                         if (sharedTasks != null) {
                                             if (task.lane != "Review") onSharedTaskToggle?.invoke(task.id)
                                         } else scmsRepository.toggleTask(task.id)
@@ -571,7 +943,7 @@ fun CommandCenterScreen(
                                         }
                                     },
                                     allowDelegate = sharedTasks == null,
-                                    allowToggleComplete = sharedTasks == null || task.lane != "Review",
+                                    allowToggleComplete = !isSharedBusy && (sharedTasks == null || task.lane != "Review"),
                                     onDelegate = {
                                         taskToReassign = task
                                         reassignNotes = ""
@@ -665,18 +1037,21 @@ fun CommandCenterScreen(
                                                     fontSize = 10.sp
                                                 )
                                             }
-                                            TextButton(
-                                                onClick = {
-                                                    if (sharedTasks != null) {
-                                                        onSharedTaskMove?.invoke(task.id, "Open")
-                                                    } else {
-                                                        scmsRepository.moveTaskLane(task.id, "Today")
-                                                    }
-                                                },
-                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                                                modifier = Modifier.height(24.dp)
-                                            ) {
-                                                Text(if (sharedTasks != null) "Reopen" else "Restore", fontSize = 10.sp)
+                                            if (sharedTasks == null || canReopenSharedTask?.invoke(task.id) == true) {
+                                                TextButton(
+                                                    enabled = !isSharedBusy,
+                                                    onClick = {
+                                                        if (sharedTasks != null) {
+                                                            onSharedTaskMove?.invoke(task.id, "Open")
+                                                        } else {
+                                                            scmsRepository.moveTaskLane(task.id, "Today")
+                                                        }
+                                                    },
+                                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                                                    modifier = Modifier.height(24.dp)
+                                                ) {
+                                                    Text(if (sharedTasks != null) "Reopen" else "Restore", fontSize = 10.sp)
+                                                }
                                             }
                                         }
                                     }
@@ -802,49 +1177,59 @@ fun CommandCenterScreen(
             }
         }
 
-        // 3. Operational KPI Highlights
+        // Signed-in users must not see local illustrative production, APQP stage,
+        // feasibility, path-selection, or RACI values as live company analytics.
+        if (!isAuthenticated) {
+        // 3. Operational KPI Highlights (dynamically derived from active project/mode)
         item {
+            val actionsDueCount = tasks.count { !it.isCompleted && (it.lane == "Today" || it.isOverdue) }
+            val priorityGatesCount = stages.count { it.status == "In Progress" || it.status == "Locked" }
+            val hodFeasibleCount = feasibilityReviews.count {
+                (activeProjectId == "ALL" || it.projectId == activeProjectId) && it.verdict.startsWith("FEASIBLE")
+            }
+            val stageApprovedCount = stages.count { it.status == "Approved" }
+            val progressPct = if (stages.isEmpty()) 0 else (stageApprovedCount * 100) / stages.size
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item {
                     KpiCard(
                         title = "Actions Due",
-                        value = "2",
-                        sub = "Scheduled Today",
+                        value = "$actionsDueCount",
+                        sub = if (isAuthenticated) "Server Tasks" else "Open / Overdue",
                         color = Color(0xFF1976D2)
                     )
                 }
                 item {
                     KpiCard(
-                        title = "Priority Gates",
-                        value = "2",
-                        sub = "Critical APQP",
+                        title = if (isAuthenticated) "Active Phases" else "Priority Gates",
+                        value = if (isAuthenticated) "${lifecycleStagesCount ?: 10}" else "$priorityGatesCount",
+                        sub = if (isAuthenticated) "Fixed Phases 0-9" else "APQP In-Flight",
                         color = Color(0xFFD32F2F)
                     )
                 }
                 item {
                     KpiCard(
-                        title = "Doc Reviews",
-                        value = "1",
-                        sub = "Pending Sign-off",
+                        title = "Approvals",
+                        value = "$pendingApprovalsCount",
+                        sub = if (isAuthenticated) "Pending Server" else "Pending Decision",
                         color = Color(0xFFED6C02)
                     )
                 }
                 item {
                     KpiCard(
-                        title = "HOD Approvals",
-                        value = "3",
-                        sub = "Feasibility Locked",
+                        title = if (isAuthenticated) "Records" else "HOD Reviews",
+                        value = if (isAuthenticated) "${sharedRecordsCount ?: 0}" else "$hodFeasibleCount",
+                        sub = if (isAuthenticated) "Permitted Scope" else if (hodFeasibleCount > 0) "Local Assessed" else "Unsigned Draft",
                         color = Color(0xFF2E7D32)
                     )
                 }
                 item {
                     KpiCard(
                         title = "Progress",
-                        value = "68%",
-                        sub = "Milestones Complete",
+                        value = "$progressPct%",
+                        sub = "$stageApprovedCount/${stages.size} Local Stages",
                         color = Color(0xFF0288D1)
                     )
                 }
@@ -1047,7 +1432,7 @@ fun CommandCenterScreen(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Multi-departmental sign-off verified: EHW, ESW, MECH, PUR, QA, FIN. Unit price locked at ₹4,066 ($48.80) with ₹45L NRE milestone.",
+                        text = "Local TEST sample review across EHW, ESW, MECH, PUR, QA, FIN. Reference estimate ₹4,066 ($48.80) · ₹45L NRE target (not production-locked).",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
@@ -1221,6 +1606,7 @@ fun CommandCenterScreen(
                     }
                 }
             }
+        }
         }
     }
 
@@ -1399,14 +1785,14 @@ fun CommandCenterScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Choose the hardware execution strategy for Tata Ace EV Telematics Gateway:",
+                        text = "Choose the hardware execution strategy for ${activeProjectObj?.title ?: "selected project"}:",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                scmsRepository.selectHardwarePath("pilot", "Direct-to-Pilot execution selected per customer delivery commitment.")
+                                scmsRepository.selectHardwarePath("pilot", "Direct-to-Pilot execution selected in local TEST simulation.")
                                 showHardwarePathModal = false
                             },
                         color = if (hardwarePath == "pilot") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -1419,7 +1805,7 @@ fun CommandCenterScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Recommended for locked architectures. Directly builds SMT pilot batch on Line 2 with zero prototype spin overhead.",
+                                text = "Used when requirements freeze is approved in local TEST simulation.",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -1457,7 +1843,7 @@ fun CommandCenterScreen(
     }
 
     // Client Support Ticket Modal
-    if (showClientTicketModal) {
+    if (!isAuthenticated && showClientTicketModal) {
         AlertDialog(
             onDismissRequest = {
                 showClientTicketModal = false
@@ -1562,6 +1948,7 @@ fun CommandCenterScreen(
         ) {
             ApprovalsScreen(
                 scmsRepository = scmsRepository,
+                isAuthenticated = isAuthenticated,
                 onBack = { showApprovalsScreen = false }
             )
         }
@@ -2020,25 +2407,43 @@ fun OperationalTaskCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer
-                        ) {
-                            Text(
-                                text = task.dept,
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.5.sp,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
+                        if (task.roleLevel != null) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                            ) {
+                                Text(
+                                    text = "${task.dept} · ${task.roleLevel}",
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 9.sp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        } else {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(0xFFFFF3E0),
+                                border = androidx.compose.foundation.BorderStroke(0.5.dp, Color(0xFFFFB74D))
+                            ) {
+                                Text(
+                                    text = "${task.dept} · Unassigned (Pending Lead)",
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 9.sp,
+                                    color = Color(0xFFE65100)
+                                )
+                            }
                         }
 
                         Text(
-                            text = "Assignee: ${task.assignee}",
+                            text = if (task.roleLevel != null) task.assignee else "Awaiting Lead",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 10.5.sp
+                            fontSize = 10.sp,
+                            maxLines = 1
                         )
 
                         Text(
@@ -2052,7 +2457,99 @@ fun OperationalTaskCard(
                             style = MaterialTheme.typography.labelSmall,
                             color = if (task.isOverdue) Color(0xFFC62828) else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = if (task.isOverdue) FontWeight.Bold else FontWeight.Normal,
-                            fontSize = 10.5.sp
+                            fontSize = 10.sp
+                        )
+                    }
+
+                    // Mobile Task Effort Stopwatch (Phase 3 Slice 3)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    var isTimerRunning by remember { mutableStateOf(false) }
+                    var elapsedSeconds by remember { mutableLongStateOf(task.loggedSeconds) }
+                    var showStopwatchNotice by remember { mutableStateOf(false) }
+
+                    LaunchedEffect(isTimerRunning) {
+                        while (isTimerRunning) {
+                            kotlinx.coroutines.delay(1000L)
+                            elapsedSeconds += 1
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = if (isTimerRunning) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant,
+                            border = androidx.compose.foundation.BorderStroke(
+                                0.5.dp,
+                                if (isTimerRunning) Color(0xFF81C784) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            ),
+                            modifier = Modifier.clickable { isTimerRunning = !isTimerRunning }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (isTimerRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = "Stopwatch",
+                                    modifier = Modifier.size(11.dp),
+                                    tint = if (isTimerRunning) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                val hrs = elapsedSeconds / 3600
+                                val mins = (elapsedSeconds % 3600) / 60
+                                val secs = elapsedSeconds % 60
+                                Text(
+                                    text = String.format("%02d:%02d:%02d / %.1fh", hrs, mins, secs, task.estimatedHours),
+                                    fontSize = 9.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isTimerRunning) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = if (isTimerRunning) "Timer Running (Effort Only)" else "Effort Tracker",
+                                fontSize = 8.5.sp,
+                                color = if (isTimerRunning) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            IconButton(
+                                onClick = { showStopwatchNotice = true },
+                                modifier = Modifier.size(18.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "Compliance Info",
+                                    modifier = Modifier.size(11.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    }
+
+                    if (showStopwatchNotice) {
+                        AlertDialog(
+                            onDismissRequest = { showStopwatchNotice = false },
+                            confirmButton = {
+                                TextButton(onClick = { showStopwatchNotice = false }) {
+                                    Text("Got it")
+                                }
+                            },
+                            title = {
+                                Text("Effort Stopwatch Compliance", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            },
+                            text = {
+                                Text(
+                                    "IATF 16949 / Master Plan §14 Invariant:\n\nLogging elapsed hours records actual engineering effort only. A timer never automatically completes a task or passes a tollgate review without verified sign-off.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         )
                     }
                 }

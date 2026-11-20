@@ -60,6 +60,40 @@ class SharedAccessTest {
         assertEquals("", SharedAccess.projectIdForTask(data, row("""{"record_id":"missing-record"}""")))
     }
 
+    @Test fun recordMasterPickersUseCanonicalIdsAndAuthorizedActiveOptions() {
+        val data = row("""{
+          "departments":[{"id":"dept-sales","code":"SAL"}],
+          "supplierOptions":[{"id":"supplier-1","reference":"SUP-01","title":"Current supplier","status":"Active"}],
+          "partOptions":[{"id":"part-1","reference":"PART-01","title":"Controller","status":"Active","mpn":"MPN-01"}],
+          "productOptions":[{"id":"product-1","reference":"PROD-01","title":"Gateway","status":"Active"}],
+          "members":[{"id":"member-1","display_name":"Sales owner","department_id":"dept-sales"}],
+          "records":[
+            {"id":"customer-1","record_type":"Customer","reference":"CUS-01-R1","title":"Old customer name","status":"Active","fields":{}},
+            {"id":"customer-2","record_type":"Customer","reference":"CUS-02","title":"Visible customer","status":"Active","fields":{}},
+            {"id":"customer-3","record_type":"Customer","reference":"CUS-03","title":"Inactive customer","status":"Archived","fields":{}},
+            {"id":"customer-4","record_type":"Customer","reference":"CUS-04","title":"Server-inactive customer","status":"Active","fields":{}},
+            {"id":"supplier-1","record_type":"Supplier","reference":"SUP-OLD","title":"Old supplier name","status":"Active","fields":{}},
+            {"id":"location-1","record_type":"Location","reference":"LOC-01","title":"Pune Plant","status":"Active","fields":{}},
+            {"id":"location-2","record_type":"Facility","reference":"LOC-02","title":"Retired plant","status":"Retired","fields":{}},
+            {"id":"project-active","record_type":"Project","reference":"PRJ-01","title":"Active project","status":"Open","fields":{}},
+            {"id":"project-archived","record_type":"Project","reference":"PRJ-02","title":"Archived project","status":"Open","archived_at":"2026-10-01T00:00:00Z","fields":{}},
+            {"id":"project-inactive","record_type":"Project","reference":"PRJ-03","title":"Inactive project","status":"Cancelled","fields":{}}
+          ],
+          "customerOptions":[{"id":"customer-1","reference":"CUS-01-R2","title":"Current customer","status":"Active"},{"id":"customer-4","reference":"CUS-04","title":"Server-inactive customer","status":"Archived"}]
+        }""")
+
+        val customers = SharedAccess.masterPickerOptions(data, "customers")
+        assertEquals(setOf("customer-1", "customer-2"), customers.map { it.id }.toSet())
+        assertEquals("CUS-01-R2 · Current customer", customers.single { it.id == "customer-1" }.label)
+        assertEquals("SUP-01 · Current supplier", SharedAccess.masterPickerOptions(data, "suppliers").single().label)
+        assertEquals("PART-01 · Controller · MPN-01", SharedAccess.masterPickerOptions(data, "parts").single().label)
+        assertEquals("PROD-01 · Gateway", SharedAccess.masterPickerOptions(data, "products").single().label)
+        assertEquals(listOf("project-active"), SharedAccess.masterPickerOptions(data, "projects").map { it.id })
+        assertEquals("Sales owner · SAL", SharedAccess.masterPickerOptions(data, "people").single().label)
+        assertEquals(listOf("location-1"), SharedAccess.masterPickerOptions(data, "locations").map { it.id })
+        assertTrue(SharedAccess.masterPickerOptions(data, "routes").isEmpty())
+    }
+
     @Test fun authenticatedDocumentsUseExplicitProjectLinksAndHonorsProjectFilter() {
         val data = row("""{
           "departments":[{"id":"dept-hw","code":"EHW"}],

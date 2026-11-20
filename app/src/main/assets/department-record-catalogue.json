@@ -1,0 +1,1283 @@
+{
+  "version": "record-form-catalogue.ts",
+  "departments": {
+    "SAL": {
+      "types": [
+        "Enquiry",
+        "Opportunity",
+        "Order",
+        "Handover"
+      ],
+      "fieldsByType": {
+        "Enquiry": [
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Target date",
+            "kind": "date"
+          }
+        ],
+        "Opportunity": [
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Target date",
+            "kind": "date"
+          }
+        ],
+        "Order": [
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Target date",
+            "kind": "date"
+          }
+        ],
+        "Handover": [
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Target date",
+            "kind": "date"
+          }
+        ]
+      }
+    },
+    "EHW": {
+      "types": [
+        "PRS",
+        "Hardware tracker",
+        "Schematic",
+        "BOM",
+        "Gerber release"
+      ],
+      "fieldsByType": {
+        "PRS": [
+          {
+            "key": "hwStage",
+            "label": "HW stage · automatic",
+            "required": false,
+            "kind": "text",
+            "options": [],
+            "readOnly": true,
+            "automaticValue": "HW_02",
+            "automaticLabel": "HW_02 · Hardware PRS baseline"
+          }
+        ],
+        "Hardware tracker": [
+          {
+            "key": "hwStage",
+            "label": "HW stage · automatic",
+            "required": false,
+            "kind": "text",
+            "options": [],
+            "readOnly": true,
+            "automaticValue": "HW_01",
+            "automaticLabel": "HW_01 · Hardware requirement capture"
+          }
+        ],
+        "Schematic": [
+          {
+            "key": "hwStage",
+            "label": "HW stage · automatic",
+            "required": false,
+            "kind": "text",
+            "options": [],
+            "readOnly": true,
+            "automaticValue": "HW_15",
+            "automaticLabel": "HW_15 · Schematic preparation"
+          }
+        ],
+        "BOM": [
+          {
+            "key": "hwStage",
+            "label": "HW stage · automatic",
+            "required": false,
+            "kind": "text",
+            "options": [],
+            "readOnly": true,
+            "automaticValue": "HW_19",
+            "automaticLabel": "HW_19 · Tentative BOM and sourcing analysis"
+          }
+        ],
+        "Gerber release": [
+          {
+            "key": "hwStage",
+            "label": "HW stage · automatic",
+            "required": false,
+            "kind": "text",
+            "options": [],
+            "readOnly": true,
+            "automaticValue": "HW_24",
+            "automaticLabel": "HW_24 · Prototype fabrication package"
+          }
+        ]
+      }
+    },
+    "FW": {
+      "types": [
+        "Software gate",
+        "HSI register",
+        "CI/CD telemetry",
+        "Firmware release"
+      ],
+      "fieldsByType": {
+        "Software gate": [
+          {
+            "key": "gate",
+            "label": "SDLC gate",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "G0",
+              "G1",
+              "G2",
+              "G3",
+              "G4",
+              "G5",
+              "G6",
+              "G7",
+              "G8",
+              "G9",
+              "G10",
+              "G11"
+            ]
+          }
+        ],
+        "HSI register": [
+          {
+            "key": "gate",
+            "label": "SDLC gate",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "G0",
+              "G1",
+              "G2",
+              "G3",
+              "G4",
+              "G5",
+              "G6",
+              "G7",
+              "G8",
+              "G9",
+              "G10",
+              "G11"
+            ]
+          }
+        ],
+        "CI/CD telemetry": [
+          {
+            "key": "gate",
+            "label": "SDLC gate",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "G0",
+              "G1",
+              "G2",
+              "G3",
+              "G4",
+              "G5",
+              "G6",
+              "G7",
+              "G8",
+              "G9",
+              "G10",
+              "G11"
+            ]
+          }
+        ],
+        "Firmware release": [
+          {
+            "key": "recordStage",
+            "label": "Stage · automatic",
+            "kind": "text",
+            "readOnly": true,
+            "automaticValue": "FW_12",
+            "automaticLabel": "FW_12 · Firmware release candidate"
+          }
+        ]
+      }
+    },
+    "SW": {
+      "types": [
+        "Software gate",
+        "HSI register",
+        "CI/CD telemetry",
+        "Firmware release"
+      ],
+      "fieldsByType": {
+        "Software gate": [
+          {
+            "key": "gate",
+            "label": "SDLC gate",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "G0",
+              "G1",
+              "G2",
+              "G3",
+              "G4",
+              "G5",
+              "G6",
+              "G7",
+              "G8",
+              "G9",
+              "G10",
+              "G11"
+            ]
+          }
+        ],
+        "HSI register": [
+          {
+            "key": "gate",
+            "label": "SDLC gate",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "G0",
+              "G1",
+              "G2",
+              "G3",
+              "G4",
+              "G5",
+              "G6",
+              "G7",
+              "G8",
+              "G9",
+              "G10",
+              "G11"
+            ]
+          }
+        ],
+        "CI/CD telemetry": [
+          {
+            "key": "gate",
+            "label": "SDLC gate",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "G0",
+              "G1",
+              "G2",
+              "G3",
+              "G4",
+              "G5",
+              "G6",
+              "G7",
+              "G8",
+              "G9",
+              "G10",
+              "G11"
+            ]
+          }
+        ],
+        "Firmware release": [
+          {
+            "key": "recordStage",
+            "label": "Stage · automatic",
+            "kind": "text",
+            "readOnly": true,
+            "automaticValue": "FW_12",
+            "automaticLabel": "FW_12 · Firmware release candidate"
+          }
+        ]
+      }
+    },
+    "MECH": {
+      "types": [
+        "STEP clearance",
+        "2D drawing",
+        "Mold tooling",
+        "Mechanical release"
+      ],
+      "fieldsByType": {
+        "STEP clearance": [
+          {
+            "key": "recordStage",
+            "label": "Stage · automatic",
+            "kind": "text",
+            "readOnly": true,
+            "automaticValue": "HW_17",
+            "automaticLabel": "HW_17 · Enclosure CAD / clearance"
+          }
+        ],
+        "2D drawing": [],
+        "Mold tooling": [],
+        "Mechanical release": []
+      }
+    },
+    "PUR": {
+      "types": [
+        "Rapid prototype request",
+        "Mass production request",
+        "ASL/ACML",
+        "F-PUR-10",
+        "F-PUR-16",
+        "PPAP Level 3"
+      ],
+      "fieldsByType": {
+        "Rapid prototype request": [
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          }
+        ],
+        "Mass production request": [
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          }
+        ],
+        "ASL/ACML": [
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          }
+        ],
+        "F-PUR-10": [
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          }
+        ],
+        "F-PUR-16": [
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          }
+        ],
+        "PPAP Level 3": [
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          }
+        ]
+      }
+    },
+    "QA": {
+      "types": [
+        "APQP gate",
+        "DVP&R",
+        "IQC",
+        "IPQC",
+        "FQC",
+        "8D CAPA",
+        "Certificate"
+      ],
+      "fieldsByType": {
+        "APQP gate": [
+          {
+            "key": "qualityStage",
+            "label": "Quality stage · automatic",
+            "required": false,
+            "kind": "text",
+            "options": [],
+            "readOnly": true,
+            "automaticValue": "APQP",
+            "automaticLabel": "APQP · determined by record type"
+          }
+        ],
+        "DVP&R": [
+          {
+            "key": "qualityStage",
+            "label": "Quality stage · automatic",
+            "required": false,
+            "kind": "text",
+            "options": [],
+            "readOnly": true,
+            "automaticValue": "DVP&R",
+            "automaticLabel": "DVP&R · determined by record type"
+          }
+        ],
+        "IQC": [
+          {
+            "key": "qualityStage",
+            "label": "Quality stage · automatic",
+            "required": false,
+            "kind": "text",
+            "options": [],
+            "readOnly": true,
+            "automaticValue": "IQC",
+            "automaticLabel": "IQC · determined by record type"
+          }
+        ],
+        "IPQC": [
+          {
+            "key": "qualityStage",
+            "label": "Quality stage · automatic",
+            "required": false,
+            "kind": "text",
+            "options": [],
+            "readOnly": true,
+            "automaticValue": "IPQC",
+            "automaticLabel": "IPQC · determined by record type"
+          }
+        ],
+        "FQC": [
+          {
+            "key": "qualityStage",
+            "label": "Quality stage · automatic",
+            "required": false,
+            "kind": "text",
+            "options": [],
+            "readOnly": true,
+            "automaticValue": "FQC",
+            "automaticLabel": "FQC · determined by record type"
+          }
+        ],
+        "8D CAPA": [
+          {
+            "key": "qualityStage",
+            "label": "Quality stage · automatic",
+            "required": false,
+            "kind": "text",
+            "options": [],
+            "readOnly": true,
+            "automaticValue": "8D",
+            "automaticLabel": "8D · determined by record type"
+          }
+        ],
+        "Certificate": [
+          {
+            "key": "qualityStage",
+            "label": "Quality stage · automatic",
+            "required": false,
+            "kind": "text",
+            "options": [],
+            "readOnly": true,
+            "automaticValue": "Certificate",
+            "automaticLabel": "Certificate · determined by record type"
+          },
+          {
+            "key": "recordStage",
+            "label": "Stage · automatic",
+            "kind": "text",
+            "readOnly": true,
+            "automaticValue": "C14",
+            "automaticLabel": "C14 · Official certificate evidence"
+          }
+        ]
+      }
+    },
+    "EMF": {
+      "types": [
+        "Line startup checklist",
+        "PFD",
+        "PFMEA",
+        "Control plan"
+      ],
+      "fieldsByType": {
+        "Line startup checklist": [],
+        "PFD": [],
+        "PFMEA": [],
+        "Control plan": []
+      }
+    },
+    "MMF": {
+      "types": [
+        "Mechanical manufacturing process requirements",
+        "Manufacturing feasibility",
+        "Fit verification",
+        "Manufacturing inspection"
+      ],
+      "fieldsByType": {
+        "Mechanical manufacturing process requirements": [
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ],
+        "Manufacturing feasibility": [
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ],
+        "Fit verification": [
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ],
+        "Manufacturing inspection": [
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ]
+      }
+    },
+    "TST": {
+      "types": [
+        "EOL test run",
+        "Test jig",
+        "QR label batch",
+        "FPY review"
+      ],
+      "fieldsByType": {
+        "EOL test run": [
+          {
+            "key": "serialRange",
+            "label": "Serial range"
+          },
+          {
+            "key": "fpy",
+            "label": "First-pass yield %"
+          }
+        ],
+        "Test jig": [
+          {
+            "key": "serialRange",
+            "label": "Serial range"
+          },
+          {
+            "key": "fpy",
+            "label": "First-pass yield %"
+          }
+        ],
+        "QR label batch": [
+          {
+            "key": "serialRange",
+            "label": "Serial range"
+          },
+          {
+            "key": "fpy",
+            "label": "First-pass yield %"
+          }
+        ],
+        "FPY review": [
+          {
+            "key": "serialRange",
+            "label": "Serial range"
+          },
+          {
+            "key": "fpy",
+            "label": "First-pass yield %"
+          }
+        ]
+      }
+    },
+    "FIN": {
+      "types": [
+        "Commercial billing",
+        "PO & GRN validation",
+        "Receivables review",
+        "Tax close"
+      ],
+      "fieldsByType": {
+        "Commercial billing": [
+          {
+            "key": "ageingDays",
+            "label": "Ageing days"
+          }
+        ],
+        "PO & GRN validation": [
+          {
+            "key": "ageingDays",
+            "label": "Ageing days"
+          }
+        ],
+        "Receivables review": [
+          {
+            "key": "ageingDays",
+            "label": "Ageing days"
+          }
+        ],
+        "Tax close": [
+          {
+            "key": "ageingDays",
+            "label": "Ageing days"
+          }
+        ]
+      }
+    },
+    "SIT": {
+      "types": [
+        "Server telemetry",
+        "Backup review",
+        "IT support ticket",
+        "Service case follow-up",
+        "Field service / RMA assessment",
+        "ISMS control"
+      ],
+      "fieldsByType": {
+        "Server telemetry": [
+          {
+            "key": "service",
+            "label": "Service / asset"
+          }
+        ],
+        "Backup review": [
+          {
+            "key": "service",
+            "label": "Service / asset"
+          }
+        ],
+        "IT support ticket": [
+          {
+            "key": "service",
+            "label": "Service / asset"
+          }
+        ],
+        "Service case follow-up": [
+          {
+            "key": "service",
+            "label": "Service / asset"
+          }
+        ],
+        "Field service / RMA assessment": [
+          {
+            "key": "service",
+            "label": "Service / asset"
+          }
+        ],
+        "ISMS control": [
+          {
+            "key": "service",
+            "label": "Service / asset"
+          }
+        ]
+      }
+    },
+    "HROPS": {
+      "types": [
+        "Skill matrix",
+        "Training need",
+        "License alert",
+        "DMAIC tollgate"
+      ],
+      "fieldsByType": {
+        "Skill matrix": [
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          }
+        ],
+        "Training need": [
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          }
+        ],
+        "License alert": [
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          }
+        ],
+        "DMAIC tollgate": [
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          }
+        ]
+      }
+    },
+    "AUDIT": {
+      "types": [
+        "Audit programme",
+        "Internal audit plan",
+        "Supplier audit plan",
+        "Customer audit plan",
+        "Audit finding",
+        "Corrective / preventive action",
+        "Management review",
+        "Improvement action",
+        "Controlled document"
+      ],
+      "fieldsByType": {
+        "Audit programme": [
+          {
+            "key": "auditStatus",
+            "label": "Workflow status",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Draft",
+              "Planned",
+              "Scheduled",
+              "In progress",
+              "Awaiting closure",
+              "Closed",
+              "Overdue"
+            ]
+          },
+          {
+            "key": "auditType",
+            "label": "Plan / finding type",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Internal",
+              "Supplier",
+              "Customer",
+              "Controlled document",
+              "Management review"
+            ]
+          },
+          {
+            "key": "classification",
+            "label": "Finding / classification",
+            "kind": "select",
+            "options": [
+              "Observation",
+              "Minor nonconformity",
+              "Major nonconformity",
+              "Confidential",
+              "Internal"
+            ]
+          },
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          },
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          },
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ],
+        "Internal audit plan": [
+          {
+            "key": "auditStatus",
+            "label": "Workflow status",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Draft",
+              "Planned",
+              "Scheduled",
+              "In progress",
+              "Awaiting closure",
+              "Closed",
+              "Overdue"
+            ]
+          },
+          {
+            "key": "auditType",
+            "label": "Plan / finding type",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Internal",
+              "Supplier",
+              "Customer",
+              "Controlled document",
+              "Management review"
+            ]
+          },
+          {
+            "key": "classification",
+            "label": "Finding / classification",
+            "kind": "select",
+            "options": [
+              "Observation",
+              "Minor nonconformity",
+              "Major nonconformity",
+              "Confidential",
+              "Internal"
+            ]
+          },
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          },
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          },
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ],
+        "Supplier audit plan": [
+          {
+            "key": "auditStatus",
+            "label": "Workflow status",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Draft",
+              "Planned",
+              "Scheduled",
+              "In progress",
+              "Awaiting closure",
+              "Closed",
+              "Overdue"
+            ]
+          },
+          {
+            "key": "auditType",
+            "label": "Plan / finding type",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Internal",
+              "Supplier",
+              "Customer",
+              "Controlled document",
+              "Management review"
+            ]
+          },
+          {
+            "key": "classification",
+            "label": "Finding / classification",
+            "kind": "select",
+            "options": [
+              "Observation",
+              "Minor nonconformity",
+              "Major nonconformity",
+              "Confidential",
+              "Internal"
+            ]
+          },
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          },
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          },
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ],
+        "Customer audit plan": [
+          {
+            "key": "auditStatus",
+            "label": "Workflow status",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Draft",
+              "Planned",
+              "Scheduled",
+              "In progress",
+              "Awaiting closure",
+              "Closed",
+              "Overdue"
+            ]
+          },
+          {
+            "key": "auditType",
+            "label": "Plan / finding type",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Internal",
+              "Supplier",
+              "Customer",
+              "Controlled document",
+              "Management review"
+            ]
+          },
+          {
+            "key": "classification",
+            "label": "Finding / classification",
+            "kind": "select",
+            "options": [
+              "Observation",
+              "Minor nonconformity",
+              "Major nonconformity",
+              "Confidential",
+              "Internal"
+            ]
+          },
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          },
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          },
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ],
+        "Audit finding": [
+          {
+            "key": "auditStatus",
+            "label": "Workflow status",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Draft",
+              "Planned",
+              "Scheduled",
+              "In progress",
+              "Awaiting closure",
+              "Closed",
+              "Overdue"
+            ]
+          },
+          {
+            "key": "auditType",
+            "label": "Plan / finding type",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Internal",
+              "Supplier",
+              "Customer",
+              "Controlled document",
+              "Management review"
+            ]
+          },
+          {
+            "key": "classification",
+            "label": "Finding / classification",
+            "kind": "select",
+            "options": [
+              "Observation",
+              "Minor nonconformity",
+              "Major nonconformity",
+              "Confidential",
+              "Internal"
+            ]
+          },
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          },
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          },
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ],
+        "Corrective / preventive action": [
+          {
+            "key": "auditStatus",
+            "label": "Workflow status",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Draft",
+              "Planned",
+              "Scheduled",
+              "In progress",
+              "Awaiting closure",
+              "Closed",
+              "Overdue"
+            ]
+          },
+          {
+            "key": "auditType",
+            "label": "Plan / finding type",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Internal",
+              "Supplier",
+              "Customer",
+              "Controlled document",
+              "Management review"
+            ]
+          },
+          {
+            "key": "classification",
+            "label": "Finding / classification",
+            "kind": "select",
+            "options": [
+              "Observation",
+              "Minor nonconformity",
+              "Major nonconformity",
+              "Confidential",
+              "Internal"
+            ]
+          },
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          },
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          },
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ],
+        "Management review": [
+          {
+            "key": "auditStatus",
+            "label": "Workflow status",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Draft",
+              "Planned",
+              "Scheduled",
+              "In progress",
+              "Awaiting closure",
+              "Closed",
+              "Overdue"
+            ]
+          },
+          {
+            "key": "auditType",
+            "label": "Plan / finding type",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Internal",
+              "Supplier",
+              "Customer",
+              "Controlled document",
+              "Management review"
+            ]
+          },
+          {
+            "key": "classification",
+            "label": "Finding / classification",
+            "kind": "select",
+            "options": [
+              "Observation",
+              "Minor nonconformity",
+              "Major nonconformity",
+              "Confidential",
+              "Internal"
+            ]
+          },
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          },
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          },
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ],
+        "Improvement action": [
+          {
+            "key": "auditStatus",
+            "label": "Workflow status",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Draft",
+              "Planned",
+              "Scheduled",
+              "In progress",
+              "Awaiting closure",
+              "Closed",
+              "Overdue"
+            ]
+          },
+          {
+            "key": "auditType",
+            "label": "Plan / finding type",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Internal",
+              "Supplier",
+              "Customer",
+              "Controlled document",
+              "Management review"
+            ]
+          },
+          {
+            "key": "classification",
+            "label": "Finding / classification",
+            "kind": "select",
+            "options": [
+              "Observation",
+              "Minor nonconformity",
+              "Major nonconformity",
+              "Confidential",
+              "Internal"
+            ]
+          },
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          },
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          },
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ],
+        "Controlled document": [
+          {
+            "key": "auditStatus",
+            "label": "Workflow status",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Draft",
+              "Planned",
+              "Scheduled",
+              "In progress",
+              "Awaiting closure",
+              "Closed",
+              "Overdue"
+            ]
+          },
+          {
+            "key": "auditType",
+            "label": "Plan / finding type",
+            "required": true,
+            "kind": "select",
+            "options": [
+              "Internal",
+              "Supplier",
+              "Customer",
+              "Controlled document",
+              "Management review"
+            ]
+          },
+          {
+            "key": "classification",
+            "label": "Finding / classification",
+            "kind": "select",
+            "options": [
+              "Observation",
+              "Minor nonconformity",
+              "Major nonconformity",
+              "Confidential",
+              "Internal"
+            ]
+          },
+          {
+            "key": "owner",
+            "label": "Owner",
+            "master": "people"
+          },
+          {
+            "key": "supplier",
+            "label": "Supplier",
+            "master": "suppliers"
+          },
+          {
+            "key": "customer",
+            "label": "Customer",
+            "master": "customers"
+          },
+          {
+            "key": "targetDate",
+            "label": "Due / review date",
+            "kind": "date"
+          }
+        ]
+      }
+    }
+  }
+}

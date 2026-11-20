@@ -17,6 +17,23 @@ import java.net.InetAddress
 import java.net.UnknownHostException
 import okhttp3.Dns
 
+internal object SsmSupabaseDnsFallback {
+    fun addresses(hostname: String): List<InetAddress> {
+        // Do not broaden this fallback to arbitrary Supabase hosts.
+        if (hostname != "jiqbxcqlywvvmhbgirzl.supabase.co" &&
+            hostname != "rzskhndweihuczbdhoxk.supabase.co") {
+            throw UnknownHostException("Unable to resolve host: $hostname")
+        }
+        // Current verified Cloudflare anycast IPv4 addresses for the two SSM
+        // projects. The caller still connects with the original hostname, so
+        // TLS certificate and SNI validation remain enabled.
+        return listOf(
+            InetAddress.getByAddress(hostname, byteArrayOf(104.toByte(), 18.toByte(), 38.toByte(), 10.toByte())),
+            InetAddress.getByAddress(hostname, byteArrayOf(172.toByte(), 64.toByte(), 149.toByte(), 246.toByte()))
+        )
+    }
+}
+
 class SupabaseClient {
 
     private val baseUrl = BuildConfig.SUPABASE_URL.trimEnd('/')
@@ -33,13 +50,12 @@ class SupabaseClient {
         }
 
         private fun fallback(hostname: String): List<InetAddress> {
-            if (hostname == "rzskhndweihuczbdhoxk.supabase.co") {
-                return listOf(
-                    InetAddress.getByAddress(hostname, byteArrayOf(104.toByte(), 18.toByte(), 38.toByte(), 10.toByte())),
-                    InetAddress.getByAddress(hostname, byteArrayOf(172.toByte(), 64.toByte(), 149.toByte(), 246.toByte()))
-                )
-            }
-            throw UnknownHostException("Unable to resolve host: $hostname")
+            // Some Android emulators have a working IP route but fail to
+            // resolve Supabase's project hostname. Keep system DNS first; use
+            // these currently verified Cloudflare anycast addresses only for
+            // the two explicitly configured SSM projects. TLS still uses the
+            // original hostname, so certificate/SNI checks remain enabled.
+            return SsmSupabaseDnsFallback.addresses(hostname)
         }
     }
 
