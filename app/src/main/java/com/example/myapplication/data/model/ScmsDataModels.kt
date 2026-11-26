@@ -29,6 +29,7 @@ enum class DepartmentRole(
     FIN("FIN", "Accounts & Finance", "Priya Voss", "priya.voss@example.com", "Demo@FIN2026"),
     SIT("SIT", "Service & IT Infrastructure", "Kai Morgan", "kai.morgan@example.com", "Demo@SIT2026"),
     HROPS("HROPS", "HR & Operations", "Taylor Quinn", "taylor.quinn@example.com", "Demo@HR2026"),
+    AUDIT("AUDIT", "Audit & Compliance", "Audit & Compliance", "", isLegacy = true),
     CLIENT("CLIENT", "Client Portal (Northstar TEST)", "Rohan Verma", "rohan.verma@example.com", "Client@Test2026", isClient = true);
 
     companion object {

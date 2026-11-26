@@ -96,4 +96,15 @@ class SharedTestRepository(private val invoke: suspend (String, String, String) 
             put("p_action", action); put("p_payload", payload); put("p_request_id", requestId)
         }.toString(), token).getOrThrow()
     }
+    suspend fun mutateWithReceipt(token: String, action: String, payload: JsonObject, requestId: String): JsonObject {
+        require(token.isNotBlank()) { "Authentication required" }
+        require(runCatching { java.util.UUID.fromString(requestId).toString() == requestId.lowercase() }.getOrDefault(false)) {
+            "A stable request ID is required"
+        }
+        return json.parseToJsonElement(invoke("mutate_shared_test_workspace", buildJsonObject {
+            put("p_action", action); put("p_payload", payload); put("p_request_id", requestId)
+        }.toString(), token).getOrThrow()).jsonObject.also { receipt ->
+            require(receipt["id"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true) { "Shared record save returned no record ID" }
+        }
+    }
 }

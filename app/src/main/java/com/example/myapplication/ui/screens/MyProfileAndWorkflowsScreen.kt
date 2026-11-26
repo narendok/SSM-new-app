@@ -22,6 +22,11 @@ import com.example.myapplication.data.model.AuthState
 import com.example.myapplication.data.model.DepartmentRole
 import com.example.myapplication.data.repository.ScmsRepository
 import com.example.myapplication.ui.viewmodel.MainViewModel
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 /**
  * Tab 5: My Profile, Workflows, HR, Assets & AI Chatbot
@@ -55,6 +60,8 @@ fun MyProfileAndWorkflowsScreen(
         else -> currentRole.title
     }
     val profileEmail = authenticatedSession?.user?.email ?: currentRole.email
+    val businessSnapshot by viewModel.businessSnapshot.collectAsState()
+    LaunchedEffect(isAuthenticated) { if (isAuthenticated) viewModel.refreshBusinessWorkspace() }
 
     var activeSubTab by remember { mutableIntStateOf(0) } // 0: Profile, 1: AI Chatbot, 2: Expenses, 3: Assets, 4: Security
     val subTabs = listOf("Profile", "AI Assistant", "Expenses", "Assets", "Security")
@@ -212,6 +219,53 @@ fun MyProfileAndWorkflowsScreen(
                                             Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(15.dp))
                                             Spacer(modifier = Modifier.width(5.dp))
                                             Text("Open data workspace", fontSize = 11.sp)
+                                        }
+                                    }
+                                    if (isAuthenticated && onOpenBusinessWorkspace != null) {
+                                        TextButton(
+                                            onClick = { onOpenBusinessWorkspace.invoke("profile") },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Open HR profile & letters", fontSize = 11.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (isAuthenticated) item {
+                            val membership = businessSnapshot?.get("membership") as? JsonObject
+                            val memberId = membership?.get("membership_id")?.jsonPrimitive?.contentOrNull.orEmpty()
+                            val sharedItems = (businessSnapshot?.get("items") as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
+                            fun value(item: JsonObject, key: String) = item[key]?.jsonPrimitive?.contentOrNull.orEmpty()
+                            fun payload(item: JsonObject) = item["data"] as? JsonObject ?: JsonObject(emptyMap())
+                            val ownProfile = sharedItems.firstOrNull { value(it, "kind") == "profile" && value(it, "ownerId") == memberId }?.let(::payload)
+                            val ownLetters = sharedItems.filter { value(it, "kind") == "employee_letter" && value(it, "ownerId") == memberId }
+                            val ownAssets = sharedItems.filter { value(it, "kind") == "employee_asset" && value(it, "ownerId") == memberId }
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text("HR profile", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                    if (businessSnapshot == null) {
+                                        Text("Loading your shared employee profile…", style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        listOf("employeeCode" to "Employee ID", "roleTitle" to "Position", "joiningDate" to "Joining date", "facilityLocation" to "Location").forEach { (key, label) ->
+                                            val text = ownProfile?.get(key)?.jsonPrimitive?.contentOrNull.orEmpty().ifBlank { "Not recorded" }
+                                            Text("$label · $text", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        Text("Letters · ${ownLetters.size}   Equipment · ${ownAssets.size}", style = MaterialTheme.typography.bodySmall)
+                                        ownLetters.take(3).forEach { letter ->
+                                            val details = payload(letter)
+                                            Text("${details["title"]?.jsonPrimitive?.contentOrNull.orEmpty().ifBlank { details["letterType"]?.jsonPrimitive?.contentOrNull.orEmpty().ifBlank { "Company letter" } }} · ${details["status"]?.jsonPrimitive?.contentOrNull.orEmpty().replace('_', ' ')}", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        ownAssets.take(3).forEach { asset ->
+                                            val details = payload(asset)
+                                            Text("${details["assetName"]?.jsonPrimitive?.contentOrNull.orEmpty().ifBlank { details["assetTag"]?.jsonPrimitive?.contentOrNull.orEmpty().ifBlank { "Assigned company equipment" } }} · ${details["custodyStatus"]?.jsonPrimitive?.contentOrNull.orEmpty().ifBlank { "Assigned" }}", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        TextButton(onClick = { onOpenBusinessWorkspace?.invoke("profile") }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)) {
+                                            Text("Open HR self-service", fontSize = 12.sp)
                                         }
                                     }
                                 }

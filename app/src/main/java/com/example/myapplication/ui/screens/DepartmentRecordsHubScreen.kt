@@ -1,9 +1,11 @@
 package com.example.myapplication.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,6 +26,9 @@ import com.example.myapplication.ui.components.SmartUploadModalBottomSheet
 import com.example.myapplication.ui.viewmodel.MainViewModel
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 /**
  * Tab 3: Central Records & Workflows Hub
@@ -32,6 +38,58 @@ import kotlinx.serialization.json.JsonArray
 data class DeptHubTab(
     val title: String,
     val content: @Composable () -> Unit
+)
+
+private fun loadMobileRecordCatalogue(context: Context): JsonObject? = runCatching {
+    context.assets.open("department-record-catalogue.json").bufferedReader().use { reader ->
+        val root = Json.parseToJsonElement(reader.readText()) as? JsonObject
+        root?.get("departments") as? JsonObject
+    }
+}.getOrNull()
+
+private data class MobileRecordTypeEntry(
+    val departmentId: String,
+    val departmentCode: String,
+    val departmentName: String,
+    val type: String,
+    val fieldCount: Int,
+    val existingCount: Int
+)
+
+internal fun recordCatalogueDepartmentCode(code: String): String = when (val normalized = code.trim().uppercase()) {
+    "EFW" -> "FW"
+    "CSW" -> "SW"
+    "HR", "OPS", "HR/OPS" -> "HROPS"
+    else -> normalized
+}
+
+internal fun lifecycleProjectRequiredRecordTypes(workspace: JsonObject?): Set<String> {
+    val revision = workspace?.get("revision") as? JsonObject ?: return emptySet()
+    val definition = revision["definition"] as? JsonObject ?: return emptySet()
+    val stages = definition["stages"] as? JsonArray ?: return emptySet()
+    return stages.flatMap { stageElement ->
+        val stage = stageElement as? JsonObject ?: return@flatMap emptyList()
+        val code = recordCatalogueDepartmentCode(stage["department"]?.jsonPrimitive?.contentOrNull.orEmpty())
+        val types = stage["exitTypes"] as? JsonArray ?: return@flatMap emptyList()
+        types.mapNotNull { type -> type.jsonPrimitive.contentOrNull?.takeIf(String::isNotBlank)?.let { "$code|$it" } }
+    }.toSet()
+}
+
+private val mobileRecordDepartmentNames = mapOf(
+    "SAL" to "Sales & Business Development",
+    "EHW" to "Embedded Hardware Engineering",
+    "FW" to "Firmware Engineering",
+    "SW" to "Software Engineering",
+    "MECH" to "Mechanical Engineering",
+    "PUR" to "Purchasing & SCM",
+    "QA" to "Quality Assurance & APQP",
+    "EMF" to "Electronics Manufacturing & SMT",
+    "MMF" to "Mechanical Manufacturing & Tooling",
+    "TST" to "EOL Testing & Jigs",
+    "FIN" to "Accounts & Finance",
+    "SIT" to "Service & IT Infrastructure",
+    "HROPS" to "HR & Operations",
+    "AUDIT" to "Audit & Compliance"
 )
 
 @Composable
@@ -48,6 +106,9 @@ fun DepartmentRecordsHubScreen(
     onOpenBusinessWorkspace: ((String) -> Unit)? = null
 ) {
     val currentRole by scmsRepository.currentRole.collectAsState()
+    val context = LocalContext.current
+    val mobileRecordCatalogue = remember(context) { loadMobileRecordCatalogue(context) }
+    val lifecycleRequiredRecordTypes = remember(lifecycleWorkspace) { lifecycleProjectRequiredRecordTypes(lifecycleWorkspace) }
     // Admin's department selector changes the displayed context only. Build a read-only,
     // in-memory projection for child screens while retaining the authenticated membership.
     val workspaceSnapshot = remember(sharedSnapshot, viewDepartment, isAuthenticated) {
@@ -91,6 +152,16 @@ fun DepartmentRecordsHubScreen(
         }
         DepartmentRole.entries.firstOrNull { it.code.equals(normalizedCode, ignoreCase = true) } ?: DepartmentRole.CLIENT
     }
+    var activeSubTab by remember(focusedRole) { mutableIntStateOf(0) }
+    var showSmartUploadModal by remember { mutableStateOf(false) }
+    var showCreateRecord by remember { mutableStateOf(false) }
+    var smartUploadMode by remember { mutableStateOf(false) }
+    var createRecordDepartmentId by remember { mutableStateOf<String?>(null) }
+    var createRecordType by remember { mutableStateOf<String?>(null) }
+    var recordToEdit by remember { mutableStateOf<JsonObject?>(null) }
+    val membership = sharedSnapshot?.get("membership") as? JsonObject
+    val authenticatedAccessRole = membership?.let { com.example.myapplication.data.model.SharedAccess.text(it, "role") }.orEmpty()
+    val canCreateSharedRecord = isAuthenticated && authenticatedAccessRole in setOf("admin", "department_lead") && focusedRole != DepartmentRole.CLIENT
 
     // Department-scoped tabs: adapts dynamically to the active department's operational domain
     val currentRoleTabs = remember(focusedRole, isAuthenticated, workspaceSnapshot, lifecycleWorkspace, viewDepartment, selectedProjectId, projectCatalog) {
@@ -105,20 +176,9 @@ fun DepartmentRecordsHubScreen(
                         viewDepartment = viewDepartment,
                         sharedSnapshot = workspaceSnapshot,
                         lifecycleWorkspace = lifecycleWorkspace,
-                        initialTopTab = 4
+                        recordsPanel = RecordsPanel.SALES_PIPELINE
                     )
-                },
-                DeptHubTab("Sales documents & directory") {
-                    DocumentControlScreen(
-                        scmsRepository = scmsRepository,
-                        isAuthenticated = isAuthenticated,
-                        projectCatalog = projectCatalog,
-                        selectedProjectId = selectedProjectId,
-                        viewDepartment = viewDepartment,
-                        sharedSnapshot = workspaceSnapshot,
-                        lifecycleWorkspace = lifecycleWorkspace,
-                        initialTopTab = 0
-                    )
+
                 }
             )
             DepartmentRole.CLIENT -> listOf(
@@ -131,20 +191,9 @@ fun DepartmentRecordsHubScreen(
                         viewDepartment = viewDepartment,
                         sharedSnapshot = workspaceSnapshot,
                         lifecycleWorkspace = lifecycleWorkspace,
-                        initialTopTab = 1
+                        recordsPanel = RecordsPanel.CLIENT_PORTAL
                     )
-                },
-                DeptHubTab("Client documents") {
-                    DocumentControlScreen(
-                        scmsRepository = scmsRepository,
-                        isAuthenticated = isAuthenticated,
-                        projectCatalog = projectCatalog,
-                        selectedProjectId = selectedProjectId,
-                        viewDepartment = viewDepartment,
-                        sharedSnapshot = workspaceSnapshot,
-                        lifecycleWorkspace = lifecycleWorkspace,
-                        initialTopTab = 0
-                    )
+
                 }
             )
             DepartmentRole.PUR -> listOf(
@@ -297,35 +346,147 @@ fun DepartmentRecordsHubScreen(
                 }
             )
 
-            DepartmentRole.ADMIN -> listOf(
-                DeptHubTab("All BOM & Purchasing") {
-                    SmartBomAndPurchasingScreen(
-                        scmsRepository = scmsRepository,
-                        isAuthenticated = isAuthenticated,
-                        sharedSnapshot = workspaceSnapshot,
-                        initialSubTab = 0,
-                        visibleTabs = listOf(0, 1, 2, 3)
-                    )
-                },
-                DeptHubTab("All Stores & Inventory") {
-                    GovernedInventoryScreen(
-                        scmsRepository = scmsRepository,
-                        isAuthenticated = isAuthenticated,
-                        sharedSnapshot = workspaceSnapshot,
-                        lifecycleWorkspace = lifecycleWorkspace,
-                        mainViewModel = mainViewModel,
-                        viewDepartment = viewDepartment,
-                        selectedProjectId = selectedProjectId
-                    )
-                },
-                DeptHubTab("All Quality & Ingestion") {
-                    AdaptiveIngestionAndQualityScreen(
-                        scmsRepository = scmsRepository,
-                        isAuthenticated = isAuthenticated,
-                        sharedSnapshot = workspaceSnapshot
-                    )
+            DepartmentRole.ADMIN -> {
+                val departments = com.example.myapplication.data.model.SharedAccess.departments(workspaceSnapshot)
+                val sourceRecords = com.example.myapplication.data.model.SharedAccess.rows(workspaceSnapshot, "records")
+                val catalogueCodes = mobileRecordCatalogue?.keys?.toList().orEmpty()
+                val recordTypeEntries = catalogueCodes.flatMap { departmentCode ->
+                    val department = departments.firstOrNull {
+                        recordCatalogueDepartmentCode(com.example.myapplication.data.model.SharedAccess.text(it, "code")) == departmentCode
+                    }
+                    val departmentId = department?.let { com.example.myapplication.data.model.SharedAccess.text(it, "id") }.orEmpty()
+                    val departmentName = department?.let { com.example.myapplication.data.model.SharedAccess.text(it, "name") }
+                        ?.ifBlank { mobileRecordDepartmentNames[departmentCode] }.orEmpty()
+                        .ifBlank { mobileRecordDepartmentNames[departmentCode] ?: departmentCode }
+                    val spec = mobileRecordCatalogue?.get(departmentCode) as? JsonObject
+                    val types = (spec?.get("types") as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }.orEmpty()
+                    val fieldsByType = spec?.get("fieldsByType") as? JsonObject
+                    types.map { type ->
+                        MobileRecordTypeEntry(
+                            departmentId = departmentId,
+                            departmentCode = departmentCode,
+                            departmentName = departmentName,
+                            type = type,
+                            fieldCount = (fieldsByType?.get(type) as? JsonArray)?.size ?: 0,
+                            existingCount = 0
+                        )
+                    }
                 }
-            )
+                recordTypeEntries.map { entry ->
+                    DeptHubTab("${entry.departmentCode} · ${entry.type}") {
+                        val matchingRecords = sourceRecords.filter { record ->
+                            val rowDepartmentId = com.example.myapplication.data.model.SharedAccess.text(record, "department_id")
+                            val rowDepartment = departments.firstOrNull {
+                                com.example.myapplication.data.model.SharedAccess.text(it, "id") == rowDepartmentId
+                            }
+                            val rowDepartmentCode = recordCatalogueDepartmentCode(
+                                rowDepartment?.let { com.example.myapplication.data.model.SharedAccess.text(it, "code") }
+                                    .orEmpty()
+                                    .ifBlank { com.example.myapplication.data.model.SharedAccess.text(record, "department_code") }
+                            )
+                            val departmentMatches = if (entry.departmentId.isNotBlank() && rowDepartmentId.isNotBlank()) {
+                                entry.departmentId == rowDepartmentId
+                            } else {
+                                rowDepartmentCode == entry.departmentCode
+                            }
+                            val recordType = com.example.myapplication.data.model.SharedAccess.text(record, "record_type")
+                            val fields = record["fields"] as? JsonObject
+                            val linkedProjectId = com.example.myapplication.data.model.SharedAccess.text(record, "project_id")
+                                .ifBlank { com.example.myapplication.data.model.SharedAccess.text(record, "projectId") }
+                                .ifBlank { fields?.let { com.example.myapplication.data.model.SharedAccess.text(it, "projectId") }.orEmpty() }
+                                .ifBlank { fields?.let { com.example.myapplication.data.model.SharedAccess.text(it, "project_id") }.orEmpty() }
+                            val projectMatches = selectedProjectId == "ALL" ||
+                                linkedProjectId == selectedProjectId || projectCatalog.any {
+                                    it.id == selectedProjectId && it.reference == linkedProjectId ||
+                                        it.reference == selectedProjectId && it.id == linkedProjectId
+                                }
+                            departmentMatches && recordType.equals(entry.type, ignoreCase = true) && projectMatches
+                        }.sortedByDescending { com.example.myapplication.data.model.SharedAccess.text(it, "updated_at") }
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                            contentPadding = PaddingValues(vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(entry.type, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                        Text("${entry.departmentName} · ${matchingRecords.size} shared records · ${entry.fieldCount} configured fields", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    OutlinedButton(
+                                        enabled = canCreateSharedRecord && mainViewModel != null && entry.departmentId.isNotBlank(),
+                                        onClick = {
+                                            recordToEdit = null
+                                            createRecordDepartmentId = entry.departmentId
+                                            createRecordType = entry.type
+                                            smartUploadMode = false
+                                            showCreateRecord = true
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                    ) { Text("Create") }
+                                }
+                            }
+                            if (matchingRecords.isEmpty()) {
+                                item {
+                                    Text("No ${entry.type} records in this project scope.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            items(matchingRecords, key = { "record-${com.example.myapplication.data.model.SharedAccess.text(it, "id")}" }) { record ->
+                                val departmentId = com.example.myapplication.data.model.SharedAccess.text(record, "department_id")
+                                val projectId = com.example.myapplication.data.model.SharedAccess.text(record, "project_id")
+                                    .ifBlank { (record["fields"] as? JsonObject)?.let { com.example.myapplication.data.model.SharedAccess.text(it, "projectId") }.orEmpty() }
+                                    .ifBlank { (record["fields"] as? JsonObject)?.let { com.example.myapplication.data.model.SharedAccess.text(it, "project_id") }.orEmpty() }
+                                val projectLabel = projectCatalog.firstOrNull { it.id == projectId || it.reference == projectId }?.reference
+                                    ?: projectId.ifBlank { "No project linked" }
+                                val departmentLabel = departments.firstOrNull {
+                                    com.example.myapplication.data.model.SharedAccess.text(it, "id") == departmentId
+                                }?.let { com.example.myapplication.data.model.SharedAccess.text(it, "name") }
+                                    ?.ifBlank { entry.departmentName } ?: entry.departmentName
+                                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            Text(
+                                                com.example.myapplication.data.model.SharedAccess.text(record, "title").ifBlank {
+                                                    com.example.myapplication.data.model.SharedAccess.text(record, "reference").ifBlank { entry.type }
+                                                },
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                "${com.example.myapplication.data.model.SharedAccess.text(record, "record_type")} · ${com.example.myapplication.data.model.SharedAccess.text(record, "status").ifBlank { "Status unavailable" }} · $departmentLabel",
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                            Text(
+                                                "${com.example.myapplication.data.model.SharedAccess.text(record, "reference")} · $projectLabel",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        TextButton(
+                                            enabled = canCreateSharedRecord && mainViewModel != null && departmentId.isNotBlank(),
+                                            onClick = {
+                                                recordToEdit = record
+                                                createRecordDepartmentId = departmentId.ifBlank { entry.departmentId }
+                                                createRecordType = entry.type
+                                                smartUploadMode = false
+                                                showCreateRecord = true
+                                            }
+                                        ) { Text("Edit") }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             else -> buildList {
                 add(DeptHubTab("Department records") {
@@ -379,12 +540,6 @@ fun DepartmentRecordsHubScreen(
         }
     }
 
-    var activeSubTab by remember(focusedRole) { mutableIntStateOf(0) }
-    var showSmartUploadModal by remember { mutableStateOf(false) }
-    var showCreateRecord by remember { mutableStateOf(false) }
-    val membership = sharedSnapshot?.get("membership") as? JsonObject
-    val authenticatedAccessRole = membership?.let { com.example.myapplication.data.model.SharedAccess.text(it, "role") }.orEmpty()
-    val canCreateSharedRecord = isAuthenticated && authenticatedAccessRole in setOf("admin", "department_lead") && focusedRole != DepartmentRole.CLIENT
     LaunchedEffect(focusedRole, currentRoleTabs.size) {
         if (activeSubTab !in currentRoleTabs.indices) activeSubTab = 0
     }
@@ -419,9 +574,9 @@ fun DepartmentRecordsHubScreen(
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (canCreateSharedRecord && mainViewModel != null) {
+                        if (canCreateSharedRecord && mainViewModel != null && focusedRole != DepartmentRole.ADMIN) {
                             FilledTonalButton(
-                                onClick = { showCreateRecord = true },
+                                onClick = { recordToEdit=null;createRecordDepartmentId=null;createRecordType=null;showCreateRecord = true },
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 3.dp),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.height(30.dp)
@@ -431,17 +586,26 @@ fun DepartmentRecordsHubScreen(
                                 Text("New record", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                             }
                         }
-                        // Smart Upload Button (Phase 3 Slice 1)
+                        // Record Smart Upload opens record creation; standalone Vault upload remains in Documents.
                         FilledTonalButton(
-                            onClick = { if (isAuthenticated) onOpenVault?.invoke() else showSmartUploadModal = true },
+                            onClick = {
+                                if (isAuthenticated && canCreateSharedRecord && mainViewModel != null) {
+                                    recordToEdit = null
+                                    createRecordDepartmentId = null
+                                    createRecordType = null
+                                    smartUploadMode = true
+                                    showCreateRecord = true
+                                } else if (!isAuthenticated) showSmartUploadModal = true
+                            },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 3.dp),
                             shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.height(30.dp)
+                            modifier = Modifier.height(30.dp),
+                            enabled = !isAuthenticated || (canCreateSharedRecord && mainViewModel != null)
                         ) {
                             Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(13.dp))
                             Spacer(modifier = Modifier.width(3.dp))
                             Text(
-                            text = if (isAuthenticated) "Upload" else "Smart Upload",
+                            text = "Smart Upload",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp
@@ -503,8 +667,13 @@ fun DepartmentRecordsHubScreen(
             projectCatalog = projectCatalog,
             selectedProjectId = selectedProjectId,
             viewDepartment = viewDepartment,
-            onDismiss = { showCreateRecord = false },
-            onSaved = { showCreateRecord = false }
+            initialDepartmentId = createRecordDepartmentId,
+            initialRecordType = createRecordType,
+            initialRecord = recordToEdit,
+            lifecycleRequiredRecordTypes = lifecycleRequiredRecordTypes,
+            smartUploadMode = smartUploadMode,
+            onDismiss = { showCreateRecord = false; createRecordDepartmentId = null; createRecordType = null; recordToEdit=null; smartUploadMode = false },
+            onSaved = { showCreateRecord = false; createRecordDepartmentId = null; createRecordType = null; recordToEdit=null; smartUploadMode = false }
         )
     }
 }

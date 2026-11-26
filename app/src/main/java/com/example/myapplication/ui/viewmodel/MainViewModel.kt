@@ -65,6 +65,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val token = authRepository.validAccessToken()
         return Json.parseToJsonElement(supabaseClient.listControlledOriginals(documentId, token).getOrThrow()).jsonArray
     }
+    suspend fun verifyControlledOriginal(fileId: String) {
+        supabaseClient.verifyControlledOriginal(fileId, authRepository.validAccessToken()).getOrThrow()
+    }
+    suspend fun employeeLetterDownloadUrl(itemId: String): String =
+        supabaseClient.employeeLetterDownloadUrl(itemId, authRepository.validAccessToken()).getOrThrow()
+    suspend fun verifiedHrLetterCatalogue(departmentIds: List<String>): List<JsonObject> {
+        val token = authRepository.validAccessToken()
+        val docs = Json.parseToJsonElement(supabaseClient.listHrLetterDocuments(departmentIds, token).getOrThrow()).jsonArray
+        val result = mutableListOf<JsonObject>()
+        for (doc in docs.mapNotNull { it as? JsonObject }) {
+            val revisions = Json.parseToJsonElement(supabaseClient.listControlledOriginals(doc["id"]?.jsonPrimitive?.content.orEmpty(), token).getOrThrow()).jsonArray
+            for (file in revisions.mapNotNull { it as? JsonObject }) {
+                val size = file["size_bytes"]?.jsonPrimitive?.longOrNull ?: 0L
+                val checksum = file["checksum"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                if (file["superseded_at"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true || size <= 0L || !checksum.matches(Regex("^[a-fA-F0-9]{64}$"))) continue
+                if (runCatching { supabaseClient.verifyControlledOriginal(file["id"]?.jsonPrimitive?.content.orEmpty(), token).getOrThrow() }.isSuccess) {
+                    result += buildJsonObject {
+                        put("documentId", doc["id"]?.jsonPrimitive?.content.orEmpty())
+                        put("fileId", file["id"]?.jsonPrimitive?.content.orEmpty())
+                        put("title", doc["title"]?.jsonPrimitive?.contentOrNull.orEmpty())
+                        put("revision", file["revision"]?.jsonPrimitive?.contentOrNull.orEmpty())
+                        put("originalName", file["original_name"]?.jsonPrimitive?.contentOrNull.orEmpty())
+                    }
+                }
+            }
+        }
+        return result
+    }
     suspend fun controlledOriginalDownload(fileId: String): String =
         controlledOriginalRepository.downloadUrl(authRepository.validAccessToken(), fileId)
     suspend fun createSharedDocumentWithOriginal(
@@ -104,6 +132,77 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         secureStorage.completeSharedRequest(userId, "$signature:original")
         _sharedSnapshot.value = sharedRepository.load(authRepository.validAccessToken())
         return fileId
+    }
+    /** Creates a shared record, then stores its source file as a private controlled original linked to that record. */
+    suspend fun createSharedRecordWithOriginal(
+        recordPayload: JsonObject,
+        departmentId: String,
+        projectId: String?,
+        recordTitle: String,
+        recordType: String,
+        originalName: String,
+        contentType: String,
+        bytes: ByteArray
+    ): JsonObject {
+        if (_sharedBusy.value) throw IllegalStateException("Another shared save is in progress. Wait and retry.")
+        _sharedBusy.value = true
+        _sharedError.value = null
+        try {
+        require(BuildConfig.SCMS_BACKEND == "staging") { "Record-linked original upload is not enabled for this workspace." }
+        require(departmentId.isNotBlank() && recordTitle.isNotBlank() && recordType.isNotBlank()) { "Record context is incomplete." }
+        require(originalName.isNotBlank() && contentType.isNotBlank()) { "Choose a readable source file." }
+        require(bytes.isNotEmpty() && bytes.size <= 25 * 1024 * 1024) { "File must be between 1 byte and 25 MB." }
+        val userId = (authState.value as? AuthState.Authenticated)?.session?.user?.id
+            ?: throw SecurityException("Sign in to the shared workspace first.")
+        val token = authRepository.validAccessToken()
+        val checksum = java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        val recordSignature = "smart-record:${recordPayload}"
+        val recordRequestId = secureStorage.sharedRequestId(userId, recordSignature)
+        val recordReceipt = sharedRepository.mutateWithReceipt(token, "create_record", recordPayload, recordRequestId)
+        val recordId = recordReceipt["id"]?.jsonPrimitive?.contentOrNull
+            ?: throw IllegalStateException("The shared record was not returned.")
+
+        val documentPayload = buildJsonObject {
+            put("title", "$recordTitle · Source")
+            put("documentType", "Record source attachment")
+            put("scope", if (projectId.isNullOrBlank()) "department" else "internal")
+            put("departmentId", departmentId)
+            if (!projectId.isNullOrBlank()) put("projectId", projectId)
+            put("recordId", recordId)
+        }
+        val documentSignature = "smart-record-document:$recordId:${documentPayload}"
+        val documentRequestId = secureStorage.sharedRequestId(userId, documentSignature)
+        val documentReceipt = sharedRepository.registerDocument(token, documentPayload, documentRequestId)
+        val documentId = documentReceipt["id"]?.jsonPrimitive?.contentOrNull
+            ?: throw IllegalStateException("The source reference was not returned.")
+
+        val originalSignature = "smart-record-original:$recordId:$documentId:$checksum"
+        val originalRequestId = secureStorage.sharedRequestId(userId, originalSignature)
+        val fileId = supabaseClient.registerControlledOriginal(
+            documentId = documentId,
+            revision = "01",
+            originalName = originalName,
+            contentType = contentType,
+            bytes = bytes,
+            accessToken = token,
+            requestId = originalRequestId
+        ).getOrThrow()
+        secureStorage.completeSharedRequest(userId, recordSignature)
+        secureStorage.completeSharedRequest(userId, documentSignature)
+        secureStorage.completeSharedRequest(userId, originalSignature)
+        _sharedSnapshot.value = sharedRepository.load(authRepository.validAccessToken())
+        _sharedSaved.value++
+        return buildJsonObject {
+            recordReceipt.forEach { (key, value) -> put(key, value) }
+            put("source_file_id", JsonPrimitive(fileId))
+        }
+        } catch (e: Exception) {
+            _sharedError.value = e.message ?: "Record or source upload failed. Retry with the same file."
+            throw e
+        } finally {
+            _sharedBusy.value = false
+        }
     }
     private val _sharedSnapshot = MutableStateFlow<JsonObject?>(null)
     val sharedSnapshot: StateFlow<JsonObject?> = _sharedSnapshot.asStateFlow()

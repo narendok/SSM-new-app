@@ -7,6 +7,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -332,6 +335,27 @@ class SupabaseClient {
         }
     }
 
+    suspend fun listHrLetterDocuments(departmentIds: List<String>, accessToken: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            require(accessToken.isNotBlank()) { "Authentication required" }
+            val ids = departmentIds.filter { runCatching { java.util.UUID.fromString(it) }.isSuccess }.distinct()
+            if (ids.isEmpty()) return@withContext Result.success("[]")
+            val departmentFilter = java.net.URLEncoder.encode("in.(${ids.joinToString(",")})", Charsets.UTF_8.name())
+            val typeFilter = java.net.URLEncoder.encode("ilike.*letter*", Charsets.UTF_8.name())
+            val request = Request.Builder()
+                .url("$baseUrl/rest/v1/documents?department_id=$departmentFilter&document_type=$typeFilter&select=id,title,document_type,department_id&limit=200")
+                .header("apikey", anonKey).header("Authorization", "Bearer $accessToken").get().build()
+            httpClient.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) throw IOException("HR letter catalogue unavailable (HTTP ${response.code}).")
+                Result.success(body)
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Result.failure(e)
+        }
+    }
+
     suspend fun verifyControlledOriginal(fileId: String, accessToken: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             require(accessToken.isNotBlank()) { "Authentication required" }
@@ -347,6 +371,26 @@ class SupabaseClient {
                     throw SecurityException("Original has not been verified")
             }
             Result.success(Unit)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Result.failure(e)
+        }
+    }
+
+    suspend fun employeeLetterDownloadUrl(itemId: String, accessToken: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            require(accessToken.isNotBlank()) { "Authentication required" }
+            require(runCatching { java.util.UUID.fromString(itemId) }.isSuccess) { "Canonical employee letter ID required" }
+            val access = invokeRpc("get_employee_letter_file_access", json.encodeToString(mapOf("p_item_id" to itemId)), accessToken).getOrThrow()
+            val row = json.parseToJsonElement(access).jsonArray.singleOrNull()?.jsonObject
+                ?: throw SecurityException("This issued letter is unavailable.")
+            val fileId = row["file_id"]?.jsonPrimitive?.contentOrNull.orEmpty()
+            val path = row["storage_path"]?.jsonPrimitive?.contentOrNull.orEmpty()
+            require(fileId.isNotBlank() && path.isNotBlank()) { "This issued letter is unavailable." }
+            verifyControlledOriginal(fileId, accessToken).getOrThrow()
+            val url = createSignedUrl("controlled-documents", path, accessToken, 60).getOrThrow()
+            val filename = row["original_name"]?.jsonPrimitive?.contentOrNull.orEmpty()
+            Result.success(if (filename.isBlank()) url else url + (if ('?' in url) "&" else "?") + "download=" + java.net.URLEncoder.encode(filename, Charsets.UTF_8.name()))
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             Result.failure(e)

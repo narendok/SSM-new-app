@@ -57,6 +57,11 @@
             "kind": "date"
           }
         ]
+      },
+      "projectLinkByType": {
+        "Opportunity": "optional",
+        "Handover": "optional",
+        "Order": "optional"
       }
     },
     "EHW": {
@@ -128,6 +133,13 @@
             "automaticLabel": "HW_24 · Prototype fabrication package"
           }
         ]
+      },
+      "projectLinkByType": {
+        "PRS": "optional",
+        "Gerber release": "optional",
+        "Hardware tracker": "optional",
+        "BOM": "optional",
+        "Schematic": "optional"
       }
     },
     "FW": {
@@ -214,6 +226,12 @@
             "automaticLabel": "FW_12 · Firmware release candidate"
           }
         ]
+      },
+      "projectLinkByType": {
+        "Firmware release": "optional",
+        "HSI register": "optional",
+        "Software gate": "optional",
+        "CI/CD telemetry": "optional"
       }
     },
     "SW": {
@@ -300,7 +318,8 @@
             "automaticLabel": "FW_12 · Firmware release candidate"
           }
         ]
-      }
+      },
+      "projectLinkByType": {}
     },
     "MECH": {
       "types": [
@@ -323,6 +342,12 @@
         "2D drawing": [],
         "Mold tooling": [],
         "Mechanical release": []
+      },
+      "projectLinkByType": {
+        "Mechanical release": "optional",
+        "2D drawing": "optional",
+        "Mold tooling": "optional",
+        "STEP clearance": "optional"
       }
     },
     "PUR": {
@@ -377,7 +402,8 @@
             "master": "suppliers"
           }
         ]
-      }
+      },
+      "projectLinkByType": {}
     },
     "QA": {
       "types": [
@@ -482,7 +508,8 @@
             "automaticLabel": "C14 · Official certificate evidence"
           }
         ]
-      }
+      },
+      "projectLinkByType": {}
     },
     "EMF": {
       "types": [
@@ -496,7 +523,8 @@
         "PFD": [],
         "PFMEA": [],
         "Control plan": []
-      }
+      },
+      "projectLinkByType": {}
     },
     "MMF": {
       "types": [
@@ -534,7 +562,8 @@
             "kind": "date"
           }
         ]
-      }
+      },
+      "projectLinkByType": {}
     },
     "TST": {
       "types": [
@@ -584,7 +613,8 @@
             "label": "First-pass yield %"
           }
         ]
-      }
+      },
+      "projectLinkByType": {}
     },
     "FIN": {
       "types": [
@@ -618,7 +648,8 @@
             "label": "Ageing days"
           }
         ]
-      }
+      },
+      "projectLinkByType": {}
     },
     "SIT": {
       "types": [
@@ -666,7 +697,8 @@
             "label": "Service / asset"
           }
         ]
-      }
+      },
+      "projectLinkByType": {}
     },
     "HROPS": {
       "types": [
@@ -704,7 +736,8 @@
             "master": "people"
           }
         ]
-      }
+      },
+      "projectLinkByType": {}
     },
     "AUDIT": {
       "types": [
@@ -1277,7 +1310,8 @@
             "kind": "date"
           }
         ]
-      }
+      },
+      "projectLinkByType": {}
     }
   }
 }

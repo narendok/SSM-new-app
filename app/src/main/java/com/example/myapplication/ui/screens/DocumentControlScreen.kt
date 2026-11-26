@@ -88,6 +88,8 @@ internal fun visibleDocumentControlTabIndex(
     return visibleTabs.indexOf(logicalTab).coerceAtLeast(0)
 }
 
+enum class RecordsPanel { SALES_PIPELINE, CLIENT_PORTAL }
+
 @Composable
 fun DocumentControlScreen(
     scmsRepository: ScmsRepository,
@@ -108,7 +110,7 @@ fun DocumentControlScreen(
     createSharedDocument: (suspend (String, String, String, String, String, String, ByteArray) -> String)? = null,
     onOpenBusinessWorkspace: (() -> Unit)? = null,
     onOpenTickets: (() -> Unit)? = null,
-    initialTopTab: Int = 0
+    recordsPanel: RecordsPanel? = null
 ) {
     val documents by scmsRepository.documents.collectAsState()
     val customers by scmsRepository.customers.collectAsState()
@@ -130,13 +132,14 @@ fun DocumentControlScreen(
     val canViewClientPortal = if (isAuthenticated) isAdminProfile || membershipRole == "viewer" || membershipRole.equals("client", true) || membershipDepartment.equals("CLIENT", true)
         else isAdminProfile || currentRole == DepartmentRole.CLIENT
 
-    var selectedTopTab by remember(initialTopTab) { mutableIntStateOf(initialTopTab.coerceIn(0, 4)) } // 0: Docs, 1: Client Portal, 2: Security, 3: Directory, 4: CRM
+    var selectedTopTab by remember { mutableIntStateOf(0) } // 0: Docs, 1: Client Portal, 2: Security, 3: Directory, 4: CRM
     var showSignedUrlModal by remember { mutableStateOf(false) }
     var selectedDocForSignedUrl by remember { mutableStateOf<ControlledDoc?>(null) }
     var signedUrlResult by remember { mutableStateOf<String?>(null) }
     var showAddCustomerModal by remember { mutableStateOf(false) }
     var showSupportTicketModal by remember { mutableStateOf(false) }
     var showSmartUploadModal by remember { mutableStateOf(false) }
+    var requestDirectDocUpload by remember { mutableStateOf(false) }
     var ticketTitle by remember { mutableStateOf("") }
     var ticketDesc by remember { mutableStateOf("") }
     var ticketConfirmationMsg by remember { mutableStateOf<String?>(null) }
@@ -166,7 +169,7 @@ fun DocumentControlScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Tab Row: compact 1-line labels
-        ScrollableTabRow(
+        if (recordsPanel == null) ScrollableTabRow(
             selectedTabIndex = selectedVisibleTabIndex,
             edgePadding = 10.dp,
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -202,7 +205,13 @@ fun DocumentControlScreen(
             }
         }
 
-        when (activeTab) {
+        val contentTab = when (recordsPanel) {
+            RecordsPanel.SALES_PIPELINE -> if (canViewSalesCrm) 4 else -1
+            RecordsPanel.CLIENT_PORTAL -> if (canViewClientPortal) 1 else -1
+            null -> activeTab
+        }
+        when (contentTab) {
+            -1 -> Text("This workspace is unavailable for your account.", Modifier.padding(16.dp))
             0 -> {
                 Column(modifier = Modifier.fillMaxSize()) {
                     Surface(
@@ -221,14 +230,14 @@ fun DocumentControlScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             FilledTonalButton(
-                                onClick = { showSmartUploadModal = true },
+                                onClick = { if (isAuthenticated) requestDirectDocUpload = true else showSmartUploadModal = true },
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.height(28.dp)
                             ) {
                                 Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(13.dp))
                                 Spacer(modifier = Modifier.width(3.dp))
-                                Text("Smart Upload", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text(if (isAuthenticated) "Upload document" else "Smart Upload", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -248,7 +257,9 @@ fun DocumentControlScreen(
                             onLinkReusableAsset = onLinkReusableAsset,
                             loadOriginalRevisions = loadOriginalRevisions,
                             originalDownload = originalDownload,
-                            createSharedDocument = createSharedDocument
+                            createSharedDocument = createSharedDocument,
+                            openDocumentUploadOnMount = requestDirectDocUpload,
+                            onDocumentUploadOpenConsumed = { requestDirectDocUpload = false }
                         )
                     }
                 }

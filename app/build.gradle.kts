@@ -16,6 +16,10 @@ val ssmBackend = providers.gradleProperty("ssmBackend").orElse("staging").get().
 require(ssmBackend == "production" || ssmBackend == "staging") {
     "ssmBackend must be either 'production' or 'staging'."
 }
+providers.gradleProperty("ssmBuildDir").orNull?.let { configuredBuildDir ->
+    layout.buildDirectory.set(rootProject.layout.projectDirectory.dir(configuredBuildDir))
+}
+val ssmDebugKeystore = providers.gradleProperty("ssmDebugKeystore").orNull
 val stagingBuild = ssmBackend == "staging"
 val expectedSupabaseUrl = if (stagingBuild) {
     "https://jiqbxcqlywvvmhbgirzl.supabase.co"
@@ -43,6 +47,17 @@ require(!stagingBuild || gradle.startParameter.taskNames.none { it.contains("rel
 android {
     namespace = "com.example.myapplication"
     compileSdk = 35
+
+    if (ssmDebugKeystore != null) {
+        signingConfigs {
+            getByName("debug") {
+                storeFile = rootProject.file(ssmDebugKeystore)
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.example.myapplication"
@@ -95,6 +110,8 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.androidx.security.crypto)
+    implementation(libs.google.mlkit.text.recognition)
+    implementation(libs.google.mlkit.text.recognition.devanagari)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

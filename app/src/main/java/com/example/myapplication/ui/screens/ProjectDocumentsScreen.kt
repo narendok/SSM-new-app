@@ -147,7 +147,9 @@ fun ProjectDocumentsScreen(
     onLinkReusableAsset: ((String, String, String) -> Unit)? = null,
     loadOriginalRevisions: (suspend (String) -> JsonArray)? = null,
     originalDownload: (suspend (String) -> String)? = null,
-    createSharedDocument: (suspend (String, String, String, String, String, String, ByteArray) -> String)? = null
+    createSharedDocument: (suspend (String, String, String, String, String, String, ByteArray) -> String)? = null,
+    openDocumentUploadOnMount: Boolean = false,
+    onDocumentUploadOpenConsumed: (() -> Unit)? = null
 ) {
     val documents by scmsRepository.documents.collectAsState()
     val clientDeliverables by scmsRepository.clientDeliverables.collectAsState()
@@ -203,6 +205,11 @@ fun ProjectDocumentsScreen(
     }
     var showDraftModal by remember { mutableStateOf(false) }
     var showSharedDocumentModal by remember { mutableStateOf(false) }
+    LaunchedEffect(openDocumentUploadOnMount, activeProjectId, canCreateSharedDocument) {
+        if (!openDocumentUploadOnMount) return@LaunchedEffect
+        if (isAuthenticated && activeProjectId != "ALL" && canCreateSharedDocument) showSharedDocumentModal = true
+        onDocumentUploadOpenConsumed?.invoke()
+    }
     var reusableAssetMenuExpanded by remember { mutableStateOf(false) }
     var selectedReusableAssetId by remember(activeProjectId) { mutableStateOf("") }
     var reusableAssetAssessment by remember(activeProjectId) { mutableStateOf("") }

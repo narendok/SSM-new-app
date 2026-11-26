@@ -10,10 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.viewmodel.MainViewModel
 import kotlinx.serialization.json.*
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 private fun JsonObject.text(key:String)=this[key]?.jsonPrimitive?.contentOrNull.orEmpty()
@@ -106,7 +108,10 @@ internal fun budgetAllocationValidationMessage(
 /** Mobile participation in the same shared records as web; authoring remains on web. */
 @Composable
 fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
+    val uriHandler=LocalUriHandler.current
+    val coroutineScope=rememberCoroutineScope()
     val snapshot by viewModel.businessSnapshot.collectAsState()
+    val sharedSnapshot by viewModel.sharedSnapshot.collectAsState()
     val busy by viewModel.businessBusy.collectAsState()
     val failure by viewModel.businessError.collectAsState()
     val saved by viewModel.businessSaved.collectAsState()
@@ -132,6 +137,8 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
     var selectedChannel by remember { mutableStateOf("") }
     var travelPolicyDetailsExpanded by remember { mutableStateOf(false) }
     var sentGeneration by remember { mutableIntStateOf(-1) }
+    var openingLetterId by remember { mutableStateOf<String?>(null) }
+    var letterOpenError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { viewModel.refreshBusinessWorkspace() }
     LaunchedEffect(saved) { if(sentGeneration>=0 && saved>sentGeneration) { action=null;form=emptyMap();sentGeneration=-1 } }
     val data=snapshot
@@ -140,6 +147,23 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
     val me=actor?.text("membership_id").orEmpty()
     val role=actor?.text("role").orEmpty()
     val dept=actor?.text("department_code").orEmpty()
+    val hrReviewer=role=="admin" || (role=="department_lead" && dept in setOf("HR","HROPS"))
+    val hrDepartmentIds=data?.rows("departments").orEmpty().filter { it.text("code").uppercase() in setOf("HR","HROPS") }.map { it.text("id") }.filter(String::isNotBlank)
+    var hrVerifiedLetters by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
+    var hrCatalogueError by remember { mutableStateOf<String?>(null) }
+    var hrCatalogueLoading by remember { mutableStateOf(false) }
+    LaunchedEffect(section, hrReviewer, me, hrDepartmentIds.joinToString()) {
+        if (section == "hr_admin" && hrReviewer) {
+            hrCatalogueLoading = true
+            hrCatalogueError = null
+            try {
+                hrVerifiedLetters = viewModel.verifiedHrLetterCatalogue(hrDepartmentIds)
+            } catch (e: Exception) {
+                hrCatalogueError = e.message ?: "Verified HR letter originals are unavailable."
+                hrVerifiedLetters = emptyList()
+            } finally { hrCatalogueLoading = false }
+        }
+    }
     val expenseCategories by viewModel.expenseCategories.collectAsState()
     val expenseServices by viewModel.expenseServices.collectAsState()
     val expenseSuppliers by viewModel.expenseSuppliers.collectAsState()
@@ -180,6 +204,14 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
         }
         if(a in setOf("approve_allocation","reject_allocation") && !finance) { validationMessage="Only Admin or Finance may review an allocation.";return }
         if(a=="reject_allocation" && form["reason"].orEmpty().trim().length<3) { validationMessage="Enter a reason of at least 3 characters.";return }
+        if(a=="assign_employee_asset" && (form["memberId"].isNullOrBlank() || form["assetRecordId"].isNullOrBlank())) { validationMessage="Choose an employee and a canonical serial Asset record.";return }
+        if(a=="issue_employee_letter") {
+            if(form["memberId"].isNullOrBlank() || form["letterFileId"].isNullOrBlank() || form["letterType"].isNullOrBlank() || form["referenceNumber"].orEmpty().trim().length<3 || form["effectiveDate"].isNullOrBlank()) {
+                validationMessage="Choose the employee and verified HR original, then enter letter type, reference, and effective date.";return
+            }
+            if(hrVerifiedLetters.none { it.text("fileId")==form["letterFileId"] }) { validationMessage="Select an original from the verified HR catalogue.";return }
+        }
+        if(a=="return_employee_asset" && form["reason"].orEmpty().trim().length<3) { validationMessage="Enter a short return condition or handover note.";return }
         if(a=="request_expense") {
             val requestType=form["requestType"]?:"travel"
             val travelDateError=if(requestType=="travel") travelDateValidationMessage(form["travelStartDate"],form["travelEndDate"]) else null
@@ -206,9 +238,19 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
             }
             form+mapOf("requestType" to type,"purchaseKind" to (form["purchaseKind"]?:"goods"),"departmentId" to (form["departmentId"]?:expenseDepartmentId),"purpose" to detail)
         } else form
-        val details=extra?:buildJsonObject { submittedForm.forEach { (k,v)->
+        val details=extra?:when(a) {
+            "issue_employee_letter" -> {
+                val source=hrVerifiedLetters.firstOrNull { it.text("fileId")==form["letterFileId"] }
+                buildJsonObject {
+                    put("memberId",form["memberId"].orEmpty());put("documentId",source?.text("documentId").orEmpty());put("fileId",source?.text("fileId").orEmpty())
+                    put("letterType",form["letterType"].orEmpty());put("referenceNumber",form["referenceNumber"].orEmpty().trim());put("effectiveDate",form["effectiveDate"].orEmpty())
+                }
+            }
+            "assign_employee_asset" -> buildJsonObject { put("memberId",form["memberId"].orEmpty());put("assetRecordId",form["assetRecordId"].orEmpty()) }
+            else -> buildJsonObject { submittedForm.forEach { (k,v)->
             when(k) { "tags"->put(k,JsonArray(v.split(",").map{it.trim()}.filter{it.isNotBlank()}.map{JsonPrimitive(it)}));"amount","actualAmount","allocatedAmount"->put(k,v.toDoubleOrNull()?:-1.0);"financeLimit"->if(v.isBlank())put(k,JsonNull) else put(k,v.toDoubleOrNull()?:-1.0);"isInternalNote","acknowledged"->put(k,v=="true");else->put(k,v) }
-        } }
+            } }
+        }
         sentGeneration=saved
         viewModel.mutateBusinessWorkspace(a,buildJsonObject { if(entry!=null){ put("id",entry.text("id"));put("version",entry["version"]!!) };put("data",details) })
     }
@@ -217,7 +259,8 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
             Column { Text("${actor?.text("display_name").orEmpty()}",style=MaterialTheme.typography.titleMedium);Text("Company workspace",style=MaterialTheme.typography.labelSmall) }
             TextButton(onClick={viewModel.refreshBusinessWorkspace();if(section=="budgets")viewModel.refreshExpenseCategories(expenseDepartmentScope,expenseOrganizationId,force=true)},enabled=!busy){Text("Refresh")}
         }
-        LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){items(listOf("budgets","tickets","profile","communication")){id->FilterChip(selected=section==id,onClick={section=id},label={Text(when(id){"budgets"->"Expenses";"tickets"->"Tickets";"profile"->"My Profile";else->"Team Chat"})})}}
+        val sections=(if(hrReviewer)listOf("hr_admin")else emptyList())+listOf("budgets","tickets","profile","communication")
+        LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){items(sections){id->FilterChip(selected=section==id,onClick={section=id},label={Text(when(id){"budgets"->"Expenses";"tickets"->"Tickets";"profile"->"My Profile";"hr_admin"->"HR & People";else->"Team Chat"})})}}
         if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
         failure?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
         if(data==null) { Text("Shared data is unavailable until the business-workspace migration is deployed. No sample data is substituted.");return@Column }
@@ -235,10 +278,170 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
             }
             if(section=="profile") {
                 val profile=kind("profile").firstOrNull { it.text("ownerId")==me }?.let(::payload)
-                item { Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){Text(actor?.text("display_name").orEmpty());listOf("employeeCode","email","phone","roleTitle","joiningDate").forEach {key->Text("$key: ${profile?.text(key)?.ifBlank { "Not recorded" }?:"Not recorded"}",style=MaterialTheme.typography.bodySmall)}}} }
+                val ownChange=kind("employee_profile_change").firstOrNull { it.text("ownerId")==me && payload(it).text("status") in setOf("Pending_HR_Review","Pending_Employee_Acknowledgement") }
+                item {
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                        Text(actor?.text("display_name").orEmpty(),style=MaterialTheme.typography.titleSmall)
+                        listOf("employeeCode","email","phone","roleTitle","joiningDate","facilityLocation","emergencyContact").forEach { key ->
+                            Text("${key.replace(Regex("([A-Z])")," $1").replaceFirstChar { it.uppercase() }}: ${profile?.text(key)?.ifBlank { "Not recorded" }?:"Not recorded"}",style=MaterialTheme.typography.bodySmall)
+                        }
+                        if(ownChange==null) OutlinedButton(onClick={open("request_profile_change",defaults=mapOf("memberId" to me)+listOf("employeeCode","email","phone","roleTitle","joiningDate","facilityLocation","emergencyContact").associateWith{profile?.text(it).orEmpty()})},enabled=!busy){Text("Request profile change")}
+                    } }
+                }
+                if(ownChange!=null) item {
+                    val change=payload(ownChange)
+                    val proposed=change["proposedProfile"] as? JsonObject ?: buildJsonObject {}
+                    val baseline=change["baseProfile"] as? JsonObject ?: buildJsonObject {}
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text("Profile change · ${change.text("status").replace('_',' ')}",style=MaterialTheme.typography.titleSmall)
+                        Text(change.text("reason"),style=MaterialTheme.typography.bodySmall)
+                        proposed.keys.filter { proposed[it] != baseline[it] }.forEach { key -> Text("${key.replace(Regex("([A-Z])")," $1")}: ${baseline[key]?.jsonPrimitive?.contentOrNull?:"—"} → ${proposed[key]?.jsonPrimitive?.contentOrNull?:"—"}",style=MaterialTheme.typography.bodySmall) }
+                        if(change.text("status")=="Pending_Employee_Acknowledgement") Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            Button(onClick={viewModel.mutateBusinessWorkspace("acknowledge_profile_change",buildJsonObject{put("id",ownChange.text("id"));put("version",ownChange["version"]!!);put("data",buildJsonObject{})})},enabled=!busy){Text("Accept HR update")}
+                            OutlinedButton(onClick={open("reject_profile_change",ownChange)},enabled=!busy){Text("Request correction")}
+                        } else Text("Waiting for HR/Admin review. Your current profile stays active until approval.",style=MaterialTheme.typography.labelSmall)
+                    } }
+                }
+                val pendingHrChanges=if(hrReviewer)kind("employee_profile_change").filter { payload(it).text("status")=="Pending_HR_Review" && it.text("ownerId")!=me } else emptyList()
+                if(pendingHrChanges.isNotEmpty()) item { Text("Employee changes awaiting HR review",style=MaterialTheme.typography.titleSmall) }
+                items(pendingHrChanges,key={it.text("id")}) { changeItem ->
+                    val change=payload(changeItem)
+                    val proposed=change["proposedProfile"] as? JsonObject ?: buildJsonObject {}
+                    val baseline=change["baseProfile"] as? JsonObject ?: buildJsonObject {}
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text("Employee profile update",style=MaterialTheme.typography.titleSmall)
+                        Text("${change.text("reason")} · baseline v${change.text("baseVersion")}",style=MaterialTheme.typography.bodySmall)
+                        proposed.keys.filter { proposed[it] != baseline[it] }.forEach { key -> Text("${key.replace(Regex("([A-Z])")," $1")}: ${baseline[key]?.jsonPrimitive?.contentOrNull?:"—"} → ${proposed[key]?.jsonPrimitive?.contentOrNull?:"—"}",style=MaterialTheme.typography.bodySmall) }
+                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            Button(onClick={viewModel.mutateBusinessWorkspace("approve_profile_change",buildJsonObject{put("id",changeItem.text("id"));put("version",changeItem["version"]!!);put("data",buildJsonObject{})})},enabled=!busy){Text("Approve")}
+                            OutlinedButton(onClick={open("reject_profile_change",changeItem)},enabled=!busy){Text("Reject")}
+                        }
+                    } }
+                }
+                val ownLetters=kind("employee_letter").filter { it.text("ownerId")==me }
+                if(ownLetters.isNotEmpty()) item { Text("My HR letters",style=MaterialTheme.typography.titleSmall) }
+                items(ownLetters,key={it.text("id")}) { letter ->
+                    val info=payload(letter)
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text(info.text("title").ifBlank{info.text("letterType").ifBlank{"Company letter"}},style=MaterialTheme.typography.titleSmall)
+                        Text("${info.text("referenceNumber")} · Effective ${info.text("effectiveDate")} · ${info.text("status").replace('_',' ')}",style=MaterialTheme.typography.bodySmall)
+                        if(info.text("status")=="Correction_Requested") Text("Correction requested: ${info.text("correctionReason")}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
+                        if(info.text("status") in setOf("Pending_Employee_Acknowledgement","Issued")) {
+                            OutlinedButton(enabled=!busy&&openingLetterId!=letter.text("id"),onClick={
+                                letterOpenError=null
+                                openingLetterId=letter.text("id")
+                                coroutineScope.launch {
+                                    try { uriHandler.openUri(viewModel.employeeLetterDownloadUrl(letter.text("id"))) }
+                                    catch(e:Exception) { letterOpenError=e.message?:"The verified original could not be opened." }
+                                    finally { openingLetterId=null }
+                                }
+                            }) { Text(if(openingLetterId==letter.text("id"))"Opening original…" else "Open verified original") }
+                            letterOpenError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
+                        }
+                        if(info.text("status")=="Pending_Employee_Acknowledgement") Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            Button(onClick={viewModel.mutateBusinessWorkspace("acknowledge_employee_letter",buildJsonObject{put("id",letter.text("id"));put("version",letter["version"]!!);put("data",buildJsonObject{put("acknowledged",true)})})},enabled=!busy){Text("Accept letter")}
+                            OutlinedButton(onClick={open("reject_employee_letter",letter)},enabled=!busy){Text("Request correction")}
+                        }
+                    } }
+                }
+                val ownAssets=kind("employee_asset").filter { it.text("ownerId")==me }
+                item { Text("My assigned equipment",style=MaterialTheme.typography.titleSmall) }
+                if(ownAssets.isEmpty()) item {
+                    Text("No serialized company equipment is assigned to your profile yet.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                items(ownAssets,key={it.text("id")}) { asset ->
+                    val info=payload(asset)
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text(info.text("assetName").ifBlank { info.text("assetTag").ifBlank { "Company equipment" } },style=MaterialTheme.typography.titleSmall)
+                        Text("${info.text("assetTag")} · SN ${info.text("serialNumber")}",style=MaterialTheme.typography.bodySmall)
+                        Text("${info.text("category").ifBlank { "Equipment" }} · ${info.text("custodyStatus").ifBlank { "Assigned" }}${if(info.text("acknowledged")=="true") " · Acknowledged" else " · Awaiting acknowledgement"}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(info.text("custodyStatus")=="Assigned" && info.text("acknowledged")!="true") {
+                            Button(onClick={viewModel.mutateBusinessWorkspace("acknowledge_employee_asset",buildJsonObject{put("id",asset.text("id"));put("version",asset["version"]!!);put("data",buildJsonObject{put("acknowledged",true)})})},enabled=!busy){Text("Acknowledge receipt")}
+                        }
+                    } }
+                }
                 items(kind("assignment").filter { it.text("ownerId")==me }) { assignment->
                     val a=payload(assignment);val template=all.firstOrNull { it.text("id")==a.text("templateId") }?.let(::payload)
                     Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){Text(template?.text("title")?:"Assignment");Text("${a.text("status")} · due ${a.text("dueDate")}",style=MaterialTheme.typography.bodySmall);if(a.text("status") !in listOf("Completed","Submitted"))OutlinedButton(onClick={open("submit_assignment",assignment)},enabled=!busy){Text("Open")}}}
+                }
+            }
+            if(section=="hr_admin"&&hrReviewer) {
+                val employees=data.rows("members").filter { it.text("id").isNotBlank() }
+                val hrAssets=(sharedSnapshot?.get("records") as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
+                    .filter { it.text("record_type").equals("Asset",ignoreCase=true) && it.text("archived_at").isBlank() }
+                    .filter { ((it["fields"] as? JsonObject)?.text("serialNumber").orEmpty()).isNotBlank() }
+                item {
+                    Text("Letters and serial assets",style=MaterialTheme.typography.titleSmall)
+                    Text(when {
+                        hrCatalogueLoading -> "Checking HR letter originals and shared asset records…"
+                        hrCatalogueError != null -> "Verified HR letter catalogue unavailable: $hrCatalogueError"
+                        else -> "${hrVerifiedLetters.size} verified HR letter originals · ${hrAssets.size} serial Asset records available."
+                    },style=MaterialTheme.typography.bodySmall,color=if(hrCatalogueError!=null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                    if(hrVerifiedLetters.isEmpty()&&!hrCatalogueLoading&&hrCatalogueError==null) Text("Upload and verify an HR Letter in controlled Documents before issuing a letter.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                item {
+                    Text("Employee register",style=MaterialTheme.typography.titleSmall)
+                    Text("HR/Admin changes stay pending until the employee reviews and acknowledges them. Employee edits continue to require HR/Admin review.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if(employees.isEmpty()) item { Text("No employees are available in the authorized shared register.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+                items(employees,key={it.text("id")}) { member ->
+                    val memberId=member.text("id")
+                    val memberName=member.text("name").ifBlank { member.text("display_name").ifBlank { member.text("full_name").ifBlank { "Employee" } } }
+                    val memberDepartmentId=member.text("departmentId").ifBlank { member.text("department_id") }
+                    val department=data.rows("departments").firstOrNull { it.text("id")==memberDepartmentId }
+                    val memberDepartment=member.text("departmentCode").ifBlank { member.text("department_code") }.ifBlank { department?.let { it.text("name").ifBlank { it.text("code") } }.orEmpty() }.ifBlank { "Department not recorded" }
+                    val profileItem=kind("profile").firstOrNull { it.text("ownerId")==memberId }
+                    val profile=profileItem?.let(::payload)
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text(memberName,style=MaterialTheme.typography.titleSmall)
+                        Text("$memberDepartment · ${member.text("role").replace('_',' ').ifBlank { "Member" }}",style=MaterialTheme.typography.bodySmall)
+                        Text("${profile?.text("employeeCode").orEmpty().ifBlank { "Employee code not recorded" }} · ${profile?.text("roleTitle").orEmpty().ifBlank { "Role title not recorded" }}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedButton(onClick={open("save_profile",profileItem,defaults=mapOf("memberId" to memberId)+listOf("employeeCode","email","phone","roleTitle","joiningDate","facilityLocation","emergencyContact").associateWith{profile?.text(it).orEmpty()}+mapOf("reason" to ""))},enabled=!busy){Text(if(profileItem==null)"Create employee profile" else "Propose profile edit")}
+                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick={open("issue_employee_letter",defaults=mapOf("memberId" to memberId,"effectiveDate" to LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).toString()))},enabled=!busy&&!hrCatalogueLoading&&hrVerifiedLetters.isNotEmpty()){Text("Issue letter")}
+                            OutlinedButton(onClick={open("assign_employee_asset",defaults=mapOf("memberId" to memberId))},enabled=!busy&&hrAssets.isNotEmpty()){Text("Assign asset")}
+                        }
+                    } }
+                }
+                val pendingLetters=kind("employee_letter").filter { payload(it).text("status") in setOf("Review","Correction_Requested") }
+                item { Text("Letters awaiting HR review · ${pendingLetters.size}",style=MaterialTheme.typography.titleSmall) }
+                items(pendingLetters,key={it.text("id")}) { letter ->
+                    val info=payload(letter)
+                    val owner=employees.firstOrNull { it.text("id")==letter.text("ownerId") }?.let { it.text("display_name").ifBlank{it.text("name")} }.orEmpty()
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text("${owner.ifBlank{"Employee"}} · ${info.text("letterType")}",style=MaterialTheme.typography.titleSmall)
+                        Text("${info.text("referenceNumber")} · Effective ${info.text("effectiveDate")} · ${info.text("status").replace('_',' ')}",style=MaterialTheme.typography.bodySmall)
+                        if(info.text("status")=="Correction_Requested") Text("Correction: ${info.text("correctionReason")}",style=MaterialTheme.typography.bodySmall)
+                        if(letter.text("ownerId")!=me&&info.text("status")=="Review") Button(onClick={viewModel.mutateBusinessWorkspace("approve_employee_letter",buildJsonObject{put("id",letter.text("id"));put("version",letter["version"]!!);put("data",buildJsonObject{})})},enabled=!busy){Text("Approve for employee review")}
+                        if(info.text("status")=="Correction_Requested") OutlinedButton(onClick={open("issue_employee_letter",defaults=mapOf("memberId" to letter.text("ownerId"),"effectiveDate" to LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).toString()))},enabled=!busy&&!hrCatalogueLoading&&hrVerifiedLetters.isNotEmpty()){Text("Issue revised letter")}
+                    } }
+                }
+                val custody=kind("employee_asset").filter { payload(it).text("custodyStatus")=="Assigned" }
+                item { Text("Current employee asset custody · ${custody.size}",style=MaterialTheme.typography.titleSmall) }
+                items(custody,key={it.text("id")}) { assigned ->
+                    val info=payload(assigned)
+                    val owner=employees.firstOrNull { it.text("id")==assigned.text("ownerId") }?.let { it.text("display_name").ifBlank{it.text("name")} }.orEmpty()
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                        Text("${owner.ifBlank{"Employee"}} · ${info.text("assetTag")}",style=MaterialTheme.typography.titleSmall)
+                        Text("${info.text("assetName")} · SN ${info.text("serialNumber")} · ${if(info["acknowledged"]?.jsonPrimitive?.booleanOrNull==true)"Acknowledged" else "Awaiting acknowledgment"}",style=MaterialTheme.typography.bodySmall)
+                        OutlinedButton(onClick={open("return_employee_asset",assigned,defaults=mapOf("reason" to ""))},enabled=!busy){Text("Record return")}
+                    } }
+                }
+                val pendingChanges=kind("employee_profile_change").filter { payload(it).text("status")=="Pending_HR_Review"&&it.text("ownerId")!=me }
+                item { Text("Employee changes awaiting review · ${pendingChanges.size}",style=MaterialTheme.typography.titleSmall) }
+                items(pendingChanges,key={it.text("id")}) { changeItem ->
+                    val change=payload(changeItem)
+                    val proposed=change["proposedProfile"] as? JsonObject ?: buildJsonObject {}
+                    val baseline=change["baseProfile"] as? JsonObject ?: buildJsonObject {}
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text(employees.firstOrNull{it.text("id")==changeItem.text("ownerId")}?.let{it.text("name").ifBlank{it.text("display_name")}}.orEmpty().ifBlank{"Employee profile update"},style=MaterialTheme.typography.titleSmall)
+                        Text(change.text("reason"),style=MaterialTheme.typography.bodySmall)
+                        proposed.keys.filter { proposed[it]!=baseline[it] }.forEach { key->Text("${key.replace(Regex("([A-Z])")," $1")}: ${baseline[key]?.jsonPrimitive?.contentOrNull?:"—"} → ${proposed[key]?.jsonPrimitive?.contentOrNull?:"—"}",style=MaterialTheme.typography.bodySmall) }
+                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            Button(onClick={viewModel.mutateBusinessWorkspace("approve_profile_change",buildJsonObject{put("id",changeItem.text("id"));put("version",changeItem["version"]!!);put("data",buildJsonObject{})})},enabled=!busy){Text("Approve")}
+                            OutlinedButton(onClick={open("reject_profile_change",changeItem)},enabled=!busy){Text("Reject")}
+                        }
+                    } }
                 }
             }
             if(section=="budgets") {
@@ -490,6 +693,38 @@ fun SharedBusinessScreen(viewModel:MainViewModel,initialView:String="profile") {
             "approve_expense"->{if(payload(target!!).text("status")=="Pending_Dept_Review")Text("Forward to Finance review")else select("allocationId","Exact allocation",kind("allocation").filter{(payload(it).text("status").isBlank()||payload(it).text("status")=="Approved")&&it.text("departmentId")==target!!.text("departmentId")&&it.text("projectId")==target!!.text("projectId")&&payload(it).text("category")==payload(target!!).text("category")&&payload(it).text("currency")==payload(target!!).text("currency")}.map{it.text("id") to "${payload(it).text("periodId")} · ${payload(it).text("category")}"})}
             "post_expense"->{field("actualAmount","Verified actual amount");field("postingRef","Finance posting reference");field("evidenceRef","Invoice / receipt evidence reference")}
             "reject_expense"->field("reason","Reason")
+            "request_profile_change"->{
+                Text("Your proposed changes go to HR/Admin for review. The current profile remains official until the reviewer approves.",style=MaterialTheme.typography.bodySmall)
+                listOf("employeeCode","email","phone","roleTitle","joiningDate","facilityLocation","emergencyContact").forEach { key -> field(key,key.replace(Regex("([A-Z])")," $1").replaceFirstChar{it.uppercase()}) }
+                field("reason","Reason for update")
+            }
+            "save_profile"->{
+                Text("This HR/Admin proposal will not replace the current baseline until the employee acknowledges it.",style=MaterialTheme.typography.bodySmall)
+                listOf("employeeCode","email","phone","roleTitle","joiningDate","facilityLocation","emergencyContact").forEach { key -> field(key,key.replace(Regex("([A-Z])")," $1").replaceFirstChar{it.uppercase()}) }
+                field("reason","Reason for update")
+            }
+            "assign_employee_asset"->{
+                val employees=data?.rows("members").orEmpty().filter{it.text("id").isNotBlank()}
+                val employeeOptions=employees.map{member->member.text("id") to "${member.text("display_name").ifBlank{member.text("name").ifBlank{"Employee"}}} · ${member.text("department_code")}"}
+                val assets=(sharedSnapshot?.get("records") as? JsonArray).orEmpty().mapNotNull{it as? JsonObject}
+                    .filter{it.text("record_type").equals("Asset",true)&&it.text("archived_at").isBlank()}
+                    .filter{((it["fields"] as? JsonObject)?.text("serialNumber").orEmpty()).isNotBlank()}
+                Text("Assign an existing shared Asset record. The employee must acknowledge receipt; this does not issue stock.",style=MaterialTheme.typography.bodySmall)
+                SharedSearchPicker("employee",employees.firstOrNull{it.text("id")==form["memberId"]}?.let{it.text("display_name").ifBlank{it.text("name")}}?:"Select employee",employeeOptions,enabled=!busy,emptyText="No employees in the authorized register."){id->form=form+("memberId" to id)}
+                SharedSearchPicker("canonical serial asset",assets.firstOrNull{it.text("id")==form["assetRecordId"]}?.let{record->val f=record["fields"] as? JsonObject;"${f?.text("assetTag").orEmpty().ifBlank{record.text("reference")}} · ${record.text("title")} · SN ${f?.text("serialNumber").orEmpty()}"}?:"Select serial Asset record",assets.map{record->val f=record["fields"] as? JsonObject;record.text("id") to "${f?.text("assetTag").orEmpty().ifBlank{record.text("reference")}} · ${record.text("title")} · SN ${f?.text("serialNumber").orEmpty()}"},enabled=!busy,emptyText="Create an Asset record with a serial number first."){id->form=form+("assetRecordId" to id)}
+            }
+            "issue_employee_letter"->{
+                val employees=data?.rows("members").orEmpty().filter{it.text("id").isNotBlank()}
+                val employeeOptions=employees.map{member->member.text("id") to "${member.text("display_name").ifBlank{member.text("name").ifBlank{"Employee"}}} · ${member.text("department_code")}"}
+                Text("Issue only from a verified HR controlled original. This creates a Review item; HR approval and employee acknowledgment are separate steps.",style=MaterialTheme.typography.bodySmall)
+                SharedSearchPicker("employee",employees.firstOrNull{it.text("id")==form["memberId"]}?.let{it.text("display_name").ifBlank{it.text("name")}}?:"Select employee",employeeOptions,enabled=!busy,emptyText="No employees in the authorized register."){id->form=form+("memberId" to id)}
+                SharedSearchPicker("verified HR original",hrVerifiedLetters.firstOrNull{it.text("fileId")==form["letterFileId"]}?.let{"${it.text("title")} · Rev ${it.text("revision")} · ${it.text("originalName")}"}?:"Select verified original",hrVerifiedLetters.map{it.text("fileId") to "${it.text("title")} · Rev ${it.text("revision")} · ${it.text("originalName")}"},enabled=!busy&&!hrCatalogueLoading,emptyText="No verified HR letter originals available."){id->form=form+("letterFileId" to id)}
+                select("letterType","Letter type",listOf("Appointment","Confirmation","Promotion","Relieving","Experience","SOP_Notice","Bonus_Award").map{it to it.replace('_',' ')})
+                field("referenceNumber","Official letter reference")
+                dateField("effectiveDate","Effective date")
+            }
+            "reject_profile_change","reject_employee_letter"->field("reason","Reason / correction needed")
+            "return_employee_asset"->field("reason","Return condition / handover note")
             "ticket_create"->{field("subject","Subject");field("description","Description");field("category","Category");select("priority","Priority",listOf("Critical","High","Normal","Low").map{it to it})}
             "ticket_reply"->{field("message","Reply");if(service||dept=="SAL")select("isInternalNote","Visibility",listOf("false" to "Requester reply","true" to "Internal note"))}
             "ticket_status"->{select("status","Status",listOf("Assigned","In Progress","Waiting","Resolved","Closed","Open").map{it to it});field("reason","Reason / reopen reason")}

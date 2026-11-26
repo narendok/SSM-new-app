@@ -173,7 +173,7 @@ fun AppShell(viewModel: MainViewModel) {
                 TopAppBar(
                     title = {
                         Text(
-                            text = "Expenses, Travel & Services",
+                            text = if (businessInitialView == "profile") "My HR Profile" else "Expenses, Travel & Services",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -474,8 +474,8 @@ fun AppShell(viewModel: MainViewModel) {
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            // Scoped project selector dropdown: active on Dashboard (Tab 0) and Project Analysis (Tab 1)
-            if (selectedTab == 0 || selectedTab == 1) {
+            // Keep project scope visible anywhere it filters project-linked records.
+            if (selectedTab == 0 || selectedTab == 1 || selectedTab == 2) {
                 com.example.myapplication.ui.components.ProjectFilterDropdown(
                     selectedProjectId = activeProjectFilter,
                     onProjectSelected = { viewModel.scmsRepository.selectProject(it) },

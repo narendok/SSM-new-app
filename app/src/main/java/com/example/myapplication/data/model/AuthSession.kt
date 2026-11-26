@@ -41,7 +41,7 @@ data class TestMembership(
         "admin" -> DepartmentRole.ADMIN
         "viewer" -> DepartmentRole.CLIENT
         "department_lead", "member" -> DepartmentRole.entries.firstOrNull {
-            !it.isLegacy && !it.isClient && it != DepartmentRole.ADMIN &&
+            (!it.isLegacy || it == DepartmentRole.AUDIT) && !it.isClient && it != DepartmentRole.ADMIN &&
                 (it.code == departmentCode || (it == DepartmentRole.HROPS && departmentCode == "HR"))
         }
         else -> null
